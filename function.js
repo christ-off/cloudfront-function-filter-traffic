@@ -26,13 +26,13 @@ function handler(event) {
   // Obvious security scans
   // ====================================================
 
-  // php
-  if (uri.endsWith('.php')) {
+  // file extension probes
+  if (/\.(php|sql|bak)$/.test(uri) || uri.includes('/.env') || uri.startsWith('/.git')) {
     return createNotFoundResponse();
   }
 
   // bad folders
-  if (/^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin)(\/|$)/.test(uri)) {
+  if (/^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)) {
     return createNotFoundResponse();
   }
 

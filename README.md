@@ -1,6 +1,6 @@
 # CloudFront Function – Traffic Filter
 
-A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions.html) (JS 2.0 runtime) that filters incoming requests before they reach the origin or cache. It handles four categories of traffic:
+A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions.html) (JS 2.0 runtime) designed to protect a **static website hosted on AWS S3** (no PHP). It filters incoming requests before they reach the origin or cache, handling four categories of traffic:
 
 ## What the function does
 
