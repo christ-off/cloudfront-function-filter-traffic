@@ -1,0 +1,25 @@
+{
+  "name": "cloudfront-function-filter-taffic",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/christ-off/cloudfront-function-filter-taffic.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/christ-off/cloudfront-function-filter-taffic/issues"
+  },
+  "homepage": "https://github.com/christ-off/cloudfront-function-filter-taffic#readme",
+  "devDependencies": {
+    "vitest": "^4.1.2"
+  }
+}

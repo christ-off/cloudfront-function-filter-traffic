@@ -1,0 +1,208 @@
+import { describe, it, expect } from "vitest";
+import { handler } from "./function.js";
+
+function makeEvent({ uri = "/", userAgent = null } = {}) {
+  const headers = {};
+  if (userAgent !== null) {
+    headers["user-agent"] = { value: userAgent };
+  }
+  return { request: { uri, headers } };
+}
+
+// =====================================================
+// Always-allow paths
+// =====================================================
+describe("always-allow paths", () => {
+  it("allows /robots.txt", () => {
+    const event = makeEvent({ uri: "/robots.txt" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows /ads.txt", () => {
+    const event = makeEvent({ uri: "/ads.txt" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows /robots.txt even with a blocked user-agent (always-allow wins)", () => {
+    const event = makeEvent({ uri: "/robots.txt", userAgent: "GPTBot/1.0" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("normalises URI whitespace before checking (trim)", () => {
+    const event = makeEvent({ uri: "  /robots.txt  " });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("normalises URI case before checking (lowercase)", () => {
+    const event = makeEvent({ uri: "/ROBOTS.TXT" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Traffic-advice path
+// =====================================================
+describe("/.well-known/traffic-advice", () => {
+  it("returns 200", () => {
+    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("returns application/trafficadvice+json content-type", () => {
+    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
+    expect(result.headers["content-type"].value).toBe("application/trafficadvice+json");
+  });
+
+  it("response body is valid JSON containing prefetch-proxy entry", () => {
+    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
+    const parsed = JSON.parse(result.body);
+    expect(parsed.some((e) => e.user_agent === "prefetch-proxy")).toBe(true);
+  });
+
+  it("sets a long cache-control header", () => {
+    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
+    expect(result.headers["cache-control"].value).toContain("max-age=");
+  });
+});
+
+// =====================================================
+// Security scan blocking — PHP files → 404
+// =====================================================
+describe("PHP file blocking", () => {
+  it("blocks a .php file at the root", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks a .php file in a sub-directory", () => {
+    const result = handler(makeEvent({ uri: "/path/to/script.php" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("PHP block is case-insensitive due to URI normalisation", () => {
+    const result = handler(makeEvent({ uri: "/Shell.PHP" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("does not block a path that merely contains 'php' as a substring", () => {
+    const event = makeEvent({ uri: "/php-info" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("404 response includes a long cache-control header", () => {
+    const result = handler(makeEvent({ uri: "/probe.php" }));
+    expect(result.headers["cache-control"].value).toContain("max-age=");
+  });
+});
+
+// =====================================================
+// Security scan blocking — bad folder prefixes → 404
+// =====================================================
+describe("bad folder blocking", () => {
+  const cases = [
+    ["/images/logo.png", "images"],
+    ["/image/logo.png", "image (singular)"],
+    ["/img/logo.png", "img"],
+    ["/wp-includes/js/jquery.js", "wp-includes"],
+    ["/static/app.js", "static"],
+    ["/wp/xmlrpc.php", "wp"],
+    ["/wordpress/index.php", "wordpress"],
+    ["/old/site/index.html", "old"],
+    ["/new/site/index.html", "new"],
+    ["/blog/post/1", "blog"],
+    ["/backup/db.sql", "backup"],
+    ["/cgi-bin/test.cgi", "cgi-bin"],
+  ];
+
+  it.each(cases)("blocks %s (%s)", (uri) => {
+    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  });
+
+  it("blocks a bad folder path with no trailing content (bare folder)", () => {
+    expect(handler(makeEvent({ uri: "/cgi-bin" })).statusCode).toBe(404);
+  });
+
+  it("does not block a path that shares a prefix but is a different folder", () => {
+    // /images2 or /blog-post should NOT be caught — regex anchors with (\/|$)
+    const event = makeEvent({ uri: "/images2/logo.png" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("blocking is case-insensitive due to URI normalisation", () => {
+    const result = handler(makeEvent({ uri: "/WP-INCLUDES/load.php" }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// AI / bot user-agent blocking → 403
+// =====================================================
+describe("AI bot blocking by user-agent", () => {
+  // One representative bot from each regex line in the function
+  const blockedAgents = [
+    ["GPTBot/1.0", "gptbot"],
+    ["ClaudeBot/1.0", "claudebot"],
+    ["Anthropic-AI/1.0", "anthropic-ai"],
+    ["CCBot/2.0", "ccbot"],
+    ["ByteSpider", "bytespider"],
+    ["FacebookBot/1.0", "facebookbot"],
+    ["Google-Extended", "google-extended"],
+    ["PerplexityBot/1.0", "perplexitybot"],
+    ["Scrapy/2.6", "scrapy"],
+    ["SemrushBot-OCOB", "semrushbot-ocob"],
+    ["YandexAdditional/1.0", "yandexadditional"],
+    ["meta-externalagent/1.0", "meta-externalagent"],
+    ["DiffBot/1.0", "diffbot"],
+    ["OAI-SearchBot/1.0", "oai-searchbot"],
+    ["Apify/1.0 ApifyWebsiteContentCrawler", "apifywebsitecontentcrawler"],
+  ];
+
+  it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
+    const result = handler(makeEvent({ userAgent }));
+    expect(result.statusCode).toBe(403);
+  });
+
+  it("bot matching is case-insensitive (UA header not lowercased by sender)", () => {
+    const result = handler(makeEvent({ userAgent: "GPTBOT/1.0" }));
+    expect(result.statusCode).toBe(403);
+  });
+
+  it("403 response includes x-robots-tag: noindex, nofollow", () => {
+    const result = handler(makeEvent({ userAgent: "GPTBot/1.0" }));
+    expect(result.headers["x-robots-tag"].value).toBe("noindex, nofollow");
+  });
+
+  it("403 response includes a long cache-control header", () => {
+    const result = handler(makeEvent({ userAgent: "GPTBot/1.0" }));
+    expect(result.headers["cache-control"].value).toContain("max-age=");
+  });
+
+  it("allows a normal browser user-agent", () => {
+    const event = makeEvent({
+      uri: "/about",
+      userAgent:
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows a request with no user-agent header", () => {
+    const event = makeEvent({ uri: "/about" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Pass-through for normal traffic
+// =====================================================
+describe("pass-through", () => {
+  it("returns the request object unchanged for a normal path", () => {
+    const event = makeEvent({ uri: "/about", userAgent: "Mozilla/5.0" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("returns the request object unchanged for the root path", () => {
+    const event = makeEvent({ uri: "/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
