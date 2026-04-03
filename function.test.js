@@ -193,6 +193,31 @@ describe("AI bot blocking by user-agent", () => {
 });
 
 // =====================================================
+// Percent-encoded URI bypass prevention
+// =====================================================
+describe("percent-encoded URI handling", () => {
+  it("blocks a .php file with an encoded dot (%2E)", () => {
+    const result = handler(makeEvent({ uri: "/wp-login%2Ephp" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks a bad folder with an encoded character (%77p-includes)", () => {
+    const result = handler(makeEvent({ uri: "/%77p-includes/load.php" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks cgi-bin with an encoded hyphen (%2D)", () => {
+    const result = handler(makeEvent({ uri: "/cgi%2Dbin/test" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("returns 404 for a malformed percent-encoded URI", () => {
+    const result = handler(makeEvent({ uri: "/%zz/path" }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {

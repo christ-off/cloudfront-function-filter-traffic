@@ -1,7 +1,12 @@
 function handler(event) {
 
   const request = event.request;
-  const uri = request.uri ? request.uri.trim().toLowerCase() : '';
+  let uri = '';
+  try {
+    uri = request.uri ? decodeURIComponent(request.uri).trim().toLowerCase() : '';
+  } catch (e) {
+    return createNotFoundResponse();
+  }
 
   // =====================================================
   // Always Allow robots.txt and ads.txt
