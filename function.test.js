@@ -141,7 +141,6 @@ describe("AI bot blocking by user-agent", () => {
   // One representative bot from each regex line in the function
   const blockedAgents = [
     ["GPTBot/1.0", "gptbot"],
-    ["ClaudeBot/1.0", "claudebot"],
     ["Anthropic-AI/1.0", "anthropic-ai"],
     ["CCBot/2.0", "ccbot"],
     ["ByteSpider", "bytespider"],

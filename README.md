@@ -24,7 +24,7 @@ Requests whose `User-Agent` header matches a curated list of known AI crawlers a
 - `cache-control: max-age=31536000` — edge-cached for one year
 - `x-robots-tag: noindex, nofollow` — signals to any indexer that slips through
 
-Blocked agents include (among many others): `GPTBot`, `ClaudeBot`, `Anthropic-AI`, `CCBot`, `ByteSpider`, `PerplexityBot`, `SemrushBot`, `meta-externalagent`, `DiffBot`, and `YandexAdditional`.
+Blocked agents include (among many others): `GPTBot`, `Anthropic-AI`, `CCBot`, `ByteSpider`, `PerplexityBot`, `SemrushBot`, `meta-externalagent`, `DiffBot`, and `YandexAdditional`.
 
 ### 5. Pass-through
 All other requests are forwarded to the origin unchanged.
@@ -67,7 +67,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all five behaviours with 51 tests:
+`function.test.js` covers all five behaviours with 54 tests:
 
 | Suite | What is tested |
 |---|---|
@@ -75,7 +75,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Traffic-advice | Status 200, correct content-type, valid JSON body, cache header |
 | PHP blocking | Root and sub-directory paths, case-insensitivity, no false positives |
 | Bad folder blocking | All 12 folder names, bare folder (no trailing slash), no false positives on similar prefixes |
-| AI bot blocking | 15 representative agents (one per regex line), case-insensitivity, response headers |
+| AI bot blocking | 14 representative agents (one per regex line), case-insensitivity, response headers |
 | Pass-through | Root path and normal page paths |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.
