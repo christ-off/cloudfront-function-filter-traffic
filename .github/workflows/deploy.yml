@@ -31,13 +31,15 @@ jobs:
 
       - name: Update CloudFront function
         run: |
+          grep -v 'export {' function.js > function.deploy.js
+
           ETAG=$(aws cloudfront describe-function \
             --name "${{ secrets.CLOUDFRONT_FUNCTION_NAME }}" \
             --query 'ETag' --output text)
 
           aws cloudfront update-function \
             --name "${{ secrets.CLOUDFRONT_FUNCTION_NAME }}" \
-            --function-code fileb://function.js \
+            --function-code fileb://function.deploy.js \
             --function-config Runtime=cloudfront-js-2.0,Comment="" \
             --if-match "$ETAG"
 
