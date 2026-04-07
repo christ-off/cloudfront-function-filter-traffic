@@ -1,19 +1,17 @@
 function handler(event) {
-
   const request = event.request;
-  let uri = '';
+  let uri;
   try {
     uri = request.uri ? decodeURIComponent(request.uri).trim().toLowerCase() : '';
-  } catch (e) {
+  } catch {
     return createNotFoundResponse();
   }
 
   // ====================================================
   // Block requests with no user agent
   // ====================================================
-  const headers = request.headers;
-  const userAgentHeader = headers['user-agent'];
-  if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
+  const userAgentHeader = request.headers['user-agent'];
+  if (!userAgentHeader?.value?.trim()) {
     return createNotFoundResponse();
   }
 
@@ -34,35 +32,40 @@ function handler(event) {
   // ====================================================
   // Obvious security scans
   // ====================================================
-
-  // file extension probes
-  if (/\.(php|sql|bak)$/.test(uri) || uri.includes('/.env') || uri.startsWith('/.git')) {
-    return createNotFoundResponse();
-  }
-
-  // bad folders
-  if (/^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)) {
+  if (isSecurityScanUri(uri)) {
     return createNotFoundResponse();
   }
 
   // ====================================================
-  // DENIES IA By 403
+  // DENIES IA bots
   // ====================================================
-  const normalizedUserAgent = userAgentHeader.value.toLowerCase();
-  if (
-      /addsearchbot|ai2bot|aihitbot|amazon-kendra|amazonbot|amazonbuyforme|amzn-searchbot|amzn-user|andibot|anomura|anthropic-ai|apifybot|apifywebsitecontentcrawler|applebot|atlassian-bot|awario|azureai-searchbot|bedrockbot|bigsur\.ai/.test(normalizedUserAgent) ||
-      /bravebot|brightbot|buddybot|bytespider|ccbot|channel3bot|chatglm-spider|chatgpt|cloudflare-autorag|cloudvertexbot|cohere-|cotoyogi|crawl4ai|crawlspace|datenbank crawler|deepseekbot|devin|diffbot/.test(normalizedUserAgent) ||
-      /duckassistbot|echobot|echoboxbot|exabot|facebookbot|factset_spyderbot|firecrawlagent|friendlycrawler|gemini-deep-research|google-cloudvertexbot|google-extended|google-firebase|google-notebooklm/.test(normalizedUserAgent) ||
-      /googleagent-mariner|googleother|gptbot|iaskbot|iaskspider|iboubot|icc-crawler|imagesiftbot|imagespider|img2dataset|isscyberriskcrawler|kangaroo bot|klaviyoaibot|kunatocrawler|laion-huggingface-processor|laiondownloader/.test(normalizedUserAgent) ||
-      /linerbot|linguee bot|linkupbot|manus-user|meta-externalagent|meta-externalfetcher|meta-webindexer|mistralai-user|mycentralaiscraperbot|netestate imprint crawler|notebooklm|novaact|oai-searchbot|omgili|omgilibot/.test(normalizedUserAgent) ||
-      /openai|operator|pangubot|panscient|perplexity-user|perplexitybot|petalbot|phindbot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|semrushbot-ocob|semrushbot-swa/.test(normalizedUserAgent) ||
-      /shapbot|sidetrade indexer bot|spider|summalybot|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent)
-  ) {
+  if (isAiBot(userAgentHeader.value.toLowerCase())) {
     return createNotFoundResponse();
   }
 
   // Pass through
   return request;
+}
+
+function isSecurityScanUri(uri) {
+  return (
+    /\.(php|sql|bak)$/.test(uri) ||
+    uri.includes('/.env') ||
+    uri.startsWith('/.git') ||
+    /^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)
+  );
+}
+
+function isAiBot(normalizedUserAgent) {
+  return (
+    /addsearchbot|ai2bot|aihitbot|amazon-kendra|amazonbot|amazonbuyforme|amzn-searchbot|amzn-user|andibot|anomura|anthropic-ai|apifybot|apifywebsitecontentcrawler|applebot|atlassian-bot|awario|azureai-searchbot|bedrockbot|bigsur\.ai/.test(normalizedUserAgent) ||
+    /bravebot|brightbot|buddybot|bytespider|ccbot|channel3bot|chatglm-spider|chatgpt|cloudflare-autorag|cloudvertexbot|cohere-|cotoyogi|crawl4ai|crawlspace|datenbank crawler|deepseekbot|devin|diffbot/.test(normalizedUserAgent) ||
+    /duckassistbot|echobot|echoboxbot|exabot|facebookbot|factset_spyderbot|firecrawlagent|friendlycrawler|gemini-deep-research|google-cloudvertexbot|google-extended|google-firebase|google-notebooklm/.test(normalizedUserAgent) ||
+    /googleagent-mariner|googleother|gptbot|iaskbot|iaskspider|iboubot|icc-crawler|imagesiftbot|imagespider|img2dataset|isscyberriskcrawler|kangaroo bot|klaviyoaibot|kunatocrawler|laion-huggingface-processor|laiondownloader/.test(normalizedUserAgent) ||
+    /linerbot|linguee bot|linkupbot|manus-user|meta-externalagent|meta-externalfetcher|meta-webindexer|mistralai-user|mycentralaiscraperbot|netestate imprint crawler|notebooklm|novaact|oai-searchbot|omgili|omgilibot/.test(normalizedUserAgent) ||
+    /openai|operator|pangubot|panscient|perplexity-user|perplexitybot|petalbot|phindbot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|semrushbot-ocob|semrushbot-swa/.test(normalizedUserAgent) ||
+    /shapbot|sidetrade indexer bot|spider|summalybot|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent)
+  );
 }
 
 function createNotFoundResponse() {
