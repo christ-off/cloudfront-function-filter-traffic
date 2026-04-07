@@ -89,10 +89,7 @@ describe("PHP file blocking", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("404 response includes a long cache-control header", () => {
-    const result = handler(makeEvent({ uri: "/probe.php" }));
-    expect(result.headers["cache-control"].value).toContain("max-age=");
-  });
+
 });
 
 // =====================================================
@@ -167,10 +164,7 @@ describe("AI bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("404 response includes a long cache-control header", () => {
-    const result = handler(makeEvent({ userAgent: "GPTBot/1.0" }));
-    expect(result.headers["cache-control"].value).toContain("max-age=");
-  });
+
 
   it("allows a normal browser user-agent", () => {
     const event = makeEvent({

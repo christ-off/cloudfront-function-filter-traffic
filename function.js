@@ -69,7 +69,7 @@ function createNotFoundResponse() {
   return {
     statusCode: 404,
     statusDescription: 'Not Found',
-    headers: { "content-type": { value: "text/plain" }, "cache-control": { value: "max-age=31536000" } },
+    headers: { "content-type": { value: "text/plain" } },
     body: 'Not Found'
   };
 }

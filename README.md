@@ -11,7 +11,7 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 Requests to `/.well-known/traffic-advice` receive a crafted `200` response with an `application/trafficadvice+json` body. This opts the site into Chrome's prefetch/prerender behaviour while disabling Topics API and prefetch-proxy exposure.
 
 ### 3. Security scan blocking (404)
-Requests that match obvious automated-scan patterns are returned a `404 Not Found` with a one-year `cache-control` header so the response is cached at the edge:
+Requests that match obvious automated-scan patterns are returned a `404 Not Found`:
 
 - **PHP probes** — any URI ending in `.php`
 - **Common scanner folders** — URIs whose first path segment is one of:
@@ -20,7 +20,7 @@ Requests that match obvious automated-scan patterns are returned a `404 Not Foun
 URI matching is case-insensitive (the URI is lowercased before any check).
 
 ### 4. AI bot / scraper blocking (404)
-Requests whose `User-Agent` header matches a curated list of known AI crawlers and scrapers are returned a `404 Not Found` with a one-year `cache-control` header so the response is cached at the edge.
+Requests whose `User-Agent` header matches a curated list of known AI crawlers and scrapers are returned a `404 Not Found`.
 
 Blocked agents include (among many others): `GPTBot`, `Anthropic-AI`, `CCBot`, `ByteSpider`, `PerplexityBot`, `SemrushBot`, `meta-externalagent`, `DiffBot`, and `YandexAdditional`.
 
