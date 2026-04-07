@@ -19,10 +19,8 @@ Requests that match obvious automated-scan patterns are returned a `404 Not Foun
 
 URI matching is case-insensitive (the URI is lowercased before any check).
 
-### 4. AI bot / scraper blocking (403)
-Requests whose `User-Agent` header matches a curated list of known AI crawlers and scrapers are returned a `403 Forbidden`. The response includes:
-- `cache-control: max-age=31536000` — edge-cached for one year
-- `x-robots-tag: noindex, nofollow` — signals to any indexer that slips through
+### 4. AI bot / scraper blocking (404)
+Requests whose `User-Agent` header matches a curated list of known AI crawlers and scrapers are returned a `404 Not Found` with a one-year `cache-control` header so the response is cached at the edge.
 
 Blocked agents include (among many others): `GPTBot`, `Anthropic-AI`, `CCBot`, `ByteSpider`, `PerplexityBot`, `SemrushBot`, `meta-externalagent`, `DiffBot`, and `YandexAdditional`.
 
@@ -75,7 +73,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Traffic-advice | Status 200, correct content-type, valid JSON body, cache header |
 | PHP blocking | Root and sub-directory paths, case-insensitivity, no false positives |
 | Bad folder blocking | All 12 folder names, bare folder (no trailing slash), no false positives on similar prefixes |
-| AI bot blocking | 14 representative agents (one per regex line), case-insensitivity, response headers |
+| AI bot blocking | 15 representative agents (one per regex line), case-insensitivity, cache header |
 | Pass-through | Root path and normal page paths |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.

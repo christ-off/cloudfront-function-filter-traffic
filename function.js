@@ -14,7 +14,7 @@ function handler(event) {
   const headers = request.headers;
   const userAgentHeader = headers['user-agent'];
   if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-    return createForbiddenResponse();
+    return createNotFoundResponse();
   }
 
   // =====================================================
@@ -58,7 +58,7 @@ function handler(event) {
       /openai|operator|pangubot|panscient|perplexity-user|perplexitybot|petalbot|phindbot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|semrushbot-ocob|semrushbot-swa/.test(normalizedUserAgent) ||
       /shapbot|sidetrade indexer bot|spider|summalybot|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent)
   ) {
-    return createForbiddenResponse();
+    return createNotFoundResponse();
   }
 
   // Pass through
@@ -71,15 +71,6 @@ function createNotFoundResponse() {
     statusDescription: 'Not Found',
     headers: { "content-type": { value: "text/plain" }, "cache-control": { value: "max-age=31536000" } },
     body: 'Not Found'
-  };
-}
-
-function createForbiddenResponse() {
-  return {
-    statusCode: 403,
-    statusDescription: "Forbidden",
-    headers: { "content-type": { value: "text/plain" }, "cache-control": { value: "max-age=31536000" }, "x-robots-tag": { value: "noindex, nofollow" } },
-    body: "403 Forbidden"
   };
 }
 

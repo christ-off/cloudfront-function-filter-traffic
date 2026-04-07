@@ -135,7 +135,7 @@ describe("bad folder blocking", () => {
 });
 
 // =====================================================
-// AI / bot user-agent blocking → 403
+// AI / bot user-agent blocking → 404
 // =====================================================
 describe("AI bot blocking by user-agent", () => {
   // One representative bot from each regex line in the function
@@ -159,20 +159,15 @@ describe("AI bot blocking by user-agent", () => {
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
     const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(403);
+    expect(result.statusCode).toBe(404);
   });
 
   it("bot matching is case-insensitive (UA header not lowercased by sender)", () => {
     const result = handler(makeEvent({ userAgent: "GPTBOT/1.0" }));
-    expect(result.statusCode).toBe(403);
+    expect(result.statusCode).toBe(404);
   });
 
-  it("403 response includes x-robots-tag: noindex, nofollow", () => {
-    const result = handler(makeEvent({ userAgent: "GPTBot/1.0" }));
-    expect(result.headers["x-robots-tag"].value).toBe("noindex, nofollow");
-  });
-
-  it("403 response includes a long cache-control header", () => {
+  it("404 response includes a long cache-control header", () => {
     const result = handler(makeEvent({ userAgent: "GPTBot/1.0" }));
     expect(result.headers["cache-control"].value).toContain("max-age=");
   });
@@ -189,27 +184,27 @@ describe("AI bot blocking by user-agent", () => {
 });
 
 // =====================================================
-// Null or empty user-agent → 403
+// Null or empty user-agent → 404
 // =====================================================
 describe("null or empty user-agent blocking", () => {
   it("blocks a request with no user-agent header", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: null }));
-    expect(result.statusCode).toBe(403);
+    expect(result.statusCode).toBe(404);
   });
 
   it("blocks a request with an empty user-agent value", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: "" }));
-    expect(result.statusCode).toBe(403);
+    expect(result.statusCode).toBe(404);
   });
 
   it("blocks a request with a whitespace-only user-agent value", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: "   " }));
-    expect(result.statusCode).toBe(403);
+    expect(result.statusCode).toBe(404);
   });
 
   it("blocks even for robots.txt when user-agent is absent", () => {
     const result = handler(makeEvent({ uri: "/robots.txt", userAgent: null }));
-    expect(result.statusCode).toBe(403);
+    expect(result.statusCode).toBe(404);
   });
 });
 
