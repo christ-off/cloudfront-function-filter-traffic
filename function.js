@@ -11,7 +11,7 @@ function handler(event) {
   // Block requests with no user agent
   // ====================================================
   const userAgentHeader = request.headers['user-agent'];
-  if (!userAgentHeader?.value?.trim()) {
+  if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
     return createNotFoundResponse();
   }
 
