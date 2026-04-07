@@ -45,6 +45,51 @@ Copy the body of `function.js` into the CloudFront Functions editor in the AWS C
 
 ---
 
+## Pre-push validation (Claude Code hook)
+
+A Claude Code `PreToolUse` hook automatically validates `function.js` against the live `cloudfront-js-2.0` runtime before every `git push`. It uploads the local code to the DEVELOPMENT stage and runs `aws cloudfront test-function`, blocking the push if any syntax or runtime error is detected.
+
+### Setup
+
+**1. Set your function name**
+
+```
+echo "Block_Intrusions" > .cloudfront-function-name
+```
+
+**2. Configure the test event**
+
+Edit `test-event.json` to match a representative viewer request for your distribution. The default covers a standard `GET` with a `User-Agent` header.
+
+**3. AWS credentials**
+
+Ensure your shell has credentials with at least these permissions:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "cloudfront:DescribeFunction",
+    "cloudfront:UpdateFunction",
+    "cloudfront:TestFunction"
+  ],
+  "Resource": "*"
+}
+```
+
+### How it works
+
+On each `git push` Claude Code will:
+
+1. Fetch the current ETag via `aws cloudfront describe-function`
+2. Upload local `function.js` to the DEVELOPMENT stage via `aws cloudfront update-function`
+3. Run `aws cloudfront test-function --stage DEVELOPMENT`
+4. Block the push and display the error if the runtime rejects the function
+
+The hook script is at `.claude/hooks/cloudfront-pre-push.sh`.
+
+---
+
 ## Test framework
 
 Tests are written with **[Vitest](https://vitest.dev/)**.
