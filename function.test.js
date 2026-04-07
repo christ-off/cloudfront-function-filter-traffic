@@ -154,6 +154,7 @@ describe("AI bot blocking by user-agent", () => {
     ["DiffBot/1.0", "diffbot"],
     ["OAI-SearchBot/1.0", "oai-searchbot"],
     ["Apify/1.0 ApifyWebsiteContentCrawler", "apifywebsitecontentcrawler"],
+    ["SummalyBot/5.2.5", "SummalyBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

@@ -49,7 +49,7 @@ function handler(event) {
       /googleagent-mariner|googleother|gptbot|iaskbot|iaskspider|iboubot|icc-crawler|imagesiftbot|imagespider|img2dataset|isscyberriskcrawler|kangaroo bot|klaviyoaibot|kunatocrawler|laion-huggingface-processor|laiondownloader/.test(normalizedUserAgent) ||
       /linerbot|linguee bot|linkupbot|manus-user|meta-externalagent|meta-externalfetcher|meta-webindexer|mistralai-user|mycentralaiscraperbot|netestate imprint crawler|notebooklm|novaact|oai-searchbot|omgili|omgilibot/.test(normalizedUserAgent) ||
       /openai|operator|pangubot|panscient|perplexity-user|perplexitybot|petalbot|phindbot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|semrushbot-ocob|semrushbot-swa/.test(normalizedUserAgent) ||
-      /shapbot|sidetrade indexer bot|spider|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent)
+      /shapbot|sidetrade indexer bot|spider|summalybot|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent)
   ) {
     return createForbiddenResponse();
   }
