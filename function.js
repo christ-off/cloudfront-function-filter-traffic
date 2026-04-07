@@ -3,7 +3,7 @@ function handler(event) {
   let uri;
   try {
     uri = request.uri ? decodeURIComponent(request.uri).trim().toLowerCase() : '';
-  } catch {
+  } catch (_e) {
     return createNotFoundResponse();
   }
 
