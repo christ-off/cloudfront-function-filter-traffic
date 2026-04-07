@@ -8,6 +8,15 @@ function handler(event) {
     return createNotFoundResponse();
   }
 
+  // ====================================================
+  // Block requests with no user agent
+  // ====================================================
+  const headers = request.headers;
+  const userAgentHeader = headers['user-agent'];
+  if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
+    return createForbiddenResponse();
+  }
+
   // =====================================================
   // Always Allow robots.txt and ads.txt
   // =====================================================
@@ -39,9 +48,7 @@ function handler(event) {
   // ====================================================
   // DENIES IA By 403
   // ====================================================
-  const headers = request.headers;
-  const userAgentHeader = headers['user-agent'];
-  const normalizedUserAgent = userAgentHeader ? userAgentHeader.value.toLowerCase() : '';
+  const normalizedUserAgent = userAgentHeader.value.toLowerCase();
   if (
       /addsearchbot|ai2bot|aihitbot|amazon-kendra|amazonbot|amazonbuyforme|amzn-searchbot|amzn-user|andibot|anomura|anthropic-ai|apifybot|apifywebsitecontentcrawler|applebot|atlassian-bot|awario|azureai-searchbot|bedrockbot|bigsur\.ai/.test(normalizedUserAgent) ||
       /bravebot|brightbot|buddybot|bytespider|ccbot|channel3bot|chatglm-spider|chatgpt|cloudflare-autorag|cloudvertexbot|cohere-|cotoyogi|crawl4ai|crawlspace|datenbank crawler|deepseekbot|devin|diffbot/.test(normalizedUserAgent) ||

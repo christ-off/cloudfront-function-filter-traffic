@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = null } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0" } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
@@ -186,9 +186,30 @@ describe("AI bot blocking by user-agent", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("allows a request with no user-agent header", () => {
-    const event = makeEvent({ uri: "/about" });
-    expect(handler(event)).toEqual(event.request);
+});
+
+// =====================================================
+// Null or empty user-agent → 403
+// =====================================================
+describe("null or empty user-agent blocking", () => {
+  it("blocks a request with no user-agent header", () => {
+    const result = handler(makeEvent({ uri: "/about", userAgent: null }));
+    expect(result.statusCode).toBe(403);
+  });
+
+  it("blocks a request with an empty user-agent value", () => {
+    const result = handler(makeEvent({ uri: "/about", userAgent: "" }));
+    expect(result.statusCode).toBe(403);
+  });
+
+  it("blocks a request with a whitespace-only user-agent value", () => {
+    const result = handler(makeEvent({ uri: "/about", userAgent: "   " }));
+    expect(result.statusCode).toBe(403);
+  });
+
+  it("blocks even for robots.txt when user-agent is absent", () => {
+    const result = handler(makeEvent({ uri: "/robots.txt", userAgent: null }));
+    expect(result.statusCode).toBe(403);
   });
 });
 
