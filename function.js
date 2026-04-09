@@ -77,7 +77,7 @@ function isAiBot(normalizedUserAgent) {
 
 function isScrapperBot(normalizedUserAgent) {
   return (
-    /yaapp_android|yasearchbrowser/.test(normalizedUserAgent)
+    /yaapp_android|yasearchbrowser|ev-crawler/.test(normalizedUserAgent)
   );
 }
 
