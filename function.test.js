@@ -188,6 +188,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ],
     ["YaApp_Android/10.61", "YaApp_Android token"],
     ["YaSearchBrowser/10.61", "YaSearchBrowser token"],
+    ["Seamus The Search Engine/1.0", "Seamus the search engine"],
+    ["DataForSEOBot/1.0", "DataForSEO bot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

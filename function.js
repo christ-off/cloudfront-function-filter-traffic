@@ -77,7 +77,9 @@ function isAiBot(normalizedUserAgent) {
 
 function isScrapperBot(normalizedUserAgent) {
   return (
-    /yaapp_android|yasearchbrowser|ev-crawler/.test(normalizedUserAgent)
+    /yaapp_android|yasearchbrowser|ev-crawler/.test(normalizedUserAgent) ||
+    /seamus the search engine/.test(normalizedUserAgent) ||
+    /dataforseobot|yaapp_android|yasearchbrowser/.test(normalizedUserAgent)
   );
 }
 
