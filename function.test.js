@@ -178,6 +178,30 @@ describe("AI bot blocking by user-agent", () => {
 });
 
 // =====================================================
+// Scrapper bot user-agent blocking → 404
+// =====================================================
+describe("scrapper bot blocking by user-agent", () => {
+  const blockedAgents = [
+    [
+      "Mozilla/5.0 (Linux; Android 7.1.1; MI MAX 2 Build/NMF26F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36 YaApp_Android/10.61 YaSearchBrowser/10.61",
+      "YaApp_Android full UA",
+    ],
+    ["YaApp_Android/10.61", "YaApp_Android token"],
+    ["YaSearchBrowser/10.61", "YaSearchBrowser token"],
+  ];
+
+  it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
+    const result = handler(makeEvent({ userAgent }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("scrapper bot matching is case-insensitive", () => {
+    const result = handler(makeEvent({ userAgent: "YAAPP_ANDROID/10.61" }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
 // Null or empty user-agent → 404
 // =====================================================
 describe("null or empty user-agent blocking", () => {
