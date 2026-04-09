@@ -50,6 +50,13 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    // ====================================================
+    // DENIES Fake user agents
+    // ====================================================
+    if (isFakeUserAgent(userAgentHeader.value.toLowerCase())) {
+        return createNotFoundResponse();
+    }
+
     // Pass through
     return request;
 }
@@ -80,6 +87,16 @@ function isScrapperBot(normalizedUserAgent) {
         /yaapp_android|yasearchbrowser|ev-crawler/.test(normalizedUserAgent) ||
         /seamus the search engine/.test(normalizedUserAgent) ||
         /dataforseobot|yaapp_android|yasearchbrowser/.test(normalizedUserAgent)
+    );
+}
+
+function isFakeUserAgent(normalizedUserAgent) {
+    // Truncated Chrome UA — missing AppleWebKit/Safari tokens
+    // Real Chrome always includes AppleWebKit/537.36 and Safari/537.36
+    return (
+        /mozilla.*windows nt.*chrome\/\d/.test(normalizedUserAgent) &&
+        !normalizedUserAgent.includes('applewebkit') &&
+        !normalizedUserAgent.includes('safari')
     );
 }
 

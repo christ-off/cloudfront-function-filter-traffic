@@ -268,6 +268,32 @@ describe("percent-encoded URI handling", () => {
 });
 
 // =====================================================
+// Fake Chrome user agent blocking
+// =====================================================
+describe("fake Chrome UA blocking", () => {
+  it("blocks a truncated Chrome UA missing AppleWebKit and Safari", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("allows a real Chrome UA with AppleWebKit and Safari tokens", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block a non-Chrome UA without AppleWebKit", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
