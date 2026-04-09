@@ -89,7 +89,21 @@ describe("PHP file blocking", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("blocks a .php5 file", () => {
+    expect(handler(makeEvent({ uri: "/shell.php5" })).statusCode).toBe(404);
+  });
 
+  it("blocks a .php7 file", () => {
+    expect(handler(makeEvent({ uri: "/shell.php7" })).statusCode).toBe(404);
+  });
+
+  it("blocks a .phtml file", () => {
+    expect(handler(makeEvent({ uri: "/page.phtml" })).statusCode).toBe(404);
+  });
+
+  it("blocks a .phar file", () => {
+    expect(handler(makeEvent({ uri: "/app.phar" })).statusCode).toBe(404);
+  });
 });
 
 // =====================================================
