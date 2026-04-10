@@ -143,6 +143,10 @@ describe("bad folder blocking", () => {
     const result = handler(makeEvent({ uri: "/WP-INCLUDES/load.php" }));
     expect(result.statusCode).toBe(404);
   });
+
+  it("blocks /ip (server IP disclosure probe)", () => {
+    expect(handler(makeEvent({ uri: "/ip" })).statusCode).toBe(404);
+  });
 });
 
 // =====================================================

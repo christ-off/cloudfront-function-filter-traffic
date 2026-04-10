@@ -66,6 +66,7 @@ function isSecurityScanUri(uri) {
         /\.(php\d?|sql|bak|phtml|phar)$/.test(uri) ||
         uri.includes('/.env') ||
         uri.startsWith('/.git') ||
+        uri === '/ip' ||
         /^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)
     );
 }
