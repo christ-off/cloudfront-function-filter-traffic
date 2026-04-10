@@ -278,9 +278,16 @@ describe("fake Chrome UA blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("allows a real Chrome UA with AppleWebKit and Safari tokens", () => {
-    const event = makeEvent({
+  it("blocks a full Chrome/120.0.0.0 UA (known fake version used by scrapers)", () => {
+    const result = handler(makeEvent({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("allows a real Chrome UA with a non-fake version", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Safari/537.36"
     });
     expect(handler(event)).toEqual(event.request);
   });
