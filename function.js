@@ -36,24 +36,25 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    const ua = userAgentHeader.value.toLowerCase();
     // ====================================================
     // DENIES IA bots
     // ====================================================
-    if (isAiBot(userAgentHeader.value.toLowerCase())) {
+    if (isAiBot(ua)) {
         return createNotFoundResponse();
     }
 
     // ====================================================
     // DENIES scrapper bots
     // ====================================================
-    if (isScrapperBot(userAgentHeader.value.toLowerCase())) {
+    if (isScrapperBot(ua)) {
         return createNotFoundResponse();
     }
 
     // ====================================================
     // DENIES Fake user agents
     // ====================================================
-    if (isFakeUserAgent(userAgentHeader.value.toLowerCase())) {
+    if (isFakeUserAgent(ua) || isStaleBrowserUA(ua)) {
         return createNotFoundResponse();
     }
 
@@ -103,6 +104,16 @@ function isFakeUserAgent(normalizedUserAgent) {
         !normalizedUserAgent.includes('applewebkit') &&
         !normalizedUserAgent.includes('safari')
     );
+}
+
+function isStaleBrowserUA(ua) {
+    // Block Chrome versions below 110 (released Feb 2023)
+    const match = ua.match(/chrome\/(\d+)\./);
+    if (match) {
+        const version = parseInt(match[1], 10);
+        if (version < 110) return true;
+    }
+    return false;
 }
 
 function createNotFoundResponse() {

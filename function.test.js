@@ -305,6 +305,39 @@ describe("fake Chrome UA blocking", () => {
 });
 
 // =====================================================
+// Stale browser UA blocking (old Chrome versions)
+// =====================================================
+describe("stale Chrome UA blocking", () => {
+  it("blocks Chrome/109 (below minimum version 110)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.120 Safari/537.36"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks Chrome/85 (very old version)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("allows Chrome/110 (minimum allowed version)", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows Chrome/124 (recent version)", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Safari/537.36"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
