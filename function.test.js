@@ -282,7 +282,7 @@ describe("fake Chrome UA blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("blocks Chrome/120.0.0.0 UA (stale version <= 120)", () => {
+  it("blocks Chrome/120.0.0.0 UA (stale version <= 140)", () => {
     const result = handler(makeEvent({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }));
@@ -291,7 +291,7 @@ describe("fake Chrome UA blocking", () => {
 
   it("allows a real Chrome UA with a non-fake version", () => {
     const event = makeEvent({
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Safari/537.36"
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.6367.82 Safari/537.36"
     });
     expect(handler(event)).toEqual(event.request);
   });
@@ -322,23 +322,23 @@ describe("stale Chrome UA blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("blocks Chrome/110 (below minimum allowed version 121)", () => {
+  it("blocks Chrome/110 (below minimum allowed version 141)", () => {
     const result = handler(makeEvent({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
     }));
     expect(result.statusCode).toBe(404);
   });
 
-  it("allows Chrome/121 (minimum allowed version)", () => {
+  it("allows Chrome/141 (minimum allowed version)", () => {
     const event = makeEvent({
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.85 Safari/537.36"
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.6167.85 Safari/537.36"
     });
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("allows Chrome/124 (recent version)", () => {
+  it("allows Chrome/150 (recent version)", () => {
     const event = makeEvent({
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Safari/537.36"
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.6367.82 Safari/537.36"
     });
     expect(handler(event)).toEqual(event.request);
   });

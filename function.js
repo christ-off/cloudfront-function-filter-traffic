@@ -107,7 +107,7 @@ function isStaleBrowserUA(ua) {
     const match = ua.match(/chrome\/(\d+)\./);
     if (match) {
         const version = parseInt(match[1], 10);
-        if (version <= 120) return true;
+        if (version <= 140) return true;
     }
     return false;
 }
