@@ -282,7 +282,7 @@ describe("fake Chrome UA blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("blocks a full Chrome/120.0.0.0 UA (known fake version used by scrapers)", () => {
+  it("blocks Chrome/120.0.0.0 UA (stale version <= 120)", () => {
     const result = handler(makeEvent({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }));
@@ -322,9 +322,16 @@ describe("stale Chrome UA blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("allows Chrome/110 (minimum allowed version)", () => {
-    const event = makeEvent({
+  it("blocks Chrome/110 (below minimum allowed version 121)", () => {
+    const result = handler(makeEvent({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("allows Chrome/121 (minimum allowed version)", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.85 Safari/537.36"
     });
     expect(handler(event)).toEqual(event.request);
   });

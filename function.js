@@ -93,10 +93,6 @@ function isScrapperBot(normalizedUserAgent) {
 }
 
 function isFakeUserAgent(normalizedUserAgent) {
-    // Chrome/120.0.0.0 is a known fake/bot UA (round version number used by scrapers)
-    if (normalizedUserAgent.includes('chrome/120.0.0.0')) {
-        return true;
-    }
     // Truncated Chrome UA — missing AppleWebKit/Safari tokens
     // Real Chrome always includes AppleWebKit/537.36 and Safari/537.36
     return (
@@ -111,7 +107,7 @@ function isStaleBrowserUA(ua) {
     const match = ua.match(/chrome\/(\d+)\./);
     if (match) {
         const version = parseInt(match[1], 10);
-        if (version < 110) return true;
+        if (version <= 120) return true;
     }
     return false;
 }
