@@ -103,6 +103,9 @@ function isFakeUserAgent(normalizedUserAgent) {
 }
 
 function isStaleBrowserUA(ua) {
+    // Allow Google PageSpeed Insights / Lighthouse regardless of Chrome version
+    if (ua.includes('chrome-lighthouse')) return false;
+
     // Block Chrome versions below 110 (released Feb 2023)
     const match = ua.match(/chrome\/(\d+)\./);
     if (match) {
