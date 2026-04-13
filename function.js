@@ -96,9 +96,12 @@ function isFakeUserAgent(normalizedUserAgent) {
     // Truncated Chrome UA — missing AppleWebKit/Safari tokens
     // Real Chrome always includes AppleWebKit/537.36 and Safari/537.36
     return (
-        /mozilla.*windows nt.*chrome\/\d/.test(normalizedUserAgent) &&
-        !normalizedUserAgent.includes('applewebkit') &&
-        !normalizedUserAgent.includes('safari')
+        /presto\//.test(normalizedUserAgent) ||
+        (
+            /mozilla.*windows nt.*chrome\/\d/.test(normalizedUserAgent) &&
+            !normalizedUserAgent.includes('applewebkit') &&
+            !normalizedUserAgent.includes('safari')
+        )
     );
 }
 
