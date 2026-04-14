@@ -64,39 +64,27 @@ function handler(event) {
 
 function isSecurityScanUri(uri) {
     return (
-        /\.(php\d?|sql|bak|phtml|phar)$/.test(uri) ||
+        uri === '/ip' ||
         uri.includes('/.env') ||
         uri.startsWith('/.git') ||
-        uri === '/ip' ||
+        /\.(php\d?|sql|bak|phtml|phar)$/.test(uri) ||
         /^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)
     );
 }
 
 function isAiBot(normalizedUserAgent) {
-    return (
-        /addsearchbot|ai2bot|aihitbot|amazon-kendra|amazonbot|amazonbuyforme|amzn-searchbot|amzn-user|andibot|anomura|anthropic-ai|apifybot|apifywebsitecontentcrawler|applebot|atlassian-bot|awario|azureai-searchbot|bedrockbot|bigsur\.ai/.test(normalizedUserAgent) ||
-        /bravebot|brightbot|buddybot|bytespider|ccbot|channel3bot|chatglm-spider|chatgpt|cloudflare-autorag|cloudvertexbot|cohere-|cotoyogi|crawl4ai|crawlspace|datenbank crawler|deepseekbot|devin|diffbot/.test(normalizedUserAgent) ||
-        /duckassistbot|echobot|echoboxbot|exabot|facebookbot|factset_spyderbot|firecrawlagent|friendlycrawler|gemini-deep-research|google-cloudvertexbot|google-extended|google-firebase|google-notebooklm/.test(normalizedUserAgent) ||
-        /googleagent-mariner|googleother|gptbot|henkbot|iaskbot|iaskspider|iboubot|icc-crawler|imagesiftbot|imagespider|img2dataset|isscyberriskcrawler|kangaroo bot|klaviyoaibot|kunatocrawler|laion-huggingface-processor|laiondownloader/.test(normalizedUserAgent) ||
-        /linerbot|linguee bot|linkupbot|manus-user|meta-externalagent|meta-externalfetcher|meta-webindexer|mistralai-user|mycentralaiscraperbot|netestate imprint crawler|notebooklm|novaact|oai-searchbot|omgili|omgilibot/.test(normalizedUserAgent) ||
-        /openai|operator|pangubot|panscient|perplexity-user|perplexitybot|petalbot|phindbot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|semrushbot-ocob|semrushbot-swa/.test(normalizedUserAgent) ||
-        /shapbot|sidetrade indexer bot|spider|summalybot|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent)
-    );
+    return /addsearchbot|ai2bot|aihitbot|amazon-kendra|amazonbot|amazonbuyforme|amzn-searchbot|amzn-user|andibot|anomura|anthropic-ai|apifybot|apifywebsitecontentcrawler|applebot|atlassian-bot|awario|azureai-searchbot|bedrockbot|bigsur\.ai|bravebot|brightbot|buddybot|bytespider|ccbot|channel3bot|chatglm-spider|chatgpt|cloudflare-autorag|cloudvertexbot|cohere-|cotoyogi|crawl4ai|crawlspace|datenbank crawler|deepseekbot|devin|diffbot|duckassistbot|echobot|echoboxbot|exabot|facebookbot|factset_spyderbot|firecrawlagent|friendlycrawler|gemini-deep-research|google-cloudvertexbot|google-extended|google-firebase|google-notebooklm|googleagent-mariner|googleother|gptbot|henkbot|iaskbot|iaskspider|iboubot|icc-crawler|imagesiftbot|imagespider|img2dataset|isscyberriskcrawler|kangaroo bot|klaviyoaibot|kunatocrawler|laion-huggingface-processor|laiondownloader|linerbot|linguee bot|linkupbot|manus-user|meta-externalagent|meta-externalfetcher|meta-webindexer|mistralai-user|mycentralaiscraperbot|netestate imprint crawler|notebooklm|novaact|oai-searchbot|omgili|omgilibot|openai|operator|pangubot|panscient|perplexity-user|perplexitybot|petalbot|phindbot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|semrushbot-ocob|semrushbot-swa|shapbot|sidetrade indexer bot|spider|summalybot|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|yandexadditional|youbot|zanistabot/.test(normalizedUserAgent);
 }
 
 function isScrapperBot(normalizedUserAgent) {
-    return (
-        /yaapp_android|yasearchbrowser|ev-crawler/.test(normalizedUserAgent) ||
-        /seamus the search engine/.test(normalizedUserAgent) ||
-        /dataforseobot|yaapp_android|yasearchbrowser/.test(normalizedUserAgent)
-    );
+    return /yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot/.test(normalizedUserAgent);
 }
 
 function isFakeUserAgent(normalizedUserAgent) {
     // Truncated Chrome UA — missing AppleWebKit/Safari tokens
     // Real Chrome always includes AppleWebKit/537.36 and Safari/537.36
     return (
-        /presto\//.test(normalizedUserAgent) ||
+        normalizedUserAgent.includes('presto/') ||
         (
             /mozilla.*windows nt.*chrome\/\d/.test(normalizedUserAgent) &&
             !normalizedUserAgent.includes('applewebkit') &&
@@ -105,23 +93,18 @@ function isFakeUserAgent(normalizedUserAgent) {
     );
 }
 
-// Dans isSecurityScanUri ou une nouvelle fonction
 function isFakeOldIE(normalizedUserAgent) {
     // MSIE is dead - all IE user agents on a modern blog are bots/scanners
-    return /msie\s[5-9]\./.test(normalizedUserAgent) ||
-        /trident\/[3-9]\.\d/.test(normalizedUserAgent);
+    return /msie\s[5-9]\.|trident\/[3-9]\.\d/.test(normalizedUserAgent);
 }
 
 function isStaleBrowserUA(ua) {
     // Allow Google PageSpeed Insights / Lighthouse regardless of Chrome version
     if (ua.includes('chrome-lighthouse')) return false;
 
-    // Block Chrome versions below 110 (released Feb 2023)
+    // Block Chrome versions <= 140
     const match = ua.match(/chrome\/(\d+)\./);
-    if (match) {
-        const version = parseInt(match[1], 10);
-        if (version <= 140) return true;
-    }
+    if (match && parseInt(match[1], 10) <= 140) return true;
     return false;
 }
 
