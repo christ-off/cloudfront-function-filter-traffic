@@ -22,6 +22,11 @@ jobs:
 
       - run: npm test
 
+      - name: SonarCloud analysis
+        uses: sonarsource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
