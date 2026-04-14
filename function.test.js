@@ -345,6 +345,60 @@ describe("stale Chrome UA blocking", () => {
 });
 
 // =====================================================
+// Fake old IE user-agent blocking → 404
+// =====================================================
+describe("fake old IE UA blocking", () => {
+  it("blocks IE 5 (MSIE 5.5)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks IE 6 (MSIE 6.0)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks IE 9 (MSIE 9.0 + Trident/5.0)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks IE 10 via Trident/6.0 (MSIE 10 is outside [5-9] range)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks IE 11 via Trident/7.0", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("matching is case-insensitive due to UA normalisation", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("does not block a modern Firefox UA", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {

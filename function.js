@@ -54,7 +54,7 @@ function handler(event) {
     // ====================================================
     // DENIES Fake user agents
     // ====================================================
-    if (isFakeUserAgent(ua) || isStaleBrowserUA(ua)) {
+    if (isFakeUserAgent(ua) || isStaleBrowserUA(ua) || isFakeOldIE(ua)) {
         return createNotFoundResponse();
     }
 
@@ -103,6 +103,13 @@ function isFakeUserAgent(normalizedUserAgent) {
             !normalizedUserAgent.includes('safari')
         )
     );
+}
+
+// Dans isSecurityScanUri ou une nouvelle fonction
+function isFakeOldIE(normalizedUserAgent) {
+    // MSIE is dead - all IE user agents on a modern blog are bots/scanners
+    return /msie\s[5-9]\./.test(normalizedUserAgent) ||
+        /trident\/[3-9]\.\d/.test(normalizedUserAgent);
 }
 
 function isStaleBrowserUA(ua) {
