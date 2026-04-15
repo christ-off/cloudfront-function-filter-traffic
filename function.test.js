@@ -208,6 +208,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["YaSearchBrowser/10.61", "YaSearchBrowser token"],
     ["Seamus The Search Engine/1.0", "Seamus the search engine"],
     ["DataForSEOBot/1.0", "DataForSEO bot"],
+    ["ev-crawler/1.0", "ev-crawler"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
@@ -394,6 +395,132 @@ describe("fake old IE UA blocking", () => {
     const event = makeEvent({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0"
     });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Headless browser and CLI tool blocking → 404
+// =====================================================
+describe("headless browser and CLI tool blocking", () => {
+  const blockedAgents = [
+    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/112.0.0.0 Safari/537.36", "HeadlessChrome"],
+    ["Mozilla/5.0 (unknown; Linux x86_64) AppleWebKit/534.34 (KHTML, like Gecko) PhantomJS/1.9.8 Safari/534.34", "PhantomJS"],
+    ["SlimerJS/0.9", "SlimerJS"],
+    ["Mozilla/5.0 (HtmlUnit)", "HtmlUnit"],
+    ["python-requests/2.28.2", "python-requests"],
+    ["python-httpx/0.24.0", "python-httpx"],
+    ["Python-urllib/3.11", "python-urllib"],
+    ["Go-http-client/2.0", "go-http-client"],
+    ["Java/17.0.3", "java/"],
+    ["libwww-perl/6.67", "libwww-perl"],
+    ["curl/7.88.1", "curl"],
+    ["Wget/1.21.4", "wget"],
+  ];
+
+  it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
+    const result = handler(makeEvent({ userAgent }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("headless browser matching is case-insensitive", () => {
+    const result = handler(makeEvent({ userAgent: "HEADLESSCHROME/112.0.0.0" }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Security scan blocking — .env and .git URIs → 404
+// =====================================================
+describe(".env and .git URI blocking", () => {
+  it("blocks /.env", () => {
+    expect(handler(makeEvent({ uri: "/.env" })).statusCode).toBe(404);
+  });
+
+  it("blocks /.env.local", () => {
+    expect(handler(makeEvent({ uri: "/.env.local" })).statusCode).toBe(404);
+  });
+
+  it("blocks /config/.env inside a subdirectory", () => {
+    expect(handler(makeEvent({ uri: "/config/.env" })).statusCode).toBe(404);
+  });
+
+  it("blocks /.git/config", () => {
+    expect(handler(makeEvent({ uri: "/.git/config" })).statusCode).toBe(404);
+  });
+
+  it("blocks /.git (bare)", () => {
+    expect(handler(makeEvent({ uri: "/.git" })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Security scan blocking — .sql and .bak extensions → 404
+// =====================================================
+describe(".sql and .bak file blocking", () => {
+  it("blocks a .sql file", () => {
+    expect(handler(makeEvent({ uri: "/dump.sql" })).statusCode).toBe(404);
+  });
+
+  it("blocks a .bak file", () => {
+    expect(handler(makeEvent({ uri: "/config.bak" })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Security scan blocking — admin folder variants → 404
+// =====================================================
+describe("admin folder blocking", () => {
+  const cases = [
+    ["/admin/login", "admin"],
+    ["/administrator/index.php", "administrator"],
+    ["/wp-admin/admin-ajax.php", "wp-admin"],
+    ["/phpmyadmin/index.php", "phpmyadmin"],
+    ["/pma/index.php", "pma"],
+  ];
+
+  it.each(cases)("blocks %s (%s)", (uri) => {
+    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Presto-based fake user-agent blocking → 404
+// =====================================================
+describe("Presto fake UA blocking", () => {
+  it("blocks an Opera UA with Presto engine token", () => {
+    const result = handler(makeEvent({
+      userAgent: "Opera/9.80 (Windows NT 6.1) Presto/2.12.388 Version/12.17"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Stale Chrome — exact boundary and Lighthouse exception
+// =====================================================
+describe("stale Chrome boundary and Lighthouse exception", () => {
+  it("blocks Chrome/140 (exactly at the blocked threshold)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("allows a Google Lighthouse UA even with an old Chrome version", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Linux; Android 7.0; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.101 Mobile Safari/537.36 Chrome-Lighthouse"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Always-allow paths with blocked user-agents
+// =====================================================
+describe("always-allow paths bypass UA checks", () => {
+  it("allows /ads.txt even with a blocked user-agent", () => {
+    const event = makeEvent({ uri: "/ads.txt", userAgent: "GPTBot/1.0" });
     expect(handler(event)).toEqual(event.request);
   });
 });

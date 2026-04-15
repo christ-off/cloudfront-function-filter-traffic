@@ -47,7 +47,7 @@ function handler(event) {
     // ====================================================
     // DENIES scrapper bots
     // ====================================================
-    if (isScrapperBot(ua)) {
+    if (isScrapperBot(ua) || isHeadlessBrowser(ua)) {
         return createNotFoundResponse();
     }
 
@@ -78,6 +78,15 @@ function isAiBot(normalizedUserAgent) {
 
 function isScrapperBot(normalizedUserAgent) {
     return /yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot/.test(normalizedUserAgent);
+}
+
+function isHeadlessBrowser(normalizedUserAgent) {
+    return (
+        /headlesschrome|phantomjs|slimerjs|htmlunit/.test(normalizedUserAgent) ||
+        /python-requests|python-httpx|python-urllib/.test(normalizedUserAgent) ||
+        /go-http-client|java\/|libwww-perl/.test(normalizedUserAgent) ||
+        /^curl\/|^wget\//.test(normalizedUserAgent)
+    );
 }
 
 function isFakeUserAgent(normalizedUserAgent) {
