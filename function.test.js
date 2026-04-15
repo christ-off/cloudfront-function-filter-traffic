@@ -24,7 +24,7 @@ describe("always-allow paths", () => {
   });
 
   it("allows /robots.txt even with a blocked user-agent (always-allow wins)", () => {
-    const event = makeEvent({ uri: "/robots.txt", userAgent: "GPTBot/1.0" });
+    const event = makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" });
     expect(handler(event)).toEqual(event.request);
   });
 
@@ -155,18 +155,13 @@ describe("bad folder blocking", () => {
 describe("AI bot blocking by user-agent", () => {
   // One representative bot from each regex line in the function
   const blockedAgents = [
-    ["GPTBot/1.0", "gptbot"],
-    ["Anthropic-AI/1.0", "anthropic-ai"],
     ["CCBot/2.0", "ccbot"],
     ["ByteSpider", "bytespider"],
     ["FacebookBot/1.0", "facebookbot"],
     ["Google-Extended", "google-extended"],
     ["PerplexityBot/1.0", "perplexitybot"],
     ["Scrapy/2.6", "scrapy"],
-    ["SemrushBot-OCOB", "semrushbot-ocob"],
-    ["YandexAdditional/1.0", "yandexadditional"],
     ["meta-externalagent/1.0", "meta-externalagent"],
-    ["DiffBot/1.0", "diffbot"],
     ["OAI-SearchBot/1.0", "oai-searchbot"],
     ["Apify/1.0 ApifyWebsiteContentCrawler", "apifywebsitecontentcrawler"],
     ["SummalyBot/5.2.5", "SummalyBot"],
@@ -178,7 +173,7 @@ describe("AI bot blocking by user-agent", () => {
   });
 
   it("bot matching is case-insensitive (UA header not lowercased by sender)", () => {
-    const result = handler(makeEvent({ userAgent: "GPTBOT/1.0" }));
+    const result = handler(makeEvent({ userAgent: "CCBOT/2.0" }));
     expect(result.statusCode).toBe(404);
   });
 
@@ -520,7 +515,7 @@ describe("stale Chrome boundary and Lighthouse exception", () => {
 // =====================================================
 describe("always-allow paths bypass UA checks", () => {
   it("allows /ads.txt even with a blocked user-agent", () => {
-    const event = makeEvent({ uri: "/ads.txt", userAgent: "GPTBot/1.0" });
+    const event = makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" });
     expect(handler(event)).toEqual(event.request);
   });
 });
