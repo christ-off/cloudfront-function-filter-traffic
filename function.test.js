@@ -508,6 +508,13 @@ describe("stale Chrome boundary and Lighthouse exception", () => {
     });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("allows Obsidian UA even with a stale Chrome version", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) obsidian/1.6.5 Chrome/124.0.6367.243 Electron/30.1.2 Safari/537.36"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================

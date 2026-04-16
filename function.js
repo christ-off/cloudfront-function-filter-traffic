@@ -108,8 +108,8 @@ function isFakeOldIE(normalizedUserAgent) {
 }
 
 function isStaleBrowserUA(ua) {
-    // Allow Google PageSpeed Insights / Lighthouse regardless of Chrome version
-    if (ua.includes('chrome-lighthouse')) return false;
+    // Allow known apps that embed old Chrome/Electron (Lighthouse, Obsidian)
+    if (/chrome-lighthouse|obsidian\//.test(ua)) return false;
 
     // Block Chrome versions <= 140
     const match = ua.match(/chrome\/(\d+)\./);
