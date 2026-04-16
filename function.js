@@ -98,6 +98,10 @@ function isFakeUserAgent(normalizedUserAgent) {
             /mozilla.*windows nt.*chrome\/\d/.test(normalizedUserAgent) &&
             !normalizedUserAgent.includes('applewebkit') &&
             !normalizedUserAgent.includes('safari')
+        ) ||
+        (
+            /\(i(?:phone|pad).*os 1[5-9]/.test(normalizedUserAgent) &&
+            /applewebkit\/[1-5]\d{2}\./.test(normalizedUserAgent)
         )
     );
 }
@@ -113,8 +117,7 @@ function isStaleBrowserUA(ua) {
 
     // Block Chrome versions <= 140
     const match = ua.match(/chrome\/(\d+)\./);
-    if (match && parseInt(match[1], 10) <= 140) return true;
-    return false;
+    return match !== null && parseInt(match[1], 10) <= 140;
 }
 
 function createNotFoundResponse() {

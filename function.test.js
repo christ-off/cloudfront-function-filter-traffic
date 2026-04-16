@@ -492,6 +492,32 @@ describe("Presto fake UA blocking", () => {
 });
 
 // =====================================================
+// Fake iOS UA: modern iOS version but old AppleWebKit build
+// =====================================================
+describe("fake iOS UA blocking", () => {
+  it("blocks iOS 15 UA with old AppleWebKit (e.g. 534)", () => {
+    const result = handler(makeEvent({
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Mobile/15A372"
+    }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("allows iOS 15 UA with current AppleWebKit (e.g. 605)", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15A372 Safari/604.1"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows iOS 14 UA with old AppleWebKit (condition requires iOS 15+)", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Mobile/14A372"
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Stale Chrome — exact boundary and Lighthouse exception
 // =====================================================
 describe("stale Chrome boundary and Lighthouse exception", () => {
