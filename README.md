@@ -15,18 +15,30 @@ Requests to `/.well-known/traffic-advice` receive a crafted `200` response with 
 ### 3. Security scan blocking (404)
 Requests that match obvious automated-scan patterns are returned a `404 Not Found`:
 
-- **PHP probes** — any URI ending in `.php`
-- **Common scanner folders** — URIs whose first path segment is one of:
-  `images`, `image`, `img`, `wp-includes`, `static`, `wp`, `wordpress`, `old`, `new`, `blog`, `backup`, `cgi-bin`
+- **Probes by extension** — URIs ending in `.php`, `.sql`, `.bak`, `.phtml`, `.phar`
+- **Common scanner folders** — first path segment is one of:
+  `images`, `image`, `img`, `wp-includes`, `static`, `wp`, `wordpress`, `old`, `new`, `blog`, `backup`, `cgi-bin`, `admin`, `administrator`, `wp-admin`, `phpmyadmin`, `pma`
+- **Sensitive paths** — `/.env*`, `/.git*`, `/ip`
 
 URI matching is case-insensitive (the URI is lowercased before any check).
 
-### 4. AI bot / scraper blocking (404)
-Requests whose `User-Agent` header matches a curated list of known AI crawlers and scrapers are returned a `404 Not Found`.
+### 4. AI bot / scraper / headless browser blocking (404)
+Requests whose `User-Agent` matches any of the following are returned a `404 Not Found`:
 
-Blocked agents include (among many others): `GPTBot`, `Anthropic-AI`, `CCBot`, `ByteSpider`, `PerplexityBot`, `SemrushBot`, `meta-externalagent`, `DiffBot`, and `YandexAdditional`.
+- **AI crawlers** — a curated list of 80+ known AI bots and scrapers: `GPTBot`, `CCBot`, `ByteSpider`, `PerplexityBot`, `meta-externalagent`, `Cohere`, `GoogleOther`, etc.
+- **Scraper bots** — `DataForSEO`, `ev-crawler`, and similar.
+- **Headless browsers & HTTP libs** — `HeadlessChrome`, `PhantomJS`, `SlimerJS`, `HtmlUnit`, `python-requests`, `python-httpx`, `go-http-client`, `curl`, `wget`, etc.
 
-### 5. Pass-through
+### 5. Fake / stale user-agent blocking (404)
+Several classes of spoofed or obsolete UAs are rejected:
+
+- **Fake Chrome on Windows** — `Mozilla/Windows NT/Chrome` pattern without the mandatory `AppleWebKit`/`Safari` tokens.
+- **Fake iOS UAs** — modern iOS version (15+) paired with an implausibly old AppleWebKit build (< 600).
+- **Stale Chrome** — `Chrome/` version ≤ 140. Exceptions: Google Lighthouse (`Chrome-Lighthouse`) and Obsidian (which embeds an older Electron/Chrome for one-time-paid users).
+- **Dead IE / Trident** — `MSIE 5–9` and `Trident/3–9` tokens; no legitimate modern browser sends these.
+- **Presto-based Opera** — `Presto/` engine token (Opera 12 and below).
+
+### 6. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -112,15 +124,17 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all five behaviours with 54 tests:
+`function.test.js` covers all six behaviours with 111 tests:
 
 | Suite | What is tested |
 |---|---|
 | Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation, bot UA ignored |
 | Traffic-advice | Status 200, correct content-type, valid JSON body, cache header |
-| PHP blocking | Root and sub-directory paths, case-insensitivity, no false positives |
-| Bad folder blocking | All 12 folder names, bare folder (no trailing slash), no false positives on similar prefixes |
-| AI bot blocking | 15 representative agents (one per regex line), case-insensitivity, cache header |
+| Security scan URIs | PHP/SQL/BAK extensions, scanner folders, `.env`/`.git` paths, admin folders |
+| AI bot blocking | 40+ representative agents, case-insensitivity |
+| Scraper & headless browser blocking | DataForSEO, HeadlessChrome, curl, wget, Python/Go HTTP libs |
+| Fake / stale UA blocking | Truncated Chrome, fake iOS (old AppleWebKit), stale Chrome ≤ 140, dead IE/Trident, Presto |
+| Exceptions | Lighthouse and Obsidian bypass stale-Chrome check |
 | Pass-through | Root path and normal page paths |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.
