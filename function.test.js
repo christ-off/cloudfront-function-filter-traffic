@@ -163,7 +163,6 @@ describe("AI bot blocking by user-agent", () => {
     ["Scrapy/2.6", "scrapy"],
     ["meta-externalagent/1.0", "meta-externalagent"],
     ["OAI-SearchBot/1.0", "oai-searchbot"],
-    ["Apify/1.0 ApifyWebsiteContentCrawler", "apifywebsitecontentcrawler"],
     ["SummalyBot/5.2.5", "SummalyBot"],
   ];
 
