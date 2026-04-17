@@ -7,7 +7,7 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 ## What the function does
 
 ### 1. Always-allow paths
-`/robots.txt` and `/ads.txt` are returned immediately regardless of any other rule — including a blocked user-agent. This ensures crawlers that respect these files can always fetch them.
+`/robots.txt` and `/ads.txt` are returned immediately regardless of any other rule, including a blocked user-agent.
 
 ### 2. Chrome cache traffic-advice
 Requests to `/.well-known/traffic-advice` receive a crafted `200` response with an `application/trafficadvice+json` body. This opts the site into Chrome's prefetch/prerender behaviour while disabling Topics API and prefetch-proxy exposure.
@@ -22,23 +22,13 @@ Requests that match obvious automated-scan patterns are returned a `404 Not Foun
 
 URI matching is case-insensitive (the URI is lowercased before any check).
 
-### 4. AI bot / scraper / headless browser blocking (404)
+### 4. AI bot / scraper blocking (404)
 Requests whose `User-Agent` matches any of the following are returned a `404 Not Found`:
 
-- **AI crawlers** — a curated list of 80+ known AI bots and scrapers: `GPTBot`, `CCBot`, `ByteSpider`, `PerplexityBot`, `meta-externalagent`, `Cohere`, `GoogleOther`, etc.
-- **Scraper bots** — `DataForSEO`, `ev-crawler`, and similar.
-- **Headless browsers & HTTP libs** — `HeadlessChrome`, `PhantomJS`, `SlimerJS`, `HtmlUnit`, `python-requests`, `python-httpx`, `go-http-client`, `curl`, `wget`, etc.
+- **AI crawlers** — a curated list of 80+ known AI bots and scrapers: `GPTBot`, `CCBot`, `ByteSpider`, `PerplexityBot`, `meta-externalagent`, `Cohere`, etc.
+- **Scraper bots** — `DataForSEO`, `ev-crawler`, `ptst/`, `YaApp_Android`, and similar.
 
-### 5. Fake / stale user-agent blocking (404)
-Several classes of spoofed or obsolete UAs are rejected:
-
-- **Fake Chrome on Windows** — `Mozilla/Windows NT/Chrome` pattern without the mandatory `AppleWebKit`/`Safari` tokens.
-- **Fake iOS UAs** — modern iOS version (15+) paired with an implausibly old AppleWebKit build (< 600).
-- **Stale Chrome** — `Chrome/` version ≤ 140. Exceptions: Google Lighthouse (`Chrome-Lighthouse`) and Obsidian (which embeds an older Electron/Chrome for one-time-paid users).
-- **Dead IE / Trident** — `MSIE 5–9` and `Trident/3–9` tokens; no legitimate modern browser sends these.
-- **Presto-based Opera** — `Presto/` engine token (Opera 12 and below).
-
-### 6. Pass-through
+### 5. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -124,17 +114,15 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all six behaviours with 111 tests:
+`function.test.js` covers all five behaviours with 75 tests:
 
 | Suite | What is tested |
 |---|---|
 | Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation, bot UA ignored |
 | Traffic-advice | Status 200, correct content-type, valid JSON body, cache header |
 | Security scan URIs | PHP/SQL/BAK extensions, scanner folders, `.env`/`.git` paths, admin folders |
-| AI bot blocking | 40+ representative agents, case-insensitivity |
-| Scraper & headless browser blocking | DataForSEO, HeadlessChrome, curl, wget, Python/Go HTTP libs |
-| Fake / stale UA blocking | Truncated Chrome, fake iOS (old AppleWebKit), stale Chrome ≤ 140, dead IE/Trident, Presto |
-| Exceptions | Lighthouse and Obsidian bypass stale-Chrome check |
+| AI bot blocking | representative agents, case-insensitivity |
+| Scraper bot blocking | DataForSEO, ev-crawler, YaApp_Android, ptst/ |
 | Pass-through | Root path and normal page paths |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.

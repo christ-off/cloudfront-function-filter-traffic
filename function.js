@@ -16,9 +16,9 @@ function handler(event) {
     }
 
     // =====================================================
-    // Always Allow robots.txt, ads.txt, feed.xml, rss.xml
+    // Always Allow robots.txt, ads.txt
     // =====================================================
-    if (/^\/(robots\.txt|ads\.txt|feed\.xml|rss\.xml)$/.test(uri)) {
+    if (/^\/(robots\.txt|ads\.txt)$/.test(uri)) {
         return request;
     }
 
@@ -47,14 +47,7 @@ function handler(event) {
     // ====================================================
     // DENIES scrapper bots
     // ====================================================
-    if (isScrapperBot(ua) || isHeadlessBrowser(ua)) {
-        return createNotFoundResponse();
-    }
-
-    // ====================================================
-    // DENIES Fake user agents
-    // ====================================================
-    if (isFakeBrowserUA(ua)) {
+    if (isScrapperBot(ua)) {
         return createNotFoundResponse();
     }
 
@@ -78,36 +71,6 @@ function isAiBot(normalizedUserAgent) {
 
 function isScrapperBot(normalizedUserAgent) {
     return /yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|\bptst\//.test(normalizedUserAgent);
-}
-
-function isHeadlessBrowser(normalizedUserAgent) {
-    return (
-        /headlesschrome|phantomjs|slimerjs|htmlunit/.test(normalizedUserAgent) ||
-        /python-requests|python-httpx|python-urllib/.test(normalizedUserAgent) ||
-        /go-http-client|java\/|libwww-perl/.test(normalizedUserAgent) ||
-        /^curl\/|^wget\//.test(normalizedUserAgent)
-    );
-}
-
-function isFakeBrowserUA(ua) {
-    // Whitelisted apps that legitimately embed old Chrome builds
-    if (/chrome-lighthouse|obsidian\//.test(ua)) return false;
-
-    // Dead engines — IE 5-11 and Opera Presto (obsolete since 2013)
-    if (/msie\s[5-9]\.|trident\/[3-9]\.\d/.test(ua)) return true;
-    if (ua.includes('presto/')) return true;
-
-    // Truncated Chrome UA — real Chrome always includes AppleWebKit + Safari tokens
-    if (/mozilla.*windows nt.*chrome\/\d/.test(ua) && !ua.includes('applewebkit') && !ua.includes('safari')) return true;
-
-    // iOS 15+ with stale AppleWebKit build (genuine iOS 15+ ships 605+)
-    if (/\(i(?:phone|pad).*os 1[5-9]/.test(ua) && /applewebkit\/[1-5]\d{2}\./.test(ua)) return true;
-
-    // Stale Chrome version — bots commonly freeze at old builds
-    const chromeMatch = ua.match(/chrome\/(\d+)\./);
-    if (chromeMatch && parseInt(chromeMatch[1], 10) <= 140) return true;
-
-    return false;
 }
 
 function createNotFoundResponse() {
