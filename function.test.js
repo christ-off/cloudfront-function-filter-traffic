@@ -23,6 +23,16 @@ describe("always-allow paths", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("allows /feed.xml", () => {
+    const event = makeEvent({ uri: "/feed.xml" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows /rss.xml", () => {
+    const event = makeEvent({ uri: "/rss.xml" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("allows /robots.txt even with a blocked user-agent (always-allow wins)", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" });
     expect(handler(event)).toEqual(event.request);
@@ -203,6 +213,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Seamus The Search Engine/1.0", "Seamus the search engine"],
     ["DataForSEOBot/1.0", "DataForSEO bot"],
     ["ev-crawler/1.0", "ev-crawler"],
+    ["Mozilla/5.0 ptst/1.0", "ptst scraper token"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

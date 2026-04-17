@@ -16,9 +16,9 @@ function handler(event) {
     }
 
     // =====================================================
-    // Always Allow robots.txt and ads.txt
+    // Always Allow robots.txt, ads.txt, feed.xml, rss.xml
     // =====================================================
-    if (uri === "/robots.txt" || uri === "/ads.txt") {
+    if (/^\/(robots\.txt|ads\.txt|feed\.xml|rss\.xml)$/.test(uri)) {
         return request;
     }
 
@@ -54,7 +54,7 @@ function handler(event) {
     // ====================================================
     // DENIES Fake user agents
     // ====================================================
-    if (isFakeUserAgent(ua) || isStaleBrowserUA(ua) || isFakeOldIE(ua)) {
+    if (isFakeBrowserUA(ua)) {
         return createNotFoundResponse();
     }
 
@@ -77,7 +77,7 @@ function isAiBot(normalizedUserAgent) {
 }
 
 function isScrapperBot(normalizedUserAgent) {
-    return /yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot/.test(normalizedUserAgent);
+    return /yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|\bptst\//.test(normalizedUserAgent);
 }
 
 function isHeadlessBrowser(normalizedUserAgent) {
@@ -89,35 +89,25 @@ function isHeadlessBrowser(normalizedUserAgent) {
     );
 }
 
-function isFakeUserAgent(normalizedUserAgent) {
-    // Truncated Chrome UA — missing AppleWebKit/Safari tokens
-    // Real Chrome always includes AppleWebKit/537.36 and Safari/537.36
-    return (
-        normalizedUserAgent.includes('presto/') ||
-        (
-            /mozilla.*windows nt.*chrome\/\d/.test(normalizedUserAgent) &&
-            !normalizedUserAgent.includes('applewebkit') &&
-            !normalizedUserAgent.includes('safari')
-        ) ||
-        (
-            /\(i(?:phone|pad).*os 1[5-9]/.test(normalizedUserAgent) &&
-            /applewebkit\/[1-5]\d{2}\./.test(normalizedUserAgent)
-        )
-    );
-}
-
-function isFakeOldIE(normalizedUserAgent) {
-    // MSIE is dead - all IE user agents on a modern blog are bots/scanners
-    return /msie\s[5-9]\.|trident\/[3-9]\.\d/.test(normalizedUserAgent);
-}
-
-function isStaleBrowserUA(ua) {
-    // Allow known apps that embed old Chrome/Electron (Lighthouse, Obsidian)
+function isFakeBrowserUA(ua) {
+    // Whitelisted apps that legitimately embed old Chrome builds
     if (/chrome-lighthouse|obsidian\//.test(ua)) return false;
 
-    // Block Chrome versions <= 140
-    const match = ua.match(/chrome\/(\d+)\./);
-    return match !== null && parseInt(match[1], 10) <= 140;
+    // Dead engines — IE 5-11 and Opera Presto (obsolete since 2013)
+    if (/msie\s[5-9]\.|trident\/[3-9]\.\d/.test(ua)) return true;
+    if (ua.includes('presto/')) return true;
+
+    // Truncated Chrome UA — real Chrome always includes AppleWebKit + Safari tokens
+    if (/mozilla.*windows nt.*chrome\/\d/.test(ua) && !ua.includes('applewebkit') && !ua.includes('safari')) return true;
+
+    // iOS 15+ with stale AppleWebKit build (genuine iOS 15+ ships 605+)
+    if (/\(i(?:phone|pad).*os 1[5-9]/.test(ua) && /applewebkit\/[1-5]\d{2}\./.test(ua)) return true;
+
+    // Stale Chrome version — bots commonly freeze at old builds
+    const chromeMatch = ua.match(/chrome\/(\d+)\./);
+    if (chromeMatch && parseInt(chromeMatch[1], 10) <= 140) return true;
+
+    return false;
 }
 
 function createNotFoundResponse() {
