@@ -70,7 +70,7 @@ function isAiBot(normalizedUserAgent) {
 }
 
 function isScrapperBot(normalizedUserAgent) {
-    return /yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|\bptst\//.test(normalizedUserAgent);
+    return /crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|\bptst\//.test(normalizedUserAgent);
 }
 
 function createNotFoundResponse() {
