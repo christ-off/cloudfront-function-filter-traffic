@@ -51,6 +51,13 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    // ====================================================
+    // DENIES too old Chrome versions (<= 123)
+    // ====================================================
+    if (isTooOldChrome(ua)) {
+        return createNotFoundResponse();
+    }
+
     // Pass through
     return request;
 }
@@ -71,6 +78,12 @@ function isAiBot(normalizedUserAgent) {
 
 function isScrapperBot(normalizedUserAgent) {
     return /crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|\bptst\//.test(normalizedUserAgent);
+}
+
+function isTooOldChrome(normalizedUserAgent) {
+    const match = normalizedUserAgent.match(/(?:headless)?chrome\/(\d+)/);
+    if (!match) return false;
+    return Number.parseInt(match[1], 10) <= 123;
 }
 
 function createNotFoundResponse() {
