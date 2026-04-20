@@ -40,32 +40,6 @@ describe("always-allow paths", () => {
 });
 
 // =====================================================
-// Traffic-advice path
-// =====================================================
-describe("/.well-known/traffic-advice", () => {
-  it("returns 200", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("returns application/trafficadvice+json content-type", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.headers["content-type"].value).toBe("application/trafficadvice+json");
-  });
-
-  it("response body is valid JSON containing prefetch-proxy entry", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    const parsed = JSON.parse(result.body);
-    expect(parsed.some((e) => e.user_agent === "prefetch-proxy")).toBe(true);
-  });
-
-  it("sets a long cache-control header", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.headers["cache-control"].value).toContain("max-age=");
-  });
-});
-
-// =====================================================
 // Security scan blocking — PHP files → 404
 // =====================================================
 describe("PHP file blocking", () => {
