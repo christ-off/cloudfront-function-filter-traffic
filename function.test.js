@@ -123,44 +123,6 @@ describe("bad folder blocking", () => {
   });
 });
 
-// =====================================================
-// AI / bot user-agent blocking → 404
-// =====================================================
-describe("AI bot blocking by user-agent", () => {
-  // One representative bot from each regex line in the function
-  const blockedAgents = [
-    ["CCBot/2.0", "ccbot"],
-    ["ByteSpider", "bytespider"],
-    ["FacebookBot/1.0", "facebookbot"],
-    ["Google-Extended", "google-extended"],
-    ["PerplexityBot/1.0", "perplexitybot"],
-    ["Scrapy/2.6", "scrapy"],
-    ["meta-externalagent/1.0", "meta-externalagent"],
-    ["OAI-SearchBot/1.0", "oai-searchbot"],
-  ];
-
-  it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
-    const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("bot matching is case-insensitive (UA header not lowercased by sender)", () => {
-    const result = handler(makeEvent({ userAgent: "CCBOT/2.0" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-
-
-  it("allows a normal browser user-agent", () => {
-    const event = makeEvent({
-      uri: "/about",
-      userAgent:
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-});
 
 // =====================================================
 // Scrapper bot user-agent blocking → 404
@@ -180,6 +142,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1", "Chrome for iOS (CriOS)"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/120.0 Mobile/15E148 Safari/604.1", "Firefox for iOS (FxiOS)"],
     ["Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko", "Internet Explorer (Trident)"],
+    ["Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.18", "Opera legacy (Presto)"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

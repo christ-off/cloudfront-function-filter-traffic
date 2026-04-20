@@ -30,12 +30,6 @@ function handler(event) {
     }
 
     const ua = userAgentHeader.value.toLowerCase();
-    // ====================================================
-    // DENIES IA bots
-    // ====================================================
-    if (isAiBot(ua)) {
-        return createNotFoundResponse();
-    }
 
     // ====================================================
     // DENIES scrapper bots
@@ -63,10 +57,6 @@ function isSecurityScanUri(uri) {
         /\.(php\d?|sql|bak|phtml|phar)$/.test(uri) ||
         /^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)
     );
-}
-
-function isAiBot(normalizedUserAgent) {
-    return /addsearchbot|aihitbot|amazon-kendra|amazonbuyforme|amzn-searchbot|amzn-user|andibot|anomura|awario|azureai-searchbot|bedrockbot|bigsur\.ai|brightbot|buddybot|bytespider|ccbot|channel3bot|chatglm-spider|chatgpt|cloudflare-autorag|cohere-|cotoyogi|crawlspace|datenbank crawler|devin|echobot|echoboxbot|facebookbot|factset_spyderbot|friendlycrawler|gemini-deep-research|google-extended|google-notebooklm|henkbot|iaskbot|iaskspider|iboubot|icc-crawler|imagesiftbot|imagespider|img2dataset|isscyberriskcrawler|kangaroo bot|klaviyoaibot|kunatocrawler|laion-huggingface-processor|laiondownloader|linerbot|linguee bot|linkupbot|manus-user|meta-externalagent|meta-externalfetcher|meta-webindexer|mycentralaiscraperbot|netestate imprint crawler|notebooklm|novaact|oai-searchbot|omgili|omgilibot|openai|operator|pangubot|panscient|perplexity-user|perplexitybot|poggio-citations|poseidon research crawler|qualifiedbot|quillbot|sbintuitionsbot|scrapy|shapbot|sidetrade indexer bot|spider|tavilybot|terracotta|thinkbot|tiktokspider|timpibot|twinagent|velenpublicwebcrawler|wardbot|webzio-extended|wpbot|wrtnbot|youbot|zanistabot/.test(normalizedUserAgent);
 }
 
 function isScrapperBot(normalizedUserAgent) {
