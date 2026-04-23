@@ -64,6 +64,7 @@ function isScrapperBot(normalizedUserAgent) {
 }
 
 function isTooOldChrome(normalizedUserAgent) {
+    if (/bingbot\//.test(normalizedUserAgent)) return false;
     const match = normalizedUserAgent.match(/(?:headless)?chrome\/(\d+)/);
     if (!match) return false;
     return Number.parseInt(match[1], 10) <= 123;
