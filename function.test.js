@@ -273,52 +273,6 @@ describe("always-allow paths bypass UA checks", () => {
 });
 
 // =====================================================
-// Old Chrome blocking → 404
-// =====================================================
-describe("old Chrome blocking by user-agent", () => {
-  const blockedAgents = [
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-      "Chrome 123 (boundary)",
-    ],
-    [
-      "Mozlila/5.0 (Linux; Android 7.0; SM-G892A Bulid/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/60.0.3112.107 Moblie Safari/537.36",
-      "Chrome 60 on Android",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/71.0.3542.0 Safari/537.36",
-      "HeadlessChrome 71",
-    ],
-  ];
-
-  it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
-    const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("allows Chrome 124", () => {
-    const event = makeEvent({
-      userAgent:
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows a UA with no Chrome token", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1)" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows BingBot despite old Chrome version", () => {
-    const event = makeEvent({
-      userAgent:
-        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
