@@ -9,8 +9,8 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 ### 1. Always-allow paths
 `/robots.txt` and `/ads.txt` are returned immediately regardless of any other rule, including a blocked user-agent.
 
-### 2. Chrome cache traffic-advice
-Requests to `/.well-known/traffic-advice` receive a crafted `200` response with an `application/trafficadvice+json` body. This opts the site into Chrome's prefetch/prerender behaviour while disabling Topics API and prefetch-proxy exposure.
+### 2. Chrome Private Prefetch Proxy — `/.well-known/traffic-advice`
+Requests to `/.well-known/traffic-advice` receive a `200` response with an `application/trafficadvice+json` body and a `Traffic-Advice: 1.0` header. This opts the site into Chrome's prefetch/prerender behaviour while disabling Topics API and prefetch-proxy exposure.
 
 ### 3. Security scan blocking (404)
 Requests that match obvious automated-scan patterns are returned a `404 Not Found`:
@@ -119,7 +119,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Suite | What is tested |
 |---|---|
 | Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation, bot UA ignored |
-| Traffic-advice | Status 200, correct content-type, valid JSON body, cache header |
+| Traffic-advice | Status 200, content-type, Traffic-Advice header, valid JSON body, cache header, permissions-policy |
 | Security scan URIs | PHP/SQL/BAK extensions, scanner folders, `.env`/`.git` paths, admin folders |
 | AI bot blocking | representative agents, case-insensitivity |
 | Scraper bot blocking | DataForSEO, ev-crawler, YaApp_Android, ptst/ |
