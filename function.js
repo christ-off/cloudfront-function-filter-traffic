@@ -60,7 +60,7 @@ function isSecurityScanUri(uri) {
 }
 
 function isScrapperBot(normalizedUserAgent) {
-    return /presto|trident|crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|\bptst\//.test(normalizedUserAgent);
+    return /presto|trident|crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|webscraperbot|\bptst\//.test(normalizedUserAgent);
 }
 
 function createNotFoundResponse() {

@@ -179,6 +179,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/120.0 Mobile/15E148 Safari/604.1", "Firefox for iOS (FxiOS)"],
     ["Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko", "Internet Explorer (Trident)"],
     ["Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.18", "Opera legacy (Presto)"],
+    ["WebScraperBot/0.1 (domain-check)", "WebScraperBot domain-check"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
