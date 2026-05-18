@@ -180,6 +180,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko", "Internet Explorer (Trident)"],
     ["Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.18", "Opera legacy (Presto)"],
     ["WebScraperBot/0.1 (domain-check)", "WebScraperBot domain-check"],
+    ["pimeyes-downloader-api/0.1", "PiMeyes downloader API"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
