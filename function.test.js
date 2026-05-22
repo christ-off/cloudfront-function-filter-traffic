@@ -182,6 +182,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["WebScraperBot/0.1 (domain-check)", "WebScraperBot domain-check"],
     ["pimeyes-downloader-api/0.1", "PiMeyes downloader API"],
     ["SleepBot/1.0 (http://sleepbot.com/)", "SleepBot scraper"],
+    ["Mozilla/5.0 (compatible; WebTrackrCrawler/1.0; https://affsignal.com/bot)", "WebTrackrCrawler (affsignal)"],
+    ["got (https://github.com/sindresorhus/got)", "got HTTP client"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
