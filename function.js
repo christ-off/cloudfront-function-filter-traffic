@@ -60,7 +60,7 @@ function isSecurityScanUri(uri) {
 }
 
 function isScrapperBot(normalizedUserAgent) {
-    return /presto|trident|crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|webscraperbot|pimeyes-downloader-api|sleepbot|webtrackrcrawler|got\s*\(https?:\/\/github\.com\/sindresorhus\/got|\bptst\//.test(normalizedUserAgent);
+    return /presto|trident|crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|webscraperbot|pimeyes-downloader-api|sleepbot|webtrackrcrawler|builtwith|got\s*\(https?:\/\/github\.com\/sindresorhus\/got|\bptst\//.test(normalizedUserAgent);
 }
 
 function createNotFoundResponse() {

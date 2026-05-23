@@ -184,6 +184,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["SleepBot/1.0 (http://sleepbot.com/)", "SleepBot scraper"],
     ["Mozilla/5.0 (compatible; WebTrackrCrawler/1.0; https://affsignal.com/bot)", "WebTrackrCrawler (affsignal)"],
     ["got (https://github.com/sindresorhus/got)", "got HTTP client"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BuiltWith/1.4; rb.gy/xprgqj) Chrome/124.0.0.0 Safari/537.36", "BuiltWith scraper"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
@@ -191,8 +192,13 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("scrapper bot matching is case-insensitive", () => {
+  it("scrapper bot matching is case-insensitive (YaApp)", () => {
     const result = handler(makeEvent({ userAgent: "YAAPP_ANDROID/10.61" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("scrapper bot matching is case-insensitive (BuiltWith)", () => {
+    const result = handler(makeEvent({ userAgent: "BuiltWith/1.4" }));
     expect(result.statusCode).toBe(404);
   });
 });
