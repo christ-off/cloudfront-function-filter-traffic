@@ -59,8 +59,23 @@ function isSecurityScanUri(uri) {
     );
 }
 
+const scrapperBotPatterns = [
+    'presto', 'trident', 'crios', 'fxios',
+    'yaapp_android', 'yasearchbrowser',
+    'ev-crawler', 'seamus the search engine',
+    'dataforseobot', 'webscraperbot',
+    'pimeyes-downloader-api', 'sleepbot',
+    'webtrackrcrawler', 'builtwith', 'shapbot',
+    'scrapy', 'got (https://github.com/sindresorhus/got',
+    /ptst\//,
+];
+
 function isScrapperBot(normalizedUserAgent) {
-    return /presto|trident|crios|fxios|yaapp_android|yasearchbrowser|ev-crawler|seamus the search engine|dataforseobot|webscraperbot|pimeyes-downloader-api|sleepbot|webtrackrcrawler|builtwith|shapbot|scrapy|got\s*\(https?:\/\/github\.com\/sindresorhus\/got|\bptst\//.test(normalizedUserAgent);
+    return scrapperBotPatterns.some(
+        (pattern) => typeof pattern === 'string'
+            ? normalizedUserAgent.includes(pattern)
+            : pattern.test(normalizedUserAgent)
+    );
 }
 
 function createNotFoundResponse() {
