@@ -185,6 +185,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; WebTrackrCrawler/1.0; https://affsignal.com/bot)", "WebTrackrCrawler (affsignal)"],
     ["got (https://github.com/sindresorhus/got)", "got HTTP client"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BuiltWith/1.4; rb.gy/xprgqj) Chrome/124.0.0.0 Safari/537.36", "BuiltWith scraper"],
+    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ShapBot/0.1.0", "ShapBot scraper"],
+    ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
