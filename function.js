@@ -60,14 +60,23 @@ function isSecurityScanUri(uri) {
 }
 
 const scrapperBotPatterns = [
-    'presto', 'trident', 'crios', 'fxios',
-    'yaapp_android', 'yasearchbrowser',
-    'ev-crawler', 'seamus the search engine',
-    'dataforseobot', 'webscraperbot',
-    'pimeyes-downloader-api', 'sleepbot',
-    'webtrackrcrawler', 'builtwith', 'shapbot',
-    'scrapy', 'got (https://github.com/sindresorhus/got',
+    // Most frequent → least frequent (based on logs.db analysis)
+    'sleepbot',
+    'got (https://github.com/sindresorhus/got',
+    'presto', 'trident',
     /ptst\//,
+    'seamus the search engine',
+    'crios',
+    'webtrackrcrawler',
+    'dataforseobot',
+    'fxios',
+    'pimeyes-downloader-api',
+    'shapbot',
+    'ev-crawler',
+    'builtwith',
+    'yasearchbrowser', 'scrapy',
+    'yaapp_android',
+    'webscraperbot',
 ];
 
 function isScrapperBot(normalizedUserAgent) {
