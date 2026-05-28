@@ -61,6 +61,7 @@ function isSecurityScanUri(uri) {
 
 const scrapperBotPatterns = [
     // Most frequent → least frequent (based on logs.db analysis)
+    'petalbot',
     'sleepbot',
     'got (https://github.com/sindresorhus/got',
     'presto', 'trident',
