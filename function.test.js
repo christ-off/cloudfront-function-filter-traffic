@@ -42,39 +42,6 @@ describe("always-allow paths", () => {
 // =====================================================
 // /.well-known/traffic-advice — Chrome Private Prefetch Proxy
 // =====================================================
-describe("/.well-known/traffic-advice", () => {
-  it("returns 200", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("returns application/trafficadvice+json content-type", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.headers["content-type"].value).toBe("application/trafficadvice+json");
-  });
-
-  it("sets a Traffic-Advice: 1.0 header", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.headers["traffic-advice"].value).toBe("1.0");
-  });
-
-  it("response body is valid JSON containing prefetch-proxy entry", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    const parsed = JSON.parse(result.body);
-    expect(parsed.some((e) => e.user_agent === "prefetch-proxy")).toBe(true);
-  });
-
-  it("sets a long cache-control header", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.headers["cache-control"].value).toContain("max-age=");
-  });
-
-  it("sets the permissions-policy header", () => {
-    const result = handler(makeEvent({ uri: "/.well-known/traffic-advice" }));
-    expect(result.headers["permissions-policy"].value).toContain("browsing-topics=");
-  });
-});
-
 // =====================================================
 // Security scan blocking — PHP files → 404
 // =====================================================

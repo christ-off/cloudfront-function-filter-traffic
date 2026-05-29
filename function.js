@@ -23,13 +23,6 @@ function handler(event) {
     }
 
     // ====================================================
-    // Chrome Private Prefetch Proxy — traffic-advice
-    // ====================================================
-    if (uri === '/.well-known/traffic-advice') {
-        return createTrafficAdviceResponse();
-    }
-
-    // ====================================================
     // Obvious security scans
     // ====================================================
     if (isSecurityScanUri(uri)) {
@@ -96,19 +89,6 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
-    };
-}
-
-function createTrafficAdviceResponse() {
-    return {
-        statusCode: 200,
-        headers: {
-            'content-type': {value: 'application/trafficadvice+json'},
-            'permissions-policy': {value: 'browsing-topics=(), prefetch=()'},
-            'cache-control': {value: 'max-age=63072000'},
-            'traffic-advice': {value: '1.0'}
-        },
-        body: '[{ "user_agent": "prefetch-proxy", "google_prefetch_proxy_eap": { "fraction": 1.0 } },{ "user_agent": "*", "accept": { "purpose": { "prefetch": true, "prerender": true },"sec-purpose": { "prefetch": true, "prerender": true }} }]'
     };
 }
 

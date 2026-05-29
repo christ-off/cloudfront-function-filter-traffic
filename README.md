@@ -8,11 +8,11 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
-### 1. Always-allow paths
-`/robots.txt` and `/ads.txt` are returned immediately regardless of any other rule, including a blocked user-agent.
+### 1. Missing user-agent blocking (404)
+Requests with no `User-Agent` header, an empty value, or a whitespace-only value are returned a `404 Not Found`. This check runs first and is not bypassed by any other rule, including always-allow paths.
 
-### 2. Chrome Private Prefetch Proxy — `/.well-known/traffic-advice`
-Requests to `/.well-known/traffic-advice` receive a `200` response with an `application/trafficadvice+json` body and a `Traffic-Advice: 1.0` header. This opts the site into Chrome's prefetch/prerender behaviour while disabling Topics API and prefetch-proxy exposure.
+### 2. Always-allow paths
+`/robots.txt` and `/ads.txt` are returned immediately, bypassing all subsequent checks (security scan, bot blocking). Requires a non-empty `User-Agent`.
 
 ### 3. Security scan blocking (404)
 Requests that match obvious automated-scan patterns are returned a `404 Not Found`:
@@ -21,6 +21,7 @@ Requests that match obvious automated-scan patterns are returned a `404 Not Foun
 - **Common scanner folders** — first path segment is one of:
   `images`, `image`, `img`, `wp-includes`, `static`, `wp`, `wordpress`, `old`, `new`, `blog`, `backup`, `cgi-bin`, `admin`, `administrator`, `wp-admin`, `phpmyadmin`, `pma`
 - **Sensitive paths** — `/.env*`, `/.git*`, `/ip`
+- **Percent-encoded bypass prevention** — the URI is decoded with `decodeURIComponent` before matching; malformed encodings return `404` immediately.
 
 URI matching is case-insensitive (the URI is lowercased before any check).
 
@@ -28,13 +29,13 @@ URI matching is case-insensitive (the URI is lowercased before any check).
 
 Bot user-agents are matched using an **array of string/regex patterns** rather than one big regex. A single regex is ~3.6× faster in microbenchmarks (49 ms vs 176 ms over 1 million calls), but the difference per real request is ~0.00013 ms — negligible at this scale. The array form was chosen because it keeps cognitive complexity low enough to satisfy SonarQube's threshold, and makes it trivial to add, remove, or comment out individual patterns.
 
-### 5. AI bot / scraper blocking (404)
-Requests whose `User-Agent` matches any of the following are returned a `404 Not Found`:
+### 5. Bot / scraper blocking (404)
+Requests whose `User-Agent` matches any entry in `blockedBotPatterns` are returned a `404 Not Found`. Patterns are ordered by observed frequency (most frequent first) for faster average matching. Current entries include:
 
-- **AI crawlers** — a curated list of 80+ known AI bots and scrapers: `GPTBot`, `CCBot`, `ByteSpider`, `PerplexityBot`, `meta-externalagent`, `Cohere`, etc.
-- **Scraper bots** — `DataForSEO`, `ev-crawler`, `ptst/`, `YaApp_Android`, and similar.
+- **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`
+- **Legacy / unwanted browser tokens** — `Trident` (IE), `Presto` (old Opera), `CriOS` (Chrome for iOS), `FxiOS` (Firefox for iOS), `YaApp_Android`, `YaSearchBrowser`, `ptst/`
 
-### 5. Pass-through
+### 6. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -120,15 +121,20 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all five behaviours with 82 tests:
+`function.test.js` covers all behaviours with 78 tests:
 
 | Suite | What is tested |
 |---|---|
-| Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation, bot UA ignored |
-| Traffic-advice | Status 200, content-type, Traffic-Advice header, valid JSON body, cache header, permissions-policy |
-| Security scan URIs | PHP/SQL/BAK extensions, scanner folders, `.env`/`.git` paths, admin folders |
-| AI bot blocking | representative agents, case-insensitivity |
-| Scraper bot blocking | DataForSEO, ev-crawler, YaApp_Android, ptst/ |
+| Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation |
+| PHP file blocking | `.php`, `.php5`, `.php7`, `.phtml`, `.phar` extensions, case-insensitivity |
+| Bad folder blocking | Scanner folders, admin folders, bare folder paths |
+| `.env` / `.git` URI blocking | Sensitive path prefixes |
+| `.sql` / `.bak` file blocking | Database and backup file extensions |
+| Admin folder blocking | `/admin`, `/wp-admin`, `/phpmyadmin`, etc. |
+| Bot blocking | All `blockedBotPatterns` entries, case-insensitivity |
+| Null / empty UA blocking | Missing header, empty value, whitespace-only value, robots.txt with no UA |
+| Percent-encoded URI handling | Encoded dots, encoded characters, malformed encodings |
+| Always-allow bypass of UA checks | `/ads.txt` passes even with a blocked bot UA |
 | Pass-through | Root path and normal page paths |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.
