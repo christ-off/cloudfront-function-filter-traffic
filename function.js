@@ -39,9 +39,9 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // ====================================================
-    // DENIES scrapper bots
+    // DENIES blocked bots
     // ====================================================
-    if (isScrapperBot(ua)) {
+    if (isBlockedBot(ua)) {
         return createNotFoundResponse();
     }
 
@@ -59,7 +59,7 @@ function isSecurityScanUri(uri) {
     );
 }
 
-const scrapperBotPatterns = [
+const blockedBotPatterns = [
     // Most frequent → least frequent (based on logs.db analysis)
     'petalbot',
     'sleepbot',
@@ -80,8 +80,8 @@ const scrapperBotPatterns = [
     'webscraperbot',
 ];
 
-function isScrapperBot(normalizedUserAgent) {
-    return scrapperBotPatterns.some(
+function isBlockedBot(normalizedUserAgent) {
+    return blockedBotPatterns.some(
         (pattern) => typeof pattern === 'string'
             ? normalizedUserAgent.includes(pattern)
             : pattern.test(normalizedUserAgent)
