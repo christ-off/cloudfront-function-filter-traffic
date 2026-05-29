@@ -79,6 +79,7 @@ const blockedBotPatterns = [
     'yaapp_android',
     'webscraperbot',
     'spiderling',
+    'timpibot',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
