@@ -24,7 +24,11 @@ Requests that match obvious automated-scan patterns are returned a `404 Not Foun
 
 URI matching is case-insensitive (the URI is lowercased before any check).
 
-### 4. AI bot / scraper blocking (404)
+### 4. Bot blocking implementation — array of patterns vs. single regex
+
+Bot user-agents are matched using an **array of string/regex patterns** rather than one big regex. A single regex is ~3.6× faster in microbenchmarks (49 ms vs 176 ms over 1 million calls), but the difference per real request is ~0.00013 ms — negligible at this scale. The array form was chosen because it keeps cognitive complexity low enough to satisfy SonarQube's threshold, and makes it trivial to add, remove, or comment out individual patterns.
+
+### 5. AI bot / scraper blocking (404)
 Requests whose `User-Agent` matches any of the following are returned a `404 Not Found`:
 
 - **AI crawlers** — a curated list of 80+ known AI bots and scrapers: `GPTBot`, `CCBot`, `ByteSpider`, `PerplexityBot`, `meta-externalagent`, `Cohere`, etc.
@@ -116,7 +120,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all five behaviours with 75 tests:
+`function.test.js` covers all five behaviours with 82 tests:
 
 | Suite | What is tested |
 |---|---|

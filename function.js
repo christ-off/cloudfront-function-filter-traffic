@@ -78,6 +78,7 @@ const blockedBotPatterns = [
     'yasearchbrowser', 'scrapy',
     'yaapp_android',
     'webscraperbot',
+    'spiderling',
 ];
 
 function isBlockedBot(normalizedUserAgent) {

@@ -189,6 +189,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 7.0;) AppleWebKit/537.36 (HTML, like Gecko) Mobile Safari/537.36 (compatible; PetalBot; https://webmaster.petalsearch.com/site/petalbot)", "PetalBot full UA"],
     ["Mozilla/5.0 (compatible;PetalBot; https://webmaster.petalsearch.com/site/petalbot)", "PetalBot compact UA"],
+    ["Mozilla/5.0 (compatible; SpiderLing; https://nlp.fi.muni.cz/projects/biwec/)", "SpiderLing scraper"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
