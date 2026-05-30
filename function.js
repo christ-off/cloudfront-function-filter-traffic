@@ -73,6 +73,7 @@ const blockedBotPatterns = [
     'webscraperbot',
     'spiderling',
     'timpibot',
+    'semrushbot',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
