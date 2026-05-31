@@ -313,6 +313,20 @@ describe("stale Chrome 90–94 blocking by user-agent", () => {
 });
 
 // =====================================================
+// iOS 1–9, all end-of-life → 404
+// =====================================================
+describe("end-of-life iOS 1–9 blocking by user-agent", () => {
+  it("blocks iOS 9 (real stale bot UA)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 9_3_5 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13G36 Safari/601.1" })).statusCode).toBe(404);
+  });
+
+  it("does not block iOS 10 (above range)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_4 like Mac OS X) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.0 Mobile/14G61 Safari/602.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
