@@ -159,6 +159,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; SpiderLing; https://nlp.fi.muni.cz/projects/biwec/)", "SpiderLing scraper"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
     ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],
+    ["greedyhand/0.1", "GreedyHand scraper"],
+    ["greedyhand/1.0", "GreedyHand scraper (any version)"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

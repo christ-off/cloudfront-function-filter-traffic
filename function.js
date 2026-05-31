@@ -74,6 +74,7 @@ const blockedBotPatterns = [
     'spiderling',
     'timpibot',
     'semrushbot',
+    'greedyhand/',
     /chrome\/9[0-4]\.\d+/, // Chrome 90–94, all stale
     /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
 ];
