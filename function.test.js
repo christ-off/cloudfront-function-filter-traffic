@@ -294,6 +294,25 @@ describe("always-allow paths bypass UA checks", () => {
 });
 
 // =====================================================
+// Chrome 90–94, all stale → 404
+// =====================================================
+describe("stale Chrome 90–94 blocking by user-agent", () => {
+  it("blocks Chrome 94 (real stale bot UA)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36" })).statusCode).toBe(404);
+  });
+
+  it("does not block Chrome 89 (below range)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block Chrome 95 (above range)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {

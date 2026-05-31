@@ -74,6 +74,7 @@ const blockedBotPatterns = [
     'spiderling',
     'timpibot',
     'semrushbot',
+    /chrome\/9[0-4]\.\d+/, // Chrome 90–94, all stale
 ];
 
 function isBlockedBot(normalizedUserAgent) {
