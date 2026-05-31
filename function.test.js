@@ -296,11 +296,15 @@ describe("always-allow paths bypass UA checks", () => {
 });
 
 // =====================================================
-// Chrome 90–94, all stale → 404
+// Chrome 90–99, all stale → 404
 // =====================================================
-describe("stale Chrome 90–94 blocking by user-agent", () => {
+describe("stale Chrome 90–99 blocking by user-agent", () => {
   it("blocks Chrome 94 (real stale bot UA)", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36" })).statusCode).toBe(404);
+  });
+
+  it("blocks Chrome 95 (within range)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36" })).statusCode).toBe(404);
   });
 
   it("does not block Chrome 89 (below range)", () => {
@@ -308,8 +312,8 @@ describe("stale Chrome 90–94 blocking by user-agent", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("does not block Chrome 95 (above range)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36" });
+  it("does not block Chrome 100 (above range)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
 });
