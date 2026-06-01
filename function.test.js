@@ -26,6 +26,16 @@ describe("always-allow paths", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("allows /feed.xml", () => {
+    const event = makeEvent({ uri: "/feed.xml" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows /feed.xml even with a blocked user-agent (always-allow wins)", () => {
+    const event = makeEvent({ uri: "/feed.xml", userAgent: "CCBot/2.0" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("allows /robots.txt even with a blocked user-agent (always-allow wins)", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" });
     expect(handler(event)).toEqual(event.request);
