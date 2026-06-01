@@ -25,17 +25,23 @@ Requests that match obvious automated-scan patterns are returned a `404 Not Foun
 
 URI matching is case-insensitive (the URI is lowercased before any check).
 
-### 4. Bot blocking implementation — array of patterns vs. single regex
+### 4. Google referrer gate → warning page (200)
+
+Requests with a `Referer` header matching any `*.google.*` domain are returned a **custom HTML warning page** instead of being passed through to the origin. The page (in French) informs the visitor that the site will soon be removed from Google's index, with a link back to the original page.
+
+The original URL is extracted from Google's `?url=` redirect parameter when present; otherwise the current requested URI is used as the link target. The page includes `Cache-Control: no-cache, no-store` headers to prevent caching.
+
+### 5. Bot blocking implementation — array of patterns vs. single regex
 
 Bot user-agents are matched using an **array of string/regex patterns** rather than one big regex. A single regex is ~3.6× faster in microbenchmarks (49 ms vs 176 ms over 1 million calls), but the difference per real request is ~0.00013 ms — negligible at this scale. The array form was chosen because it keeps cognitive complexity low enough to satisfy SonarQube's threshold, and makes it trivial to add, remove, or comment out individual patterns.
 
-### 5. Bot / scraper blocking (404)
+### 6. Bot / scraper blocking (404)
 Requests whose `User-Agent` matches any entry in `blockedBotPatterns` are returned a `404 Not Found`. Patterns are ordered by observed frequency (most frequent first) for faster average matching. Current entries include:
 
 - **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`
 - **Legacy / unwanted browser tokens** — `Trident` (IE), `Presto` (old Opera), `CriOS` (Chrome for iOS), `FxiOS` (Firefox for iOS), `YaApp_Android`, `YaSearchBrowser`, `ptst/`
 
-### 6. Pass-through
+### 7. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -127,6 +133,7 @@ npm run test:watch # watch mode (re-runs on file save)
 |---|---|
 | Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation |
 | PHP file blocking | `.php`, `.php5`, `.php7`, `.phtml`, `.phar` extensions, case-insensitivity |
+| Google referrer gate | `google.com`, `google.fr`, `google.co.uk`, `google.de` → warning page; non-Google → pass-through; URL extraction from `?url=` param; HTML structure; fallback to current URI |
 | Bad folder blocking | Scanner folders, admin folders, bare folder paths |
 | `.env` / `.git` URI blocking | Sensitive path prefixes |
 | `.sql` / `.bak` file blocking | Database and backup file extensions |

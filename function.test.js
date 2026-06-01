@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0" } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", referer = null } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
+  }
+  if (referer !== null) {
+    headers["referer"] = { value: referer };
   }
   return { request: { uri, headers } };
 }
@@ -350,5 +353,75 @@ describe("pass-through", () => {
   it("returns the request object unchanged for the root path", () => {
     const event = makeEvent({ uri: "/" });
     expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Google referrer gate → warning page
+// =====================================================
+describe("google referrer gate", () => {
+  it("returns warning page for google.com referrer", () => {
+    const result = handler(makeEvent({ uri: "/about", userAgent: "Mozilla/5.0", referer: "https://www.google.com/search?q=test" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("bientôt retiré de l'index Google");
+    expect(result.body).toContain("page originale");
+  });
+
+  it("returns warning page for google.fr referrer", () => {
+    const result = handler(makeEvent({ uri: "/contact", referer: "https://www.google.fr/search?q=test" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("page originale");
+  });
+
+  it("returns warning page for google.co.uk referrer", () => {
+    const result = handler(makeEvent({ uri: "/article", referer: "https://www.google.co.uk/" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("returns warning page for google.de referrer", () => {
+    const result = handler(makeEvent({ uri: "/faq", referer: "https://www.google.de/" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("returns warning page for googleblog.com referrer (non-.google. → pass-through)", () => {
+    const event = makeEvent({ uri: "/about", referer: "https://www.googleblog.com/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through non-google referrer (bing.com)", () => {
+    const event = makeEvent({ uri: "/about", referer: "https://www.bing.com/search?q=test" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through when referer header is missing", () => {
+    const event = makeEvent({ uri: "/about", userAgent: "Mozilla/5.0", referer: null });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("extracts original URL from Google redirect url parameter", () => {
+    const referer = "https://www.google.fr/url?sa=t&url=https%3A%2F%2Fmonsite.com%2Factualites%2F2024&rct=j";
+    const result = handler(makeEvent({ uri: "/other", referer }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("/actualites/2024");
+    expect(result.body).not.toContain("other");
+  });
+
+  it("falls back to current URI when no url parameter", () => {
+    const result = handler(makeEvent({ uri: "/accueil", referer: "https://www.google.com/search?q=test" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("/accueil");
+  });
+
+  it("returns HTML with correct content type", () => {
+    const result = handler(makeEvent({ uri: "/", referer: "https://www.google.com/" }));
+    expect(result.headers["Content-Type"].value).toBe("text/html; charset=UTF-8");
+    expect(result.headers["Cache-Control"].value).toBe("no-cache, no-store");
+  });
+
+  it("HTML is valid and contains French text", () => {
+    const result = handler(makeEvent({ uri: "/", referer: "https://www.google.com/" }));
+    expect(result.body).toContain("<html lang=\"fr\">");
+    expect(result.body).toContain("Ce site sera bientôt retiré de l'index Google");
+    expect(result.body).toContain("Accéder à la page originale");
   });
 });
