@@ -363,7 +363,7 @@ describe("google referrer gate", () => {
   it("returns warning page for google.com referrer", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: "Mozilla/5.0", referer: "https://www.google.com/search?q=test" }));
     expect(result.statusCode).toBe(200);
-    expect(result.body).toContain("bientôt retiré de l'index Google");
+    expect(result.body).toContain("politique prédatrice de Google");
     expect(result.body).toContain("page originale");
   });
 
@@ -421,7 +421,7 @@ describe("google referrer gate", () => {
   it("HTML is valid and contains French text", () => {
     const result = handler(makeEvent({ uri: "/", referer: "https://www.google.com/" }));
     expect(result.body).toContain("<html lang=\"fr\">");
-    expect(result.body).toContain("Ce site sera bientôt retiré de l'index Google");
+    expect(result.body).toContain("politique prédatrice de Google");
     expect(result.body).toContain("Accéder à la page originale");
   });
 });
