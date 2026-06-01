@@ -76,6 +76,7 @@ const blockedBotPatterns = [
     'semrushbot',
     'greedyhand/',
     'palo alto networks',
+    'baiduspider',
     /chrome\/9[0-9]\.\d+/, // Chrome 90–99, all stale
     /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
 ];
