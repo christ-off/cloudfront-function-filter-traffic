@@ -145,7 +145,7 @@ function createGoogleWarningResponse(originalUrl) {
         'a:hover{text-decoration:underline}.logo{font-size:2rem;margin-bottom:1rem}</style>' +
         '</head><body><div class="logo">Google</div>' +
         '<h1>Ce site apparaît dans vos résultats Google</h1>' +
-        '<p class="msg">Ce site sera bientôt retiré de l\'index Google. ' +
+        '<p class="msg">En raison de la politique prédatrice de Google, ce site ne sera bientôt plus référencé dans ses résultats. Nous vous invitons à utiliser un autre moteur de recherche pour le retrouver. ' +
         'Pour accéder à la page originale, cliquez ci-dessous :</p>' +
         '<a href="' + escapeHtml(originalUrl) + '">Accéder à la page originale</a>' +
         '</body></html>';
