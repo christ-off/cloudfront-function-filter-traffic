@@ -414,8 +414,8 @@ describe("google referrer gate", () => {
 
   it("returns HTML with correct content type", () => {
     const result = handler(makeEvent({ uri: "/", referer: "https://www.google.com/" }));
-    expect(result.headers["Content-Type"].value).toBe("text/html; charset=UTF-8");
-    expect(result.headers["Cache-Control"].value).toBe("no-cache, no-store");
+    expect(result.headers["content-type"].value).toBe("text/html; charset=UTF-8");
+    expect(result.headers["cache-control"].value).toBe("no-cache, no-store");
   });
 
   it("HTML is valid and contains French text", () => {

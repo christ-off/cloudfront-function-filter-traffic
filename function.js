@@ -144,8 +144,8 @@ function createGoogleWarningResponse(originalUrl) {
         'a{color:#1a73e8;text-decoration:none;font-weight:500}' +
         'a:hover{text-decoration:underline}.logo{font-size:2rem;margin-bottom:1rem}</style>' +
         '</head><body><div class="logo">Google</div>' +
-        '<h1>Ce site apparaît dans les résultats Google</h1>' +
-        '<p class="msg">En raison des nouvelles politiques de Google, ce site ne sera bientôt plus référencé dans ses résultats. Nous vous invitons à utiliser un autre moteur de recherche pour le retrouver. ' +
+        '<h1>Ce site apparaît dans vos résultats Google</h1>' +
+        '<p class="msg">Ce site sera bientôt retiré de l\'index Google. ' +
         'Pour accéder à la page originale, cliquez ci-dessous :</p>' +
         '<a href="' + escapeHtml(originalUrl) + '">Accéder à la page originale</a>' +
         '</body></html>';
@@ -153,8 +153,8 @@ function createGoogleWarningResponse(originalUrl) {
         statusCode: 200,
         statusDescription: 'OK',
         headers: {
-            'Content-Type': { value: 'text/html; charset=UTF-8' },
-            'Cache-Control': { value: 'no-cache, no-store' },
+            'content-type': { value: 'text/html; charset=UTF-8' },
+            'cache-control': { value: 'no-cache, no-store' },
         },
         body: body,
     };
