@@ -16,9 +16,9 @@ function handler(event) {
     }
 
     // =====================================================
-    // Always Allow robots.txt, ads.txt
+    // Always allow robots.txt and ads.txt
     // =====================================================
-    if (/^\/(robots\.txt|ads\.txt|feed\.xml)$/.test(uri)) {
+    if (/^\/(robots\.txt|ads\.txt)$/.test(uri)) {
         return request;
     }
 
