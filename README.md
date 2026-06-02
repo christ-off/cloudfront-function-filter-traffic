@@ -127,11 +127,11 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 78 tests:
+`function.test.js` covers all behaviours with 101 tests:
 
 | Suite | What is tested |
 |---|---|
-| Always-allow paths | `/robots.txt`, `/ads.txt`, URI trim & lowercase normalisation |
+| Always-allow paths | `/robots.txt`, `/ads.txt`; URI trim & lowercase normalisation |
 | PHP file blocking | `.php`, `.php5`, `.php7`, `.phtml`, `.phar` extensions, case-insensitivity |
 | Google referrer gate | `google.com`, `google.fr`, `google.co.uk`, `google.de` → warning page; non-Google → pass-through; URL extraction from `?url=` param; HTML structure; fallback to current URI |
 | Bad folder blocking | Scanner folders, admin folders, bare folder paths |
