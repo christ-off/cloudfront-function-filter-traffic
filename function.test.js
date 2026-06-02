@@ -176,6 +176,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["greedyhand/1.0", "GreedyHand scraper (any version)"],
     ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider/2.0"],
     ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render/2.0"],
+    ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
