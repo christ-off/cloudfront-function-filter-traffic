@@ -167,6 +167,10 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider/2.0"],
     ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render/2.0"],
     ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
+      "Peg Tech Inc. / RakSmart",
+    ],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
@@ -317,8 +321,16 @@ describe("stale Chrome < 100 blocking by user-agent", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("does not block Chrome 100 (minimum version)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36" });
+  it("blocks Chrome 100 (below 110)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36" })).statusCode).toBe(404);
+  });
+
+  it("blocks Chrome 109 (just below 110)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.120 Safari/537.36" })).statusCode).toBe(404);
+  });
+
+  it("does not block Chrome 110 (minimum version)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.178 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
 

@@ -87,7 +87,7 @@ const blockedBotPatterns = [
     'greedyhand/',
     'palo alto networks',
     'baiduspider',
-    /chrome\/[1-9]?\d\.\d+(?!\d)/, // Chrome < 100 (1–99), all stale
+    (ua) => isStaleChrome(ua),
     /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
 ];
 
@@ -95,8 +95,18 @@ function isBlockedBot(normalizedUserAgent) {
     return blockedBotPatterns.some(
         (pattern) => typeof pattern === 'string'
             ? normalizedUserAgent.includes(pattern)
-            : pattern.test(normalizedUserAgent)
+            : pattern instanceof RegExp
+                ? pattern.test(normalizedUserAgent)
+                : pattern(normalizedUserAgent)
     );
+}
+
+function isStaleChrome(ua) {
+    const m = ua.match(/chrome\/(\d+)\./);
+    if (!m) return false;
+    const version = parseInt(m[1], 10);
+    // Chrome 110 = Feb 2023. Pre-110 in 2026 = bot indicator.
+    return version < 110;
 }
 
 function createNotFoundResponse() {

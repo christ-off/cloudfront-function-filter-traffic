@@ -40,8 +40,16 @@ Requests whose `User-Agent` matches any entry in `blockedBotPatterns` are return
 
 - **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`
 - **Legacy / unwanted browser tokens** — `Trident` (IE), `Presto` (old Opera), `CriOS` (Chrome for iOS), `FxiOS` (Firefox for iOS), `YaApp_Android`, `YaSearchBrowser`, `ptst/`
+- **Stale Chrome** — Chrome < 110 (pre-Feb 2023) — treated as a bot indicator
+- **End-of-life iOS** — iOS 1–9 — all versions are end-of-life and rarely used by real browsers
 
-### 7. Pass-through
+### 7. Stale Chrome blocking (404)
+Requests with a Chrome version below 110 (released Feb 2023) are returned a `404 Not Found`. Chrome versions this old are rarely seen in legitimate browsers in 2026 and are treated as a strong bot indicator.
+
+### 8. End-of-life iOS blocking (404)
+Requests with an iOS version between 1 and 9 are returned a `404 Not Found`. All such versions are end-of-life and are predominantly used by automated tools rather than real browsers.
+
+### 9. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -127,7 +135,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 101 tests:
+`function.test.js` covers all behaviours with 104 tests:
 
 | Suite | What is tested |
 |---|---|
@@ -139,6 +147,8 @@ npm run test:watch # watch mode (re-runs on file save)
 | `.sql` / `.bak` file blocking | Database and backup file extensions |
 | Admin folder blocking | `/admin`, `/wp-admin`, `/phpmyadmin`, etc. |
 | Bot blocking | All `blockedBotPatterns` entries, case-insensitivity |
+| Stale Chrome blocking | Chrome 89, 94, 99 blocked; 100, 110, 115 pass |
+| End-of-life iOS blocking | iOS 9 blocked; iOS 10 passes |
 | Null / empty UA blocking | Missing header, empty value, whitespace-only value, robots.txt with no UA |
 | Percent-encoded URI handling | Encoded dots, encoded characters, malformed encodings |
 | Always-allow bypass of UA checks | `/ads.txt` passes even with a blocked bot UA |
