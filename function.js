@@ -41,9 +41,12 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // ====================================================
-    // DENIES blocked bots
+    // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK)
     // ====================================================
     if (isBlockedBot(ua)) {
+        if (/^\/feed\.xml$/.test(uri)) {
+            return createEmptyFeedResponse();
+        }
         return createNotFoundResponse();
     }
 
@@ -74,6 +77,7 @@ const blockedBotPatterns = [
     'webtrackrcrawler',
     'dataforseobot',
     'fxios',
+    'bytespider',
     'pimeyes-downloader-api',
     'shapbot',
     'ev-crawler',
@@ -108,8 +112,8 @@ function isStaleChrome(ua) {
     const m = ua.match(/chrome\/(\d+)\./);
     if (!m) return false;
     const version = parseInt(m[1], 10);
-    // Chrome 110 = Feb 2023. Pre-110 in 2026 = bot indicator.
-    return version < 110;
+    // Chrome 120 = Oct 2024. Pre-121 in 2026 = bot indicator.
+    return version <= 120;
 }
 
 function createNotFoundResponse() {
@@ -118,6 +122,15 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
+    };
+}
+
+function createEmptyFeedResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {'content-type': {value: 'application/atom+xml'}},
+        body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>'
     };
 }
 

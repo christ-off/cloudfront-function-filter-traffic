@@ -159,6 +159,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 7.0;) AppleWebKit/537.36 (HTML, like Gecko) Mobile Safari/537.36 (compatible; PetalBot; https://webmaster.petalsearch.com/site/petalbot)", "PetalBot full UA"],
     ["Mozilla/5.0 (compatible;PetalBot; https://webmaster.petalsearch.com/site/petalbot)", "PetalBot compact UA"],
+    ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Mozilla/5.0 (compatible; SpiderLing; https://nlp.fi.muni.cz/projects/biwec/)", "SpiderLing scraper"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
     ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],
@@ -312,36 +313,36 @@ describe("always-allow paths bypass UA checks", () => {
 });
 
 // =====================================================
-// Chrome < 100, all stale → 404
+// Chrome ≤ 120, all stale → 404
 // =====================================================
-describe("stale Chrome < 100 blocking by user-agent", () => {
-  it("blocks Chrome 89 (below 100)", () => {
+describe("stale Chrome ≤ 120 blocking by user-agent", () => {
+  it("blocks Chrome 89 (below 120)", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("blocks Chrome 94 (below 100)", () => {
+  it("blocks Chrome 94 (below 120)", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("blocks Chrome 99 (below 100)", () => {
+  it("blocks Chrome 99 (below 120)", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("blocks Chrome 100 (below 110)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36" })).statusCode).toBe(404);
+  it("blocks Chrome 110 (below 120)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.4896.75 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("blocks Chrome 109 (just below 110)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.120 Safari/537.36" })).statusCode).toBe(404);
+  it("blocks Chrome 120 (boundary, <= 120)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.5414.120 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("does not block Chrome 110 (minimum version)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.178 Safari/537.36" });
+  it("does not block Chrome 121 (minimum version)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.5481.178 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("does not block Chrome 115 (modern)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.170 Safari/537.36" });
+  it("does not block Chrome 125 (modern)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.5790.170 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
 });

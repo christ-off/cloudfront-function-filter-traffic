@@ -38,13 +38,13 @@ Bot user-agents are matched using an **array of string/regex patterns** rather t
 ### 6. Bot / scraper blocking (404)
 Requests whose `User-Agent` matches any entry in `blockedBotPatterns` are returned a `404 Not Found`. Patterns are ordered by observed frequency (most frequent first) for faster average matching. Current entries include:
 
-- **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`
+- **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`, `Bytespider`, `Baiduspider`
 - **Legacy / unwanted browser tokens** — `Trident` (IE), `Presto` (old Opera), `CriOS` (Chrome for iOS), `FxiOS` (Firefox for iOS), `YaApp_Android`, `YaSearchBrowser`, `ptst/`
-- **Stale Chrome** — Chrome < 110 (pre-Feb 2023) — treated as a bot indicator
+- **Stale Chrome** — Chrome ≤ 120 (Oct 2024) — treated as a bot indicator
 - **End-of-life iOS** — iOS 1–9 — all versions are end-of-life and rarely used by real browsers
 
 ### 7. Stale Chrome blocking (404)
-Requests with a Chrome version below 110 (released Feb 2023) are returned a `404 Not Found`. Chrome versions this old are rarely seen in legitimate browsers in 2026 and are treated as a strong bot indicator.
+Requests with a Chrome version of 120 or below (released Oct 2024) are returned a `404 Not Found`. Chrome versions this old are rarely seen in legitimate browsers in 2026 and are treated as a strong bot indicator.
 
 ### 8. End-of-life iOS blocking (404)
 Requests with an iOS version between 1 and 9 are returned a `404 Not Found`. All such versions are end-of-life and are predominantly used by automated tools rather than real browsers.
@@ -147,7 +147,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | `.sql` / `.bak` file blocking | Database and backup file extensions |
 | Admin folder blocking | `/admin`, `/wp-admin`, `/phpmyadmin`, etc. |
 | Bot blocking | All `blockedBotPatterns` entries, case-insensitivity |
-| Stale Chrome blocking | Chrome 89, 94, 99 blocked; 100, 110, 115 pass |
+| Stale Chrome blocking | Chrome 89, 94, 99, 110, 120 blocked; 121, 125 pass |
 | End-of-life iOS blocking | iOS 9 blocked; iOS 10 passes |
 | Null / empty UA blocking | Missing header, empty value, whitespace-only value, robots.txt with no UA |
 | Percent-encoded URI handling | Encoded dots, encoded characters, malformed encodings |
