@@ -94,6 +94,7 @@ const blockedBotPatterns = [
     'baiduspider',
     (ua) => isStaleChrome(ua),
     /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
+    'applewebkit/605.1.15 (khtml, like gecko) chrome/',
     'mozilla/5.0 (x11; ubuntu; linux x86_64; rv:147.0) gecko/20100101 firefox/147.0',
     'applewebkit/605.1.15'
 ];
