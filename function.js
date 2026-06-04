@@ -65,6 +65,7 @@ const blockedBotPatterns = [
     // Most frequent → least frequent (based on logs.db analysis)
     'petalbot',
     'sleepbot',
+    'fyndbot',
     'got (https://github.com/sindresorhus/got',
     'presto', 'trident',
     /ptst\//,
@@ -89,6 +90,7 @@ const blockedBotPatterns = [
     'baiduspider',
     (ua) => isStaleChrome(ua),
     /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
+    'mozilla/5.0 (x11; ubuntu; linux x86_64; rv:147.0) gecko/20100101 firefox/147.0'
 ];
 
 function isBlockedBot(normalizedUserAgent) {

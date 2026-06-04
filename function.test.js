@@ -167,9 +167,15 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider/2.0"],
     ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render/2.0"],
     ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
+    ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
+    ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
     [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
       "Peg Tech Inc. / RakSmart",
+    ],
+    [
+      "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0",
+      "Firefox 147 (Ubuntu) suspected scraper",
     ],
   ];
 
