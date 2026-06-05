@@ -87,7 +87,7 @@ const blockedBotPatterns = [
     'webscraperbot',
     'spiderling',
     'timpibot',
-    'semrushbot',
+    'semrushbot', 'serankingbacklinksbot',
     'feedfetcher-google',
     'greedyhand/',
     'palo alto networks',
