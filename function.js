@@ -109,7 +109,10 @@ function isBlockedBot(normalizedUserAgent) {
     );
 }
 
+const KNOWN_CRAWLERS = ['bingbot/', 'googlebot/', 'applebot/'];
+
 function isStaleChrome(ua) {
+    if (KNOWN_CRAWLERS.some((c) => ua.includes(c))) return false;
     const m = ua.match(/chrome\/(\d+)\./);
     if (!m) return false;
     const version = parseInt(m[1], 10);

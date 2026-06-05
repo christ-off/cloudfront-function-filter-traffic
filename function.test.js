@@ -345,6 +345,11 @@ describe("stale Chrome ≤ 120 blocking by user-agent", () => {
     const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.5790.170 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("does not block bingbot with stale Chrome version", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36" });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
