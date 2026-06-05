@@ -82,6 +82,7 @@ const blockedBotPatterns = [
     'shapbot',
     'ev-crawler',
     'builtwith',
+    'lanai',
     'yasearchbrowser', 'scrapy',
     'yaapp_android',
     'webscraperbot',

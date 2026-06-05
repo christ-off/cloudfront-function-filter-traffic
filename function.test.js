@@ -170,6 +170,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
     ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
     ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Lanai)", "Lanai bot"],
     [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
       "Peg Tech Inc. / RakSmart",
