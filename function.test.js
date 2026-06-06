@@ -65,8 +65,10 @@ describe("PHP file blocking", () => {
   });
 
   it("does not block a path that merely contains 'php' as a substring", () => {
-    const event = makeEvent({ uri: "/php-info" });
-    expect(handler(event)).toEqual(event.request);
+    // /php-info has no dot and no trailing slash → trailing-slash redirect (not a 404 security block)
+    const result = handler(makeEvent({ uri: "/php-info" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("L'adresse n'est pas correcte");
   });
 
   it("blocks a .php5 file", () => {
@@ -195,6 +197,13 @@ describe("scrapper bot blocking by user-agent", () => {
   it("scrapper bot matching is case-insensitive (BuiltWith)", () => {
     const result = handler(makeEvent({ userAgent: "BuiltWith/1.4" }));
     expect(result.statusCode).toBe(404);
+  });
+
+  it("blocked bot on /feed.xml gets empty Atom feed (200), not 404", () => {
+    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("application/atom+xml");
+    expect(result.body).toContain("<feed");
   });
 });
 
@@ -369,11 +378,113 @@ describe("end-of-life iOS 1–9 blocking by user-agent", () => {
 });
 
 // =====================================================
+// Trailing slash redirect
+// =====================================================
+describe("trailing slash redirect", () => {
+  // --- needsTrailingSlash: triggers redirect ---
+  it("returns 200 redirect page for /about (no trailing slash)", () => {
+    const result = handler(makeEvent({ uri: "/about" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("returns 200 redirect page for /contact/team (nested, no trailing slash)", () => {
+    const result = handler(makeEvent({ uri: "/contact/team" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("returns 200 redirect page for /php-info (no dot, not a security scan)", () => {
+    const result = handler(makeEvent({ uri: "/php-info" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  // --- needsTrailingSlash: pass-through ---
+  it("passes through / (root already has trailing slash)", () => {
+    const event = makeEvent({ uri: "/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through /about/ (already has trailing slash)", () => {
+    const event = makeEvent({ uri: "/about/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through /style.css (has dot — static resource)", () => {
+    const event = makeEvent({ uri: "/style.css" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through /image.avif (has dot — static resource)", () => {
+    const event = makeEvent({ uri: "/image.avif" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through /feed.xml (has dot)", () => {
+    const event = makeEvent({ uri: "/feed.xml" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  // --- 200 response content ---
+  it("body contains 'L'adresse n'est pas correcte'", () => {
+    const result = handler(makeEvent({ uri: "/about" }));
+    expect(result.body).toContain("L'adresse n'est pas correcte");
+  });
+
+  it("body contains meta http-equiv refresh pointing to /about/", () => {
+    const result = handler(makeEvent({ uri: "/about" }));
+    expect(result.body).toContain('<meta http-equiv="refresh"');
+    expect(result.body).toContain("0;url=/about/");
+  });
+
+  it("body contains link to correct relative URL /about/", () => {
+    const result = handler(makeEvent({ uri: "/about" }));
+    expect(result.body).toContain('href="/about/"');
+  });
+
+  it("response has content-type text/html; charset=UTF-8", () => {
+    const result = handler(makeEvent({ uri: "/about" }));
+    expect(result.headers["content-type"].value).toBe("text/html; charset=UTF-8");
+  });
+
+  // --- whitelisted bots → 301 ---
+  it("returns 301 for Qwant bot on /about", () => {
+    const result = handler(makeEvent({
+      uri: "/about",
+      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
+    }));
+    expect(result.statusCode).toBe(301);
+    expect(result.headers["location"].value).toBe("/about/");
+  });
+
+  it("returns 301 for Qwant bot on /page (second UA variant)", () => {
+    const result = handler(makeEvent({
+      uri: "/page",
+      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
+    }));
+    expect(result.statusCode).toBe(301);
+    expect(result.headers["location"].value).toBe("/page/");
+  });
+
+  it("Qwant on /about/ (already correct) passes through, no redirect", () => {
+    const event = makeEvent({
+      uri: "/about/",
+      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  // --- blocked bot hits bot-block before trailing-slash gate ---
+  it("blocked bot on /about still gets 404 (bot block runs first)", () => {
+    const result = handler(makeEvent({ uri: "/about", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
   it("returns the request object unchanged for a normal path", () => {
-    const event = makeEvent({ uri: "/about", userAgent: "Mozilla/5.0" });
+    const event = makeEvent({ uri: "/about/", userAgent: "Mozilla/5.0" });
     expect(handler(event)).toEqual(event.request);
   });
 
@@ -411,17 +522,17 @@ describe("google referrer gate", () => {
   });
 
   it("returns warning page for googleblog.com referrer (non-.google. → pass-through)", () => {
-    const event = makeEvent({ uri: "/about", referer: "https://www.googleblog.com/" });
+    const event = makeEvent({ uri: "/about/", referer: "https://www.googleblog.com/" });
     expect(handler(event)).toEqual(event.request);
   });
 
   it("passes through non-google referrer (bing.com)", () => {
-    const event = makeEvent({ uri: "/about", referer: "https://www.bing.com/search?q=test" });
+    const event = makeEvent({ uri: "/about/", referer: "https://www.bing.com/search?q=test" });
     expect(handler(event)).toEqual(event.request);
   });
 
   it("passes through when referer header is missing", () => {
-    const event = makeEvent({ uri: "/about", userAgent: "Mozilla/5.0", referer: null });
+    const event = makeEvent({ uri: "/about/", userAgent: "Mozilla/5.0", referer: null });
     expect(handler(event)).toEqual(event.request);
   });
 
@@ -437,6 +548,13 @@ describe("google referrer gate", () => {
     const result = handler(makeEvent({ uri: "/accueil", referer: "https://www.google.com/search?q=test" }));
     expect(result.statusCode).toBe(200);
     expect(result.body).toContain("/accueil");
+  });
+
+  it("decodes url parameter that is a relative path (not a valid absolute URL)", () => {
+    const referer = "https://www.google.fr/url?url=%2Factualites%2F2024%2F";
+    const result = handler(makeEvent({ uri: "/other/", referer }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("/actualites/2024/");
   });
 
   it("returns HTML with correct content type", () => {
