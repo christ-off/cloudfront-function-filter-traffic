@@ -179,6 +179,7 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0",
       "Firefox 147 (Ubuntu) suspected scraper",
     ],
+    ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
