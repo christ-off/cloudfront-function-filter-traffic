@@ -35,13 +35,15 @@ The original URL is extracted from Google's `?url=` redirect parameter when pres
 
 Bot user-agents are matched using an **array of string/regex patterns** rather than one big regex. A single regex is ~3.6× faster in microbenchmarks (49 ms vs 176 ms over 1 million calls), but the difference per real request is ~0.00013 ms — negligible at this scale. The array form was chosen because it keeps cognitive complexity low enough to satisfy SonarQube's threshold, and makes it trivial to add, remove, or comment out individual patterns.
 
-### 6. Bot / scraper blocking (404)
+### 6. Bot / scraper blocking (404 or empty feed)
 Requests whose `User-Agent` matches any entry in `blockedBotPatterns` are returned a `404 Not Found`. Patterns are ordered by observed frequency (most frequent first) for faster average matching. Current entries include:
 
 - **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`, `Bytespider`, `Baiduspider`
 - **Legacy / unwanted browser tokens** — `Trident` (IE), `Presto` (old Opera), `CriOS` (Chrome for iOS), `FxiOS` (Firefox for iOS), `YaApp_Android`, `YaSearchBrowser`, `ptst/`
 - **Stale Chrome** — Chrome ≤ 120 (Oct 2024) — treated as a bot indicator
 - **End-of-life iOS** — iOS 1–9 — all versions are end-of-life and rarely used by real browsers
+
+**Exception — `/feed.xml`:** blocked bots hitting the Atom feed receive a `200` with an empty `<feed>` document instead of a `404`. Subsequent requests that include `If-None-Match` (matching ETag) or `If-Modified-Since` receive `304 Not Modified`. Both responses carry `Cache-Control: public, max-age=31536000` and a stable `ETag` / `Last-Modified` (Jan 2024), signalling to the scraper that the feed has not changed in a very long time and discouraging re-crawling.
 
 ### 7. Stale Chrome blocking (404)
 Requests with a Chrome version of 120 or below (released Oct 2024) are returned a `404 Not Found`. Chrome versions this old are rarely seen in legitimate browsers in 2026 and are treated as a strong bot indicator.
@@ -135,7 +137,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 104 tests:
+`function.test.js` covers all behaviours with 131 tests:
 
 | Suite | What is tested |
 |---|---|
@@ -146,7 +148,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | `.env` / `.git` URI blocking | Sensitive path prefixes |
 | `.sql` / `.bak` file blocking | Database and backup file extensions |
 | Admin folder blocking | `/admin`, `/wp-admin`, `/phpmyadmin`, etc. |
-| Bot blocking | All `blockedBotPatterns` entries, case-insensitivity |
+| Bot blocking | All `blockedBotPatterns` entries, case-insensitivity; `/feed.xml` → empty Atom 200 with caching headers; ETag match → 304; `If-Modified-Since` → 304 |
 | Stale Chrome blocking | Chrome 89, 94, 99, 110, 120 blocked; 121, 125 pass |
 | End-of-life iOS blocking | iOS 9 blocked; iOS 10 passes |
 | Null / empty UA blocking | Missing header, empty value, whitespace-only value, robots.txt with no UA |

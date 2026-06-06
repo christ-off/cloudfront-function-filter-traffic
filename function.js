@@ -45,7 +45,7 @@ function handler(event) {
     // ====================================================
     if (isBlockedBot(ua)) {
         if (/^\/feed\.xml$/.test(uri)) {
-            return createEmptyFeedResponse();
+            return createEmptyFeedResponse(request.headers);
         }
         return createNotFoundResponse();
     }
@@ -191,12 +191,34 @@ function createNotFoundResponse() {
     };
 }
 
-function createEmptyFeedResponse() {
+// Stable ETag for the empty feed — never changes, so scrapers always see "already cached"
+const EMPTY_FEED_ETAG = '"empty-feed-v1"';
+const EMPTY_FEED_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
+const EMPTY_FEED_BODY = '<feed xmlns="http://www.w3.org/2005/Atom"></feed>';
+
+function createEmptyFeedResponse(headers) {
+    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
+    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
+    if (inm === EMPTY_FEED_ETAG || ims) {
+        return {
+            statusCode: 304,
+            statusDescription: 'Not Modified',
+            headers: {
+                'etag': {value: EMPTY_FEED_ETAG},
+                'cache-control': {value: 'public, max-age=31536000'},
+            }
+        };
+    }
     return {
         statusCode: 200,
         statusDescription: 'OK',
-        headers: {'content-type': {value: 'application/atom+xml'}},
-        body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>'
+        headers: {
+            'content-type': {value: 'application/atom+xml'},
+            'etag': {value: EMPTY_FEED_ETAG},
+            'last-modified': {value: EMPTY_FEED_LAST_MODIFIED},
+            'cache-control': {value: 'public, max-age=31536000'},
+        },
+        body: EMPTY_FEED_BODY
     };
 }
 

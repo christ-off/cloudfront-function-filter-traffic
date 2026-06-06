@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", referer = null } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", referer = null, extraHeaders = {} } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
@@ -9,6 +9,7 @@ function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", referer = null } = {}
   if (referer !== null) {
     headers["referer"] = { value: referer };
   }
+  Object.assign(headers, extraHeaders);
   return { request: { uri, headers } };
 }
 
@@ -204,6 +205,30 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("application/atom+xml");
     expect(result.body).toContain("<feed");
+    expect(result.headers["etag"]).toBeDefined();
+    expect(result.headers["last-modified"]).toBeDefined();
+    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
+  });
+
+  it("blocked bot on /feed.xml with matching ETag gets 304", () => {
+    const first = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
+    const etag = first.headers["etag"].value;
+    const result = handler(makeEvent({
+      uri: "/feed.xml",
+      userAgent: "Scrapy/2.16.0",
+      extraHeaders: { "if-none-match": { value: etag } }
+    }));
+    expect(result.statusCode).toBe(304);
+    expect(result.headers["etag"].value).toBe(etag);
+  });
+
+  it("blocked bot on /feed.xml with If-Modified-Since gets 304", () => {
+    const result = handler(makeEvent({
+      uri: "/feed.xml",
+      userAgent: "Scrapy/2.16.0",
+      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
+    }));
+    expect(result.statusCode).toBe(304);
   });
 });
 
