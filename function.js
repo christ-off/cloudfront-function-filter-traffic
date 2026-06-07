@@ -156,19 +156,24 @@ function createPermanentRedirectResponse(correctUrl) {
     };
 }
 
+const HTML_HEAD_START = '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">';
+const VIEWPORT_META = '<meta name="viewport" content="width=device-width,initial-scale=1">';
+const PAGE_STYLE_BASE =
+    'body{font-family:system-ui,sans-serif;text-align:center;' +
+    'padding:2rem;margin:0;min-height:100vh;display:flex;flex-direction:column;' +
+    'justify-content:center;align-items:center;background:#f5f5f5;color:#212121}' +
+    'h1{font-size:1.25rem;margin:0 0 .5rem}.msg{max-width:480px;line-height:1.5;margin:0 0 1.5rem}' +
+    'a{color:#1a73e8;text-decoration:none;font-weight:500}' +
+    'a:hover{text-decoration:underline}';
+
 function createTrailingSlashResponse(correctUrl) {
     const safeUrl = escapeHtml(correctUrl);
     const body =
-        '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">' +
+        HTML_HEAD_START +
         '<meta http-equiv="refresh" content="0;url=' + safeUrl + '">' +
-        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        VIEWPORT_META +
         '<title>Redirection</title>' +
-        '<style>body{font-family:system-ui,sans-serif;text-align:center;' +
-        'padding:2rem;margin:0;min-height:100vh;display:flex;flex-direction:column;' +
-        'justify-content:center;align-items:center;background:#f5f5f5;color:#212121}' +
-        'h1{font-size:1.25rem;margin:0 0 .5rem}.msg{max-width:480px;line-height:1.5;margin:0 0 1.5rem}' +
-        'a{color:#1a73e8;text-decoration:none;font-weight:500}' +
-        'a:hover{text-decoration:underline}</style>' +
+        '<style>' + PAGE_STYLE_BASE + '</style>' +
         '</head><body>' +
         '<h1>L\'adresse n\'est pas correcte</h1>' +
         '<p class="msg">Cette page existe à une adresse légèrement différente. ' +
@@ -250,15 +255,10 @@ function escapeHtml(str) {
 
 function createGoogleWarningResponse(originalUrl) {
     const body =
-        '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">' +
-        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        HTML_HEAD_START +
+        VIEWPORT_META +
         '<title>Avertissement — Accès depuis Google</title>' +
-        '<style>body{font-family:system-ui,sans-serif;text-align:center;' +
-        'padding:2rem;margin:0;min-height:100vh;display:flex;flex-direction:column;' +
-        'justify-content:center;align-items:center;background:#f5f5f5;color:#212121}' +
-        'h1{font-size:1.25rem;margin:0 0 .5rem}.msg{max-width:480px;line-height:1.5;margin:0 0 1.5rem}' +
-        'a{color:#1a73e8;text-decoration:none;font-weight:500}' +
-        'a:hover{text-decoration:underline}.logo{font-size:2rem;margin-bottom:1rem}</style>' +
+        '<style>' + PAGE_STYLE_BASE + '.logo{font-size:2rem;margin-bottom:1rem}</style>' +
         '</head><body><div class="logo">Google</div>' +
         '<h1>Ce site apparaît dans vos résultats Google</h1>' +
         '<p class="msg">En raison de la politique prédatrice de Google, ce site ne sera bientôt plus référencé dans ses résultats. Nous vous invitons à utiliser un autre moteur de recherche pour le retrouver. ' +
