@@ -109,6 +109,8 @@ const blockedBotPatterns = [
     'mozilla/5.0 (x11; ubuntu; linux x86_64; rv:147.0) gecko/20100101 firefox/147.0',
     'applewebkit/605.1.15',
     'wellknownbot',
+    // Chrome with zeroed build number = fake UA
+    /chrome\/\d+\.0\.0\.0\b/,
 ];
 
 function isBlockedBot(normalizedUserAgent) {
