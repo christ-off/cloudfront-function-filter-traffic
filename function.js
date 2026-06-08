@@ -125,6 +125,7 @@ function isBlockedBot(normalizedUserAgent) {
 
 const whitelistedBotPatterns = [
     'qwantbot/',
+    'duckduckbot/',
 ];
 
 function isWhitelistedBot(normalizedUserAgent) {
