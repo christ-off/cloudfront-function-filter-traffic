@@ -2,3 +2,5 @@
 /node_modules/*
 /.cloudfront-function-name
 /cloudfront-function-filter-traffic.iml
+.DS_Store
+/coverage/
