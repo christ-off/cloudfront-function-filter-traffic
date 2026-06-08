@@ -102,6 +102,7 @@ const blockedBotPatterns = [
     'yasearchbrowser',
     'yaapp_android',
     'webscraperbot',
+    'wpbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
