@@ -3,7 +3,7 @@ function handler(event) {
     let uri;
     try {
         uri = request.uri ? decodeURIComponent(request.uri).trim().toLowerCase() : '';
-    } catch (_e) {
+    } catch {
         return createNotFoundResponse();
     }
 
@@ -11,7 +11,7 @@ function handler(event) {
     // Block requests with no user agent
     // ====================================================
     const userAgentHeader = request.headers['user-agent'];
-    if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
+    if (!userAgentHeader?.value?.trim()) {
         return createNotFoundResponse();
     }
 
@@ -27,15 +27,6 @@ function handler(event) {
     // ====================================================
     if (isSecurityScanUri(uri)) {
         return createNotFoundResponse();
-    }
-
-    // ====================================================
-    // Google referrer → warning page (before bot blocking)
-    // ====================================================
-    if (isGoogleReferrer(request.headers)) {
-        const referer = request.headers['referer'].value;
-        const originalUrl = extractGoogleUrl(uri, referer);
-        return createGoogleWarningResponse(originalUrl);
     }
 
     const ua = userAgentHeader.value.toLowerCase();
@@ -114,13 +105,11 @@ const blockedBotPatterns = [
 ];
 
 function isBlockedBot(normalizedUserAgent) {
-    return blockedBotPatterns.some(
-        (pattern) => typeof pattern === 'string'
-            ? normalizedUserAgent.includes(pattern)
-            : pattern instanceof RegExp
-                ? pattern.test(normalizedUserAgent)
-                : pattern(normalizedUserAgent)
-    );
+    return blockedBotPatterns.some((pattern) => {
+        if (typeof pattern === 'string') return normalizedUserAgent.includes(pattern);
+        if (pattern instanceof RegExp) return pattern.test(normalizedUserAgent);
+        return pattern(normalizedUserAgent);
+    });
 }
 
 const whitelistedBotPatterns = [
@@ -144,7 +133,7 @@ function isStaleChrome(ua) {
     if (KNOWN_CRAWLERS.some((c) => ua.includes(c))) return false;
     const m = ua.match(/chrome\/(\d+)\./);
     if (!m) return false;
-    const version = parseInt(m[1], 10);
+    const version = Number.parseInt(m[1], 10);
     // Chrome 120 = Oct 2024. Pre-121 in 2026 = bot indicator.
     return version <= 120;
 }
@@ -205,8 +194,8 @@ const EMPTY_FEED_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
 const EMPTY_FEED_BODY = '<feed xmlns="http://www.w3.org/2005/Atom"></feed>';
 
 function createEmptyFeedResponse(headers) {
-    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
-    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
+    const inm = headers?.['if-none-match']?.value;
+    const ims = headers?.['if-modified-since']?.value;
     if (inm === EMPTY_FEED_ETAG || ims) {
         return {
             statusCode: 304,
@@ -230,52 +219,10 @@ function createEmptyFeedResponse(headers) {
     };
 }
 
-function isGoogleReferrer(headers) {
-    const referer = headers['referer'];
-    if (!referer || !referer.value) return false;
-    return /^https?:\/\/[^/]*\.google\./.test(referer.value.toLowerCase());
-}
-
-function extractGoogleUrl(currentUri, referer) {
-    // Try to extract the original URL from Google's redirect ?url= parameter
-    const idx = referer.indexOf('?');
-    if (idx === -1) return currentUri;
-    const params = new URLSearchParams(referer.slice(idx + 1));
-    const raw = params.get('url');
-    if (!raw) return currentUri;
-    try {
-        const parsed = new URL(raw);
-        return parsed.pathname.toLowerCase();
-    } catch (_e) {
-        return decodeURIComponent(raw).trim().toLowerCase();
-    }
-}
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 
 function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function createGoogleWarningResponse(originalUrl) {
-    const body =
-        HTML_HEAD_START +
-        VIEWPORT_META +
-        '<title>Avertissement — Accès depuis Google</title>' +
-        '<style>' + PAGE_STYLE_BASE + '.logo{font-size:2rem;margin-bottom:1rem}</style>' +
-        '</head><body><div class="logo">Google</div>' +
-        '<h1>Ce site apparaît dans vos résultats Google</h1>' +
-        '<p class="msg">En raison de la politique prédatrice de Google, ce site ne sera bientôt plus référencé dans ses résultats. Nous vous invitons à utiliser un autre moteur de recherche pour le retrouver. ' +
-        'Pour accéder à la page originale, cliquez ci-dessous :</p>' +
-        '<a href="' + escapeHtml(originalUrl) + '">Accéder à la page originale</a>' +
-        '</body></html>';
-    return {
-        statusCode: 200,
-        statusDescription: 'OK',
-        headers: {
-            'content-type': { value: 'text/html; charset=UTF-8' },
-            'cache-control': { value: 'no-cache, no-store' },
-        },
-        body: body,
-    };
+    return str.replace(/[&<>"]/g, (c) => HTML_ESCAPES[c]);
 }
 
 export {handler};
