@@ -9,9 +9,26 @@ is UNSUPPORTED unless it's literally named in the runtime-2.0 docs page. Confirm
     operators + ES7 `**` are listed; do not trust generic "ES2020 supported" marketing blurbs)
   - ES2019 optional catch binding `catch { }` (must write `catch (e) { }`)
 Always write the old-school equivalent: `a && a.b && a.b.c` instead of `a?.b?.c`, `catch (e)` instead of
-`catch { }`. Vitest passing is NOT sufficient proof the code will deploy: a syntax valid in Node can still
-fail at CloudFront. Before relying on ANY non-ES5.1 feature, grep the actual runtime-2.0 docs page for the
-exact feature name (fetch it fresh — don't rely on memory or web-search summaries, they can be wrong):
+`catch { }`.
+
+Other "looks like standard JS" features that are ALSO absent from the runtime-2.0 allowlist — avoid
+when simplifying, even though they'd pass Vitest/Node fine:
+  - destructuring (`const { a } = obj`, `const [x] = arr`) — not listed anywhere in core features
+  - spread syntax (`{...obj}`, `[...arr]`, `fn(...args)`) — only function *rest parameters* are listed,
+    spread is a distinct feature and isn't
+  - `for...of` loops / iterator protocol / generators / `Symbol.iterator` — only `for-in` is listed
+  - `class` syntax — this runtime is prototype/function-based only
+  - `Map`/`Set`/`WeakMap`/`WeakSet` — entirely absent from built-in objects
+  - default parameters (`function f(a = 1)`)
+  - logical assignment operators `||=`, `&&=`, `??=` (ES2021)
+  - `Array.from()`, `.flat()`, `.flatMap()`, `.at()`, `Object.fromEntries()`, `Object.hasOwn()` — only
+    the array/object methods explicitly named in the docs are supported, not the whole modern API surface
+  - top-level `await` / async arrow functions / async closures — `async`/`await` only work inside a
+    plain `async function`
+Vitest passing is NOT sufficient proof the code will deploy: syntax valid in Node can still fail at
+CloudFront. Before relying on ANY non-ES5.1 feature, fetch the runtime-2.0 docs page FRESH and grep for
+the exact feature name — don't trust memory, training data, or web-search summaries (they can be wrong,
+as the "?. is supported" claim was):
 https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-javascript-runtime-20.html
 After pushing to main, check that the GitHub Actions deploy succeeded AND that the CloudFront function
 itself runs without "invalid or could not run" errors (e.g. via `aws cloudfront test-function` or by
