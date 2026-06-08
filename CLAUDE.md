@@ -11,3 +11,11 @@ https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-jav
 After pushing to main, check that the GitHub Actions deploy succeeded AND that the CloudFront function
 itself runs without "invalid or could not run" errors (e.g. via `aws cloudfront test-function` or by
 checking distribution logs), since the deploy step can succeed while the published function is broken.
+
+# git push must run standalone (not chained)
+A PreToolUse hook (`.claude/hooks/cloudfront-pre-push.sh`) validates function.js against the real
+cloudfront-js-2.0 runtime via `aws cloudfront test-function` and BLOCKS the push if it errors — this
+is exactly the safety net that would have caught the `catch { }` runtime incompatibility above.
+It only fires when the Bash command literally starts with `git push` (matcher `Bash(git push*)`).
+Always run `git push` as its own Bash call — never chain it with `&&` after `git add`/`git commit`,
+or the matcher won't match and the hook silently won't run.
