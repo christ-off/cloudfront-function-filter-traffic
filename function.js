@@ -11,7 +11,7 @@ function handler(event) {
     // Block requests with no user agent
     // ====================================================
     const userAgentHeader = request.headers['user-agent'];
-    if (!userAgentHeader?.value?.trim()) {
+    if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
         return createNotFoundResponse();
     }
 
@@ -194,8 +194,8 @@ const EMPTY_FEED_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
 const EMPTY_FEED_BODY = '<feed xmlns="http://www.w3.org/2005/Atom"></feed>';
 
 function createEmptyFeedResponse(headers) {
-    const inm = headers?.['if-none-match']?.value;
-    const ims = headers?.['if-modified-since']?.value;
+    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
+    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
     if (inm === EMPTY_FEED_ETAG || ims) {
         return {
             statusCode: 304,
