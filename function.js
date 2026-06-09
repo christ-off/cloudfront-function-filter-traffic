@@ -67,7 +67,6 @@ function isSecurityScanUri(uri) {
 
 const blockedBotPatterns = [
     // Most frequent → least frequent (based on logs.db analysis)
-    /chrome\/\d+\.0\.0\.0\b/,
     (ua) => isStaleChrome(ua),
     'feedfetcher-google',
     'applewebkit/605.1.15',
