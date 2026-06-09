@@ -32,6 +32,13 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // ====================================================
+    // Malformed Firefox UA (rv: version != firefox/ version)
+    // ====================================================
+    if (isMalformedFirefoxUA(ua)) {
+        return createNotFoundResponse();
+    }
+
+    // ====================================================
     // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK)
     // ====================================================
     if (isBlockedBot(ua)) {
@@ -111,6 +118,13 @@ function isBlockedBot(normalizedUserAgent) {
         if (pattern instanceof RegExp) return pattern.test(normalizedUserAgent);
         return pattern(normalizedUserAgent);
     });
+}
+
+function isMalformedFirefoxUA(ua) {
+    const rv = ua.match(/rv:(\d+)\./);
+    const ff = ua.match(/firefox\/(\d+)\./);
+    if (rv && ff) return rv[1] !== ff[1];
+    return false;
 }
 
 const whitelistedBotPatterns = [
