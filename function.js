@@ -102,6 +102,7 @@ const blockedBotPatterns = [
     'yaapp_android',
     'webscraperbot',
     'wpbot/',
+    'googlebot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
@@ -127,7 +128,7 @@ function needsTrailingSlash(uri) {
     return !lastSegment.includes('.');
 }
 
-const KNOWN_CRAWLERS = ['bingbot/', 'googlebot/', 'applebot/'];
+const KNOWN_CRAWLERS = ['bingbot/', 'applebot/'];
 
 function isStaleChrome(ua) {
     if (KNOWN_CRAWLERS.some((c) => ua.includes(c))) return false;
