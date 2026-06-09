@@ -183,6 +183,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
     ["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Googlebot"],
     ["Mozilla/4.0 (compatible; ms-office; MSOffice 16)", "MS Office SaaS"],
+    ["     python-httpx/0.28.1", "Python httpx with leading whitespace"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
