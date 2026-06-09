@@ -111,8 +111,9 @@ const blockedBotPatterns = [
     'yasearchbrowser',
     'yaapp_android',
     'webscraperbot',
+    'python-httpx/',
+    'python-requests/',
     'mozilla/4.0 (compatible; ms-office; msoffice 16)',
-    /python-httpx\//,   // any version, leading whitespace OK
     'wpbot/',
     'googlebot/',
 ];
