@@ -501,6 +501,29 @@ describe("trailing slash redirect", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(404);
   });
+
+  // --- case preservation in redirect URLs ---
+  it("preserves original case in redirect URL for /About", () => {
+    const result = handler(makeEvent({ uri: "/About" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("href=\"/About/\"");
+    expect(result.body).toContain('0;url=/About/');
+  });
+
+  it("preserves original case and special chars in redirect URL", () => {
+    const result = handler(makeEvent({ uri: "/Le_grand_roman_des-maths_Mickaël_Launay" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain("/Le_grand_roman_des-maths_Mickaël_Launay/");
+  });
+
+  it("301 redirect preserves original case for whitelisted bot", () => {
+    const result = handler(makeEvent({
+      uri: "/Le_grand_roman_des-maths_Mickaël_Launay",
+      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
+    }));
+    expect(result.statusCode).toBe(301);
+    expect(result.headers["location"].value).toBe("/Le_grand_roman_des-maths_Mickaël_Launay/");
+  });
 });
 
 // =====================================================

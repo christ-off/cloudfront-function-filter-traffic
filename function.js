@@ -2,10 +2,13 @@ function handler(event) {
     const request = event.request;
     let uri;
     try {
-        uri = request.uri ? decodeURIComponent(request.uri).trim().toLowerCase() : '';
+        uri = request.uri ? decodeURIComponent(request.uri).trim() : '';
     } catch (_e) {
         return createNotFoundResponse();
     }
+
+    // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
+    const uriLower = uri.toLowerCase();
 
     // ====================================================
     // Block requests with no user agent
@@ -18,14 +21,14 @@ function handler(event) {
     // =====================================================
     // Always allow robots.txt and ads.txt
     // =====================================================
-    if (/^\/(robots\.txt|ads\.txt)$/.test(uri)) {
+    if (/^\/(robots\.txt|ads\.txt)$/i.test(uriLower)) {
         return request;
     }
 
     // ====================================================
     // Obvious security scans
     // ====================================================
-    if (isSecurityScanUri(uri)) {
+    if (isSecurityScanUri(uriLower)) {
         return createNotFoundResponse();
     }
 
@@ -42,7 +45,7 @@ function handler(event) {
     // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK)
     // ====================================================
     if (isBlockedBot(ua)) {
-        if (/^\/feed\.xml$/.test(uri)) {
+        if (/^\/feed\.xml$/i.test(uriLower)) {
             return createEmptyFeedResponse(request.headers);
         }
         return createNotFoundResponse();
