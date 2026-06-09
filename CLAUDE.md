@@ -34,6 +34,12 @@ After pushing to main, check that the GitHub Actions deploy succeeded AND that t
 itself runs without "invalid or could not run" errors (e.g. via `aws cloudfront test-function` or by
 checking distribution logs), since the deploy step can succeed while the published function is broken.
 
+# Other filtering advice
+
+Do not block Chrome requests solely because the User-Agent contains a `.0.0.0` minor/patch version.
+Real Chrome browsers intentionally report only the major version (e.g. `Chrome/136.0.0.0`) to reduce
+fingerprinting — the `.0.0.0` suffix is normal and expected, not a bot indicator.
+
 # git push must run standalone (not chained)
 A PreToolUse hook (`.claude/hooks/cloudfront-pre-push.sh`) validates function.js against the real
 cloudfront-js-2.0 runtime via `aws cloudfront test-function` and BLOCKS the push if it errors — this
