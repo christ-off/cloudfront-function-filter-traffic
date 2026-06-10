@@ -82,7 +82,6 @@ const blockedBotPatterns = [
     'applewebkit/605.1.15',
     'sleepbot',
     'baiduspider',
-    'applewebkit/605.1.15 (khtml, like gecko) chrome/',
     'petalbot',
     'got (https://github.com/sindresorhus/got',
     'palo alto networks',
