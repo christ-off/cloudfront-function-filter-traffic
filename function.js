@@ -115,6 +115,7 @@ const blockedBotPatterns = [
     'mozilla/4.0 (compatible; ms-office; msoffice 16)',
     'wpbot/',
     'googlebot/',
+    'siteanalysisbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
