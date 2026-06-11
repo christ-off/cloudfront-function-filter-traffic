@@ -116,6 +116,7 @@ const blockedBotPatterns = [
     'wpbot/',
     'googlebot/',
     'siteanalysisbot/',
+    'cmssurvey/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
