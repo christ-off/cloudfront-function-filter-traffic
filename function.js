@@ -117,6 +117,7 @@ const blockedBotPatterns = [
     'googlebot/',
     'siteanalysisbot/',
     'cmssurvey/',
+    'reyilbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
