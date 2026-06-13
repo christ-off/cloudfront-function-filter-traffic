@@ -119,6 +119,7 @@ const blockedBotPatterns = [
     'cmssurvey/',
     'reyilbot/',
     'wellesley/1.0',
+    'rankpulsebot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {

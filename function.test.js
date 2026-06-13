@@ -188,6 +188,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["CMSSurvey/1.0; https://addedlovely.com/crawler", "CMSSurvey"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ReyilBot/0.1", "ReyilBot"],
     ["Wellesley/1.0 bot", "Wellesley"],
+    ["RankPulseBot/0.1 ( https://github.com/rankpulse/rankpulse)", "RankPulseBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
