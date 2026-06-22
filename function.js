@@ -160,7 +160,7 @@ function isStaleChrome(ua) {
     if (!m) return false;
     const version = Number.parseInt(m[1], 10);
     // Chrome 120 = Oct 2024. Pre-121 in 2026 = bot indicator.
-    return version <= 120;
+    return version <= 124;
 }
 
 function createPermanentRedirectResponse(correctUrl) {
