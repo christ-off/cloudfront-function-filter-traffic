@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/christ-off/cloudfront-function-filter-traffic#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.8",
-    "vitest": "^4.1.8"
+    "@vitest/coverage-v8": "^4.1.9",
+    "vitest": "^4.1.9"
   }
 }
