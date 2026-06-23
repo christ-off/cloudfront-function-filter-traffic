@@ -159,7 +159,7 @@ function isStaleChrome(ua) {
     const m = ua.match(/chrome\/(\d+)\./);
     if (!m) return false;
     const version = Number.parseInt(m[1], 10);
-    // Chrome 120 = Oct 2024. Pre-121 in 2026 = bot indicator.
+    // Chrome 124 = Apr 2024. Pre-125 in 2026 = bot indicator.
     return version <= 124;
 }
 

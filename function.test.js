@@ -355,9 +355,9 @@ describe("always-allow paths bypass UA checks", () => {
 });
 
 // =====================================================
-// Chrome ≤ 120, all stale → 404
+// Chrome ≤ 124, all stale → 404
 // =====================================================
-describe("stale Chrome ≤ 120 blocking by user-agent", () => {
+describe("stale Chrome ≤ 124 blocking by user-agent", () => {
   it("blocks Chrome 89 (below 120)", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36" })).statusCode).toBe(404);
   });
@@ -374,17 +374,21 @@ describe("stale Chrome ≤ 120 blocking by user-agent", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.4896.75 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("blocks Chrome 120 (boundary, <= 120)", () => {
+  it("blocks Chrome 120 (below 124)", () => {
     expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.5414.120 Safari/537.36" })).statusCode).toBe(404);
   });
 
-  it("does not block Chrome 121 (minimum version)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.5481.178 Safari/537.36" });
+  it("blocks Chrome 124 (boundary, <= 124)", () => {
+    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.91 Safari/537.36" })).statusCode).toBe(404);
+  });
+
+  it("does not block Chrome 125 (minimum version)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.5790.170 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("does not block Chrome 125 (modern)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.5790.170 Safari/537.36" });
+  it("does not block Chrome 130 (modern)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36" });
     expect(handler(event)).toEqual(event.request);
   });
 
