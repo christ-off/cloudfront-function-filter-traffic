@@ -102,6 +102,7 @@ const blockedBotPatterns = [
     'bytespider',
     'pimeyes-downloader-api',
     'shapbot',
+    'shap-user',
     'wellknownbot',
     'ev-crawler',
     'builtwith', 'timpibot',
