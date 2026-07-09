@@ -190,6 +190,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Wellesley/1.0 bot", "Wellesley"],
     ["RankPulseBot/0.1 ( https://github.com/rankpulse/rankpulse)", "RankPulseBot"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
+    ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

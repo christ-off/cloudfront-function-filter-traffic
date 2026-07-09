@@ -122,6 +122,7 @@ const blockedBotPatterns = [
     'wellesley/1.0',
     'rankpulsebot/',
     'linkupbot/',
+    'google-cloudvertexbot',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
