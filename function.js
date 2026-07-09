@@ -125,6 +125,7 @@ const blockedBotPatterns = [
     'google-cloudvertexbot',
     'ccbot/',
     'aranea web-crawled corpora project',
+    'intelx.io_bot',
 ];
 
 function isBlockedBot(normalizedUserAgent) {

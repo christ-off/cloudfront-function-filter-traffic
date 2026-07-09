@@ -193,6 +193,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
+    ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
