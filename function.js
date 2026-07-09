@@ -124,6 +124,7 @@ const blockedBotPatterns = [
     'linkupbot/',
     'google-cloudvertexbot',
     'ccbot/',
+    'aranea web-crawled corpora project',
 ];
 
 function isBlockedBot(normalizedUserAgent) {

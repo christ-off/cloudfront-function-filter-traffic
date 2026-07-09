@@ -192,6 +192,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
+    ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
