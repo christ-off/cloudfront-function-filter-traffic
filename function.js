@@ -123,6 +123,7 @@ const blockedBotPatterns = [
     'rankpulsebot/',
     'linkupbot/',
     'google-cloudvertexbot',
+    'ccbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
