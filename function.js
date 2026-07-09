@@ -121,6 +121,7 @@ const blockedBotPatterns = [
     'reyilbot/',
     'wellesley/1.0',
     'rankpulsebot/',
+    'linkupbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
