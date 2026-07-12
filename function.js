@@ -130,6 +130,7 @@ const blockedBotPatterns = [
     'perplexitybot/',
     'yandexbot/',
     'oai-searchbot/',
+    'linkupbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
