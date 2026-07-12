@@ -131,6 +131,7 @@ const blockedBotPatterns = [
     'yandexbot/',
     'oai-searchbot/',
     'linkupbot/',
+    'analyseseonet/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
