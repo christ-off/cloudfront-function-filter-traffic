@@ -133,6 +133,7 @@ const blockedBotPatterns = [
     'linkupbot/',
     'analyseseonet/',
     'chatgpt-user/',
+    'siteauditbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
