@@ -135,6 +135,7 @@ const blockedBotPatterns = [
     'chatgpt-user/',
     'siteauditbot/',
     'engagemiibot/',
+    'amazonbot/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
