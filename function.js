@@ -136,6 +136,7 @@ const blockedBotPatterns = [
     'siteauditbot/',
     'engagemiibot/',
     'amazonbot/',
+    'googleother',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
