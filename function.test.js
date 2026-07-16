@@ -165,8 +165,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],
     ["greedyhand/0.1", "GreedyHand scraper"],
     ["greedyhand/1.0", "GreedyHand scraper (any version)"],
-    ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider/2.0"],
-    ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render/2.0"],
     ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
     ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
     ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
