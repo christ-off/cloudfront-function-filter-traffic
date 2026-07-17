@@ -138,6 +138,7 @@ const blockedBotPatterns = [
     'applebot',
     'gptbot/',
     'stackyenrich/',
+    'thewebreport/1.0; https://theweb.report',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
