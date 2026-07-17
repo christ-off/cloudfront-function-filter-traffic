@@ -9,49 +9,35 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 ## What the function does
 
 ### 1. Missing user-agent blocking (404)
-Requests with no `User-Agent` header, an empty value, or a whitespace-only value are returned a `404 Not Found`. This check runs first and is not bypassed by any other rule, including always-allow paths.
+Requests with no `User-Agent` header, an empty value, or whitespace-only value return `404`. This check runs first and cannot be bypassed.
 
-### 2. Always-allow paths
-`/robots.txt` and `/ads.txt` are returned immediately, bypassing all subsequent checks (security scan, bot blocking). Requires a non-empty `User-Agent`.
+### 2. Security scan blocking (404)
+Requests matching automated-scan patterns return `404`:
+- URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.phar`
+- Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, etc.
+- Sensitive paths: `/.env`, `/.git`, `/ip`
 
-### 3. Security scan blocking (404)
-Requests that match obvious automated-scan patterns are returned a `404 Not Found`:
+### 3. Malformed Firefox user-agent blocking (404)
+Requests with mismatched `rv:` and `firefox/` versions return `404`.
 
-- **Probes by extension** — URIs ending in `.php`, `.sql`, `.bak`, `.phtml`, `.phar`
-- **Common scanner folders** — first path segment is one of:
-  `images`, `image`, `img`, `wp-includes`, `static`, `wp`, `wordpress`, `old`, `new`, `blog`, `backup`, `cgi-bin`, `admin`, `administrator`, `wp-admin`, `phpmyadmin`, `pma`
-- **Sensitive paths** — `/.env*`, `/.git*`, `/ip`
-- **Percent-encoded bypass prevention** — the URI is decoded with `decodeURIComponent` before matching; malformed encodings return `404` immediately.
+### 4. Bot / scraper blocking
+Requests matching `blockedBotPatterns` normally return `404`. But on well-known paths, blocked bots get harmless cached responses instead:
 
-URI matching is case-insensitive (the URI is lowercased before any check).
+- **`/robots.txt`** — `200 OK` with deny-all `robots.txt` body, ETag, cache headers
+- **`/feed.xml`** — `200 OK` with empty Atom feed, ETag, cache headers
+- **`/sitemap.xml`** — `200 OK` with empty sitemap, ETag, cache headers
 
-### 4. Google referrer gate → warning page (200)
+Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive `304 Not Modified`.
 
-Requests with a `Referer` header matching any `*.google.*` domain are returned a **custom HTML warning page** instead of being passed through to the origin. The page (in French) informs the visitor that the site will soon be removed from Google's index, with a link back to the original page.
+**Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto, CriOS, FxiOS), stale Chrome (≤124), end-of-life iOS (1–9), and 80+ other known bots/crawlers.
 
-The original URL is extracted from Google's `?url=` redirect parameter when present; otherwise the current requested URI is used as the link target. The page includes `Cache-Control: no-cache, no-store` headers to prevent caching.
+### 5. Always-allow paths
+`/ads.txt` bypasses all checks and returns immediately (requires non-empty user-agent).
 
-### 5. Bot blocking implementation — array of patterns vs. single regex
+### 6. Trailing slash redirect
+Requests missing a trailing slash on folder-like paths are redirected with a custom page.
 
-Bot user-agents are matched using an **array of string/regex patterns** rather than one big regex. A single regex is ~3.6× faster in microbenchmarks (49 ms vs 176 ms over 1 million calls), but the difference per real request is ~0.00013 ms — negligible at this scale. The array form was chosen because it keeps cognitive complexity low enough to satisfy SonarQube's threshold, and makes it trivial to add, remove, or comment out individual patterns.
-
-### 6. Bot / scraper blocking (404 or empty feed)
-Requests whose `User-Agent` matches any entry in `blockedBotPatterns` are returned a `404 Not Found`. Patterns are ordered by observed frequency (most frequent first) for faster average matching. Current entries include:
-
-- **Scrapers & crawlers** — `PetalBot`, `SleepBot`, `got`, `DataForSEO`, `ev-crawler`, `WebScraperBot`, `PiMeyes`, `ShapBot`, `Scrapy`, `BuiltWith`, `WebTrackrCrawler`, `SpiderLing`, `Timpibot`, `Seamus the Search Engine`, `Bytespider`, `Baiduspider`
-- **Legacy / unwanted browser tokens** — `Trident` (IE), `Presto` (old Opera), `CriOS` (Chrome for iOS), `FxiOS` (Firefox for iOS), `YaApp_Android`, `YaSearchBrowser`, `ptst/`
-- **Stale Chrome** — Chrome ≤ 120 (Oct 2024) — treated as a bot indicator
-- **End-of-life iOS** — iOS 1–9 — all versions are end-of-life and rarely used by real browsers
-
-**Exception — `/feed.xml`:** blocked bots hitting the Atom feed receive a `200` with an empty `<feed>` document instead of a `404`. Subsequent requests that include `If-None-Match` (matching ETag) or `If-Modified-Since` receive `304 Not Modified`. Both responses carry `Cache-Control: public, max-age=31536000` and a stable `ETag` / `Last-Modified` (Jan 2024), signalling to the scraper that the feed has not changed in a very long time and discouraging re-crawling.
-
-### 7. Stale Chrome blocking (404)
-Requests with a Chrome version of 120 or below (released Oct 2024) are returned a `404 Not Found`. Chrome versions this old are rarely seen in legitimate browsers in 2026 and are treated as a strong bot indicator.
-
-### 8. End-of-life iOS blocking (404)
-Requests with an iOS version between 1 and 9 are returned a `404 Not Found`. All such versions are end-of-life and are predominantly used by automated tools rather than real browsers.
-
-### 9. Pass-through
+### 7. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -137,23 +123,19 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 131 tests:
+`function.test.js` covers all behaviours with 141 tests:
 
 | Suite | What is tested |
 |---|---|
-| Always-allow paths | `/robots.txt`, `/ads.txt`; URI trim & lowercase normalisation |
-| PHP file blocking | `.php`, `.php5`, `.php7`, `.phtml`, `.phar` extensions, case-insensitivity |
-| Google referrer gate | `google.com`, `google.fr`, `google.co.uk`, `google.de` → warning page; non-Google → pass-through; URL extraction from `?url=` param; HTML structure; fallback to current URI |
-| Bad folder blocking | Scanner folders, admin folders, bare folder paths |
-| `.env` / `.git` URI blocking | Sensitive path prefixes |
-| `.sql` / `.bak` file blocking | Database and backup file extensions |
-| Admin folder blocking | `/admin`, `/wp-admin`, `/phpmyadmin`, etc. |
-| Bot blocking | All `blockedBotPatterns` entries, case-insensitivity; `/feed.xml` → empty Atom 200 with caching headers; ETag match → 304; `If-Modified-Since` → 304 |
-| Stale Chrome blocking | Chrome 89, 94, 99, 110, 120 blocked; 121, 125 pass |
-| End-of-life iOS blocking | iOS 9 blocked; iOS 10 passes |
-| Null / empty UA blocking | Missing header, empty value, whitespace-only value, robots.txt with no UA |
-| Percent-encoded URI handling | Encoded dots, encoded characters, malformed encodings |
-| Always-allow bypass of UA checks | `/ads.txt` passes even with a blocked bot UA |
-| Pass-through | Root path and normal page paths |
+| Always-allow paths | `/ads.txt`; URI trim & lowercase normalisation |
+| Security scan blocking | File extensions, scanner folders, sensitive paths |
+| Blocked bots | Deny-all `/robots.txt`; empty `/feed.xml`; empty `/sitemap.xml`; 304 Not Modified on cache headers |
+| Bot patterns | 80+ patterns matched case-insensitively |
+| Stale Chrome blocking | Chrome ≤124 blocked; Chrome 125+ pass |
+| End-of-life iOS blocking | iOS 1–9 blocked; iOS 10+ pass |
+| Malformed Firefox UA | Mismatched `rv:` and `firefox/` versions blocked |
+| Null / empty UA blocking | Missing/empty/whitespace user-agent |
+| Trailing slash redirect | Folder paths redirected with custom page |
+| Pass-through | Normal requests forwarded unchanged |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.
