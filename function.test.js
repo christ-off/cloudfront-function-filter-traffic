@@ -24,9 +24,11 @@ describe("always-allow paths", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("allows /robots.txt even with a blocked user-agent (always-allow wins)", () => {
+  it("serves a deny-all robots.txt to blocked bots instead of passthrough", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" });
-    expect(handler(event)).toEqual(event.request);
+    const result = handler(event);
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
   });
 
   it("normalises URI whitespace before checking (trim)", () => {

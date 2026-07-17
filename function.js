@@ -19,9 +19,9 @@ function handler(event) {
     }
 
     // =====================================================
-    // Always allow robots.txt and ads.txt
+    // Always allow ads.txt
     // =====================================================
-    if (/^\/(robots\.txt|ads\.txt)$/i.test(uriLower)) {
+    if (/^\/ads\.txt$/i.test(uriLower)) {
         return request;
     }
 
@@ -41,15 +41,29 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    const isRobotsTxt = /^\/robots\.txt$/i.test(uriLower);
+
     // ====================================================
     // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK)
+    // and /robots.txt (deny-all robots.txt, 200 OK)
     // ====================================================
     if (isBlockedBot(ua)) {
+        if (isRobotsTxt) {
+            return createDenyAllRobotsResponse();
+        }
         if (/^\/feed\.xml$/i.test(uriLower)) {
             return createEmptyFeedResponse(request.headers);
         }
         return createNotFoundResponse();
     }
+
+    // =====================================================
+    // Always allow robots.txt for non-blocked traffic
+    // =====================================================
+    if (isRobotsTxt) {
+        return request;
+    }
+
     // ====================================================
     // Redirect pages missing trailing slash
     // ====================================================
@@ -261,6 +275,15 @@ function createEmptyFeedResponse(headers) {
             'cache-control': {value: 'public, max-age=31536000'},
         },
         body: EMPTY_FEED_BODY
+    };
+}
+
+function createDenyAllRobotsResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: { 'content-type': { value: 'text/plain' } },
+        body: 'User-agent: *\nDisallow: /\n',
     };
 }
 
