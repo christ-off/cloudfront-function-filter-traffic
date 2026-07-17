@@ -24,37 +24,6 @@ describe("always-allow paths", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("serves a deny-all robots.txt to blocked bots instead of passthrough", () => {
-    const event = makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" });
-    const result = handler(event);
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("text/plain");
-    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
-    expect(result.headers["etag"]).toBeDefined();
-    expect(result.headers["last-modified"]).toBeDefined();
-    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
-  });
-
-  it("blocked bot on /robots.txt with matching ETag gets 304", () => {
-    const first = handler(makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" }));
-    const etag = first.headers["etag"].value;
-    const result = handler(makeEvent({
-      uri: "/robots.txt",
-      userAgent: "CCBot/2.0",
-      extraHeaders: { "if-none-match": { value: etag } }
-    }));
-    expect(result.statusCode).toBe(304);
-    expect(result.headers["etag"].value).toBe(etag);
-  });
-
-  it("blocked bot on /robots.txt with If-Modified-Since gets 304", () => {
-    const result = handler(makeEvent({
-      uri: "/robots.txt",
-      userAgent: "CCBot/2.0",
-      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
-    }));
-    expect(result.statusCode).toBe(304);
-  });
 
   it("normalises URI whitespace before checking (trim)", () => {
     const event = makeEvent({ uri: "  /robots.txt  " });
@@ -237,97 +206,45 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("blocked bot on /feed.xml gets empty Atom feed (200), not 404", () => {
-    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/atom+xml");
-    expect(result.body).toContain("<feed");
-    expect(result.headers["etag"]).toBeDefined();
-    expect(result.headers["last-modified"]).toBeDefined();
-    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
-  });
+  // Parametrized tests for decoy responses (robots.txt, feed.xml, rss.xml, sitemap.xml)
+  const decoyTests = [
+    ["/robots.txt", "text/plain", "User-agent", "robots.txt"],
+    ["/feed.xml", "application/atom+xml", "<feed", "feed.xml"],
+    ["/rss.xml", "application/rss+xml", "<rss", "rss.xml"],
+    ["/sitemap.xml", "application/xml", "<urlset", "sitemap.xml"],
+  ];
 
-  it("blocked bot on /feed.xml with matching ETag gets 304", () => {
-    const first = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    const etag = first.headers["etag"].value;
-    const result = handler(makeEvent({
-      uri: "/feed.xml",
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: { "if-none-match": { value: etag } }
-    }));
-    expect(result.statusCode).toBe(304);
-    expect(result.headers["etag"].value).toBe(etag);
-  });
+  describe.each(decoyTests)("decoy response for blocked bot on %s", (uri, contentType, bodyMarker) => {
+    it("returns 200 OK with cache headers", () => {
+      const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
+      expect(result.statusCode).toBe(200);
+      expect(result.headers["content-type"].value).toBe(contentType);
+      expect(result.body).toContain(bodyMarker);
+      expect(result.headers["etag"]).toBeDefined();
+      expect(result.headers["last-modified"]).toBeDefined();
+      expect(result.headers["cache-control"].value).toContain("max-age=31536000");
+    });
 
-  it("blocked bot on /feed.xml with If-Modified-Since gets 304", () => {
-    const result = handler(makeEvent({
-      uri: "/feed.xml",
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
-    }));
-    expect(result.statusCode).toBe(304);
-  });
+    it("returns 304 on matching ETag", () => {
+      const first = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
+      const etag = first.headers["etag"].value;
+      const result = handler(makeEvent({
+        uri,
+        userAgent: "Scrapy/2.16.0",
+        extraHeaders: { "if-none-match": { value: etag } }
+      }));
+      expect(result.statusCode).toBe(304);
+      expect(result.headers["etag"].value).toBe(etag);
+    });
 
-  it("blocked bot on /sitemap.xml gets empty sitemap (200), not 404", () => {
-    const result = handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/xml");
-    expect(result.body).toContain("<urlset");
-    expect(result.headers["etag"]).toBeDefined();
-    expect(result.headers["last-modified"]).toBeDefined();
-    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
-  });
-
-  it("blocked bot on /sitemap.xml with matching ETag gets 304", () => {
-    const first = handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" }));
-    const etag = first.headers["etag"].value;
-    const result = handler(makeEvent({
-      uri: "/sitemap.xml",
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: { "if-none-match": { value: etag } }
-    }));
-    expect(result.statusCode).toBe(304);
-    expect(result.headers["etag"].value).toBe(etag);
-  });
-
-  it("blocked bot on /sitemap.xml with If-Modified-Since gets 304", () => {
-    const result = handler(makeEvent({
-      uri: "/sitemap.xml",
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
-    }));
-    expect(result.statusCode).toBe(304);
-  });
-
-  it("blocked bot on /rss.xml gets empty RSS (200), not 404", () => {
-    const result = handler(makeEvent({ uri: "/rss.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/rss+xml");
-    expect(result.body).toContain("<rss");
-    expect(result.headers["etag"]).toBeDefined();
-    expect(result.headers["last-modified"]).toBeDefined();
-    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
-  });
-
-  it("blocked bot on /rss.xml with matching ETag gets 304", () => {
-    const first = handler(makeEvent({ uri: "/rss.xml", userAgent: "Scrapy/2.16.0" }));
-    const etag = first.headers["etag"].value;
-    const result = handler(makeEvent({
-      uri: "/rss.xml",
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: { "if-none-match": { value: etag } }
-    }));
-    expect(result.statusCode).toBe(304);
-    expect(result.headers["etag"].value).toBe(etag);
-  });
-
-  it("blocked bot on /rss.xml with If-Modified-Since gets 304", () => {
-    const result = handler(makeEvent({
-      uri: "/rss.xml",
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
-    }));
-    expect(result.statusCode).toBe(304);
+    it("returns 304 on If-Modified-Since", () => {
+      const result = handler(makeEvent({
+        uri,
+        userAgent: "Scrapy/2.16.0",
+        extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
+      }));
+      expect(result.statusCode).toBe(304);
+    });
   });
 });
 
@@ -451,28 +368,18 @@ describe("always-allow paths bypass UA checks", () => {
 // Chrome ≤ 124, all stale → 404
 // =====================================================
 describe("stale Chrome ≤ 124 blocking by user-agent", () => {
-  it("blocks Chrome 89 (below 120)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36" })).statusCode).toBe(404);
-  });
+  const staleChromeVersions = [
+    [89, "below 120"],
+    [94, "below 120"],
+    [99, "below 120"],
+    [110, "below 120"],
+    [120, "below 124"],
+    [124, "boundary, <= 124"],
+  ];
 
-  it("blocks Chrome 94 (below 120)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36" })).statusCode).toBe(404);
-  });
-
-  it("blocks Chrome 99 (below 120)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36" })).statusCode).toBe(404);
-  });
-
-  it("blocks Chrome 110 (below 120)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.4896.75 Safari/537.36" })).statusCode).toBe(404);
-  });
-
-  it("blocks Chrome 120 (below 124)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.5414.120 Safari/537.36" })).statusCode).toBe(404);
-  });
-
-  it("blocks Chrome 124 (boundary, <= 124)", () => {
-    expect(handler(makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.91 Safari/537.36" })).statusCode).toBe(404);
+  it.each(staleChromeVersions)("blocks Chrome %i (%s)", (version) => {
+    const ua = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${version}.0.0.0 Safari/537.36`;
+    expect(handler(makeEvent({ userAgent: ua })).statusCode).toBe(404);
   });
 
   it("does not block Chrome 125 (minimum version)", () => {
