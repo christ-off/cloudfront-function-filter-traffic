@@ -154,6 +154,7 @@ const blockedBotPatterns = [
     'stackyenrich/',
     'thewebreport/1.0; https://theweb.report',
     'welley/1.0 bot',
+    'twitterbot/1.0',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
