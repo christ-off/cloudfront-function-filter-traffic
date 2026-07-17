@@ -298,6 +298,37 @@ describe("scrapper bot blocking by user-agent", () => {
     }));
     expect(result.statusCode).toBe(304);
   });
+
+  it("blocked bot on /rss.xml gets empty RSS (200), not 404", () => {
+    const result = handler(makeEvent({ uri: "/rss.xml", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("application/rss+xml");
+    expect(result.body).toContain("<rss");
+    expect(result.headers["etag"]).toBeDefined();
+    expect(result.headers["last-modified"]).toBeDefined();
+    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
+  });
+
+  it("blocked bot on /rss.xml with matching ETag gets 304", () => {
+    const first = handler(makeEvent({ uri: "/rss.xml", userAgent: "Scrapy/2.16.0" }));
+    const etag = first.headers["etag"].value;
+    const result = handler(makeEvent({
+      uri: "/rss.xml",
+      userAgent: "Scrapy/2.16.0",
+      extraHeaders: { "if-none-match": { value: etag } }
+    }));
+    expect(result.statusCode).toBe(304);
+    expect(result.headers["etag"].value).toBe(etag);
+  });
+
+  it("blocked bot on /rss.xml with If-Modified-Since gets 304", () => {
+    const result = handler(makeEvent({
+      uri: "/rss.xml",
+      userAgent: "Scrapy/2.16.0",
+      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
+    }));
+    expect(result.statusCode).toBe(304);
+  });
 });
 
 // =====================================================

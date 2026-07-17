@@ -10,6 +10,11 @@ const BOT_DECOYS = {
         contentType: 'application/atom+xml',
         body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>',
     },
+    '/rss.xml': {
+        etag: '"empty-rss-v1"',
+        contentType: 'application/rss+xml',
+        body: '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>',
+    },
     '/sitemap.xml': {
         etag: '"empty-sitemap-v1"',
         contentType: 'application/xml',
