@@ -21,7 +21,7 @@ function handler(event) {
     // =====================================================
     // Always allow ads.txt
     // =====================================================
-    if (/^\/ads\.txt$/i.test(uriLower)) {
+    if (uriLower === '/ads.txt') {
         return request;
     }
 
@@ -41,21 +41,14 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    const isRobotsTxt = /^\/robots\.txt$/i.test(uriLower);
-
     // ====================================================
-    // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK),
-    // /sitemap.xml (empty sitemap, 200 OK) and /robots.txt (deny-all robots.txt, 200 OK)
+    // DENIES blocked bots — except decoy paths (robots.txt,
+    // feed.xml, sitemap.xml) which get harmless cached 200s
     // ====================================================
     if (isBlockedBot(ua)) {
-        if (isRobotsTxt) {
-            return createDenyAllRobotsResponse(request.headers);
-        }
-        if (/^\/feed\.xml$/i.test(uriLower)) {
-            return createEmptyFeedResponse(request.headers);
-        }
-        if (/^\/sitemap\.xml$/i.test(uriLower)) {
-            return createEmptySitemapResponse(request.headers);
+        const decoy = BOT_DECOYS[uriLower];
+        if (decoy) {
+            return createDecoyResponse(request.headers, decoy);
         }
         return createNotFoundResponse();
     }
@@ -63,7 +56,7 @@ function handler(event) {
     // =====================================================
     // Always allow robots.txt for non-blocked traffic
     // =====================================================
-    if (isRobotsTxt) {
+    if (uriLower === '/robots.txt') {
         return request;
     }
 
@@ -94,7 +87,7 @@ function isSecurityScanUri(uri) {
 
 const blockedBotPatterns = [
     // Most frequent → least frequent (based on logs.db analysis)
-    (ua) => isStaleChrome(ua),
+    isStaleChrome,
     'feedfetcher-google',
     'applewebkit/605.1.15',
     'sleepbot',
@@ -145,7 +138,6 @@ const blockedBotPatterns = [
     'mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/537.36 (khtml, like gecko) chrome/148.0.0.0 safari/537.36',
     'perplexitybot/',
     'oai-searchbot/',
-    'linkupbot/',
     'analyseseonet/',
     'chatgpt-user/',
     'siteauditbot/',
@@ -251,21 +243,39 @@ function createNotFoundResponse() {
     };
 }
 
-// Stable ETag for the empty feed — never changes, so scrapers always see "already cached"
-const EMPTY_FEED_ETAG = '"empty-feed-v1"';
-const EMPTY_FEED_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
-const EMPTY_FEED_BODY = '<feed xmlns="http://www.w3.org/2005/Atom"></feed>';
+// Harmless static responses served to blocked bots on well-known paths.
+// Stable ETags + far-future cache headers so scrapers see "already cached" forever.
+const BOT_DECOYS = {
+    '/robots.txt': {
+        etag: '"deny-all-robots-v1"',
+        contentType: 'text/plain',
+        body: 'User-agent: *\nDisallow: /\n',
+    },
+    '/feed.xml': {
+        etag: '"empty-feed-v1"',
+        contentType: 'application/atom+xml',
+        body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>',
+    },
+    '/sitemap.xml': {
+        etag: '"empty-sitemap-v1"',
+        contentType: 'application/xml',
+        body: '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>',
+    },
+};
 
-function createEmptyFeedResponse(headers) {
+const DECOY_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
+const DECOY_CACHE_CONTROL = 'public, max-age=31536000';
+
+function createDecoyResponse(headers, decoy) {
     const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
     const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
-    if (inm === EMPTY_FEED_ETAG || ims) {
+    if (inm === decoy.etag || ims) {
         return {
             statusCode: 304,
             statusDescription: 'Not Modified',
             headers: {
-                'etag': {value: EMPTY_FEED_ETAG},
-                'cache-control': {value: 'public, max-age=31536000'},
+                'etag': {value: decoy.etag},
+                'cache-control': {value: DECOY_CACHE_CONTROL},
             }
         };
     }
@@ -273,74 +283,12 @@ function createEmptyFeedResponse(headers) {
         statusCode: 200,
         statusDescription: 'OK',
         headers: {
-            'content-type': {value: 'application/atom+xml'},
-            'etag': {value: EMPTY_FEED_ETAG},
-            'last-modified': {value: EMPTY_FEED_LAST_MODIFIED},
-            'cache-control': {value: 'public, max-age=31536000'},
+            'content-type': {value: decoy.contentType},
+            'etag': {value: decoy.etag},
+            'last-modified': {value: DECOY_LAST_MODIFIED},
+            'cache-control': {value: DECOY_CACHE_CONTROL},
         },
-        body: EMPTY_FEED_BODY
-    };
-}
-
-// Stable ETag for the empty sitemap — never changes, so scrapers always see "already cached"
-const EMPTY_SITEMAP_ETAG = '"empty-sitemap-v1"';
-const EMPTY_SITEMAP_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
-const EMPTY_SITEMAP_BODY = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
-
-function createEmptySitemapResponse(headers) {
-    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
-    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
-    if (inm === EMPTY_SITEMAP_ETAG || ims) {
-        return {
-            statusCode: 304,
-            statusDescription: 'Not Modified',
-            headers: {
-                'etag': {value: EMPTY_SITEMAP_ETAG},
-                'cache-control': {value: 'public, max-age=31536000'},
-            }
-        };
-    }
-    return {
-        statusCode: 200,
-        statusDescription: 'OK',
-        headers: {
-            'content-type': {value: 'application/xml'},
-            'etag': {value: EMPTY_SITEMAP_ETAG},
-            'last-modified': {value: EMPTY_SITEMAP_LAST_MODIFIED},
-            'cache-control': {value: 'public, max-age=31536000'},
-        },
-        body: EMPTY_SITEMAP_BODY
-    };
-}
-
-// Stable ETag for the deny-all robots.txt — never changes, so scrapers always see "already cached"
-const DENY_ALL_ROBOTS_ETAG = '"deny-all-robots-v1"';
-const DENY_ALL_ROBOTS_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
-const DENY_ALL_ROBOTS_BODY = 'User-agent: *\nDisallow: /\n';
-
-function createDenyAllRobotsResponse(headers) {
-    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
-    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
-    if (inm === DENY_ALL_ROBOTS_ETAG || ims) {
-        return {
-            statusCode: 304,
-            statusDescription: 'Not Modified',
-            headers: {
-                'etag': {value: DENY_ALL_ROBOTS_ETAG},
-                'cache-control': {value: 'public, max-age=31536000'},
-            }
-        };
-    }
-    return {
-        statusCode: 200,
-        statusDescription: 'OK',
-        headers: {
-            'content-type': {value: 'text/plain'},
-            'etag': {value: DENY_ALL_ROBOTS_ETAG},
-            'last-modified': {value: DENY_ALL_ROBOTS_LAST_MODIFIED},
-            'cache-control': {value: 'public, max-age=31536000'},
-        },
-        body: DENY_ALL_ROBOTS_BODY
+        body: decoy.body
     };
 }
 
