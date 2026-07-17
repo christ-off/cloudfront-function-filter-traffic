@@ -1,3 +1,22 @@
+// Harmless static responses served to blocked bots on well-known paths
+const BOT_DECOYS = {
+    '/robots.txt': {
+        etag: '"deny-all-robots-v1"',
+        contentType: 'text/plain',
+        body: 'User-agent: *\nDisallow: /\n',
+    },
+    '/feed.xml': {
+        etag: '"empty-feed-v1"',
+        contentType: 'application/atom+xml',
+        body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>',
+    },
+    '/sitemap.xml': {
+        etag: '"empty-sitemap-v1"',
+        contentType: 'application/xml',
+        body: '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>',
+    },
+};
+
 function handler(event) {
     const request = event.request;
     let uri;
@@ -242,26 +261,6 @@ function createNotFoundResponse() {
         body: 'Not Found'
     };
 }
-
-// Harmless static responses served to blocked bots on well-known paths.
-// Stable ETags + far-future cache headers so scrapers see "already cached" forever.
-const BOT_DECOYS = {
-    '/robots.txt': {
-        etag: '"deny-all-robots-v1"',
-        contentType: 'text/plain',
-        body: 'User-agent: *\nDisallow: /\n',
-    },
-    '/feed.xml': {
-        etag: '"empty-feed-v1"',
-        contentType: 'application/atom+xml',
-        body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>',
-    },
-    '/sitemap.xml': {
-        etag: '"empty-sitemap-v1"',
-        contentType: 'application/xml',
-        body: '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>',
-    },
-};
 
 const DECOY_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
 const DECOY_CACHE_CONTROL = 'public, max-age=31536000';
