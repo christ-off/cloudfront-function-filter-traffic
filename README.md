@@ -25,6 +25,7 @@ Requests matching `blockedBotPatterns` normally return `404`. But on well-known 
 
 - **`/robots.txt`** — `200 OK` with deny-all `robots.txt` body, ETag, cache headers
 - **`/feed.xml`** — `200 OK` with empty Atom feed, ETag, cache headers
+- **`/rss.xml`** — `200 OK` with empty RSS feed, ETag, cache headers
 - **`/sitemap.xml`** — `200 OK` with empty sitemap, ETag, cache headers
 
 Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive `304 Not Modified`.
