@@ -137,6 +137,7 @@ const blockedBotPatterns = [
     'googleother',
     'applebot',
     'gptbot/',
+    'stackyenrich/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {

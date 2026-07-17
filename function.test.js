@@ -166,6 +166,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["greedyhand/0.1", "GreedyHand scraper"],
     ["greedyhand/1.0", "GreedyHand scraper (any version)"],
     ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
+    ["Mozilla/5.0 (compatible; StackyEnrich/1.0)", "StackyEnrich"],
     ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
     ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Lanai)", "Lanai bot"],
