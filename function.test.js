@@ -28,7 +28,32 @@ describe("always-allow paths", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" });
     const result = handler(event);
     expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("text/plain");
     expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+    expect(result.headers["etag"]).toBeDefined();
+    expect(result.headers["last-modified"]).toBeDefined();
+    expect(result.headers["cache-control"].value).toContain("max-age=31536000");
+  });
+
+  it("blocked bot on /robots.txt with matching ETag gets 304", () => {
+    const first = handler(makeEvent({ uri: "/robots.txt", userAgent: "CCBot/2.0" }));
+    const etag = first.headers["etag"].value;
+    const result = handler(makeEvent({
+      uri: "/robots.txt",
+      userAgent: "CCBot/2.0",
+      extraHeaders: { "if-none-match": { value: etag } }
+    }));
+    expect(result.statusCode).toBe(304);
+    expect(result.headers["etag"].value).toBe(etag);
+  });
+
+  it("blocked bot on /robots.txt with If-Modified-Since gets 304", () => {
+    const result = handler(makeEvent({
+      uri: "/robots.txt",
+      userAgent: "CCBot/2.0",
+      extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
+    }));
+    expect(result.statusCode).toBe(304);
   });
 
   it("normalises URI whitespace before checking (trim)", () => {

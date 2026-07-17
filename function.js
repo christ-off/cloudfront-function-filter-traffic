@@ -49,7 +49,7 @@ function handler(event) {
     // ====================================================
     if (isBlockedBot(ua)) {
         if (isRobotsTxt) {
-            return createDenyAllRobotsResponse();
+            return createDenyAllRobotsResponse(request.headers);
         }
         if (/^\/feed\.xml$/i.test(uriLower)) {
             return createEmptyFeedResponse(request.headers);
@@ -313,12 +313,34 @@ function createEmptySitemapResponse(headers) {
     };
 }
 
-function createDenyAllRobotsResponse() {
+// Stable ETag for the deny-all robots.txt — never changes, so scrapers always see "already cached"
+const DENY_ALL_ROBOTS_ETAG = '"deny-all-robots-v1"';
+const DENY_ALL_ROBOTS_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
+const DENY_ALL_ROBOTS_BODY = 'User-agent: *\nDisallow: /\n';
+
+function createDenyAllRobotsResponse(headers) {
+    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
+    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
+    if (inm === DENY_ALL_ROBOTS_ETAG || ims) {
+        return {
+            statusCode: 304,
+            statusDescription: 'Not Modified',
+            headers: {
+                'etag': {value: DENY_ALL_ROBOTS_ETAG},
+                'cache-control': {value: 'public, max-age=31536000'},
+            }
+        };
+    }
     return {
         statusCode: 200,
         statusDescription: 'OK',
-        headers: { 'content-type': { value: 'text/plain' } },
-        body: 'User-agent: *\nDisallow: /\n',
+        headers: {
+            'content-type': {value: 'text/plain'},
+            'etag': {value: DENY_ALL_ROBOTS_ETAG},
+            'last-modified': {value: DENY_ALL_ROBOTS_LAST_MODIFIED},
+            'cache-control': {value: 'public, max-age=31536000'},
+        },
+        body: DENY_ALL_ROBOTS_BODY
     };
 }
 
