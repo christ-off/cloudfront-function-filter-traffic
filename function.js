@@ -44,8 +44,8 @@ function handler(event) {
     const isRobotsTxt = /^\/robots\.txt$/i.test(uriLower);
 
     // ====================================================
-    // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK)
-    // and /robots.txt (deny-all robots.txt, 200 OK)
+    // DENIES blocked bots — except /feed.xml (empty Atom feed, 200 OK),
+    // /sitemap.xml (empty sitemap, 200 OK) and /robots.txt (deny-all robots.txt, 200 OK)
     // ====================================================
     if (isBlockedBot(ua)) {
         if (isRobotsTxt) {
@@ -53,6 +53,9 @@ function handler(event) {
         }
         if (/^\/feed\.xml$/i.test(uriLower)) {
             return createEmptyFeedResponse(request.headers);
+        }
+        if (/^\/sitemap\.xml$/i.test(uriLower)) {
+            return createEmptySitemapResponse(request.headers);
         }
         return createNotFoundResponse();
     }
@@ -276,6 +279,37 @@ function createEmptyFeedResponse(headers) {
             'cache-control': {value: 'public, max-age=31536000'},
         },
         body: EMPTY_FEED_BODY
+    };
+}
+
+// Stable ETag for the empty sitemap — never changes, so scrapers always see "already cached"
+const EMPTY_SITEMAP_ETAG = '"empty-sitemap-v1"';
+const EMPTY_SITEMAP_LAST_MODIFIED = 'Mon, 01 Jan 2024 00:00:00 GMT';
+const EMPTY_SITEMAP_BODY = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
+
+function createEmptySitemapResponse(headers) {
+    const inm = headers && headers['if-none-match'] && headers['if-none-match'].value;
+    const ims = headers && headers['if-modified-since'] && headers['if-modified-since'].value;
+    if (inm === EMPTY_SITEMAP_ETAG || ims) {
+        return {
+            statusCode: 304,
+            statusDescription: 'Not Modified',
+            headers: {
+                'etag': {value: EMPTY_SITEMAP_ETAG},
+                'cache-control': {value: 'public, max-age=31536000'},
+            }
+        };
+    }
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {
+            'content-type': {value: 'application/xml'},
+            'etag': {value: EMPTY_SITEMAP_ETAG},
+            'last-modified': {value: EMPTY_SITEMAP_LAST_MODIFIED},
+            'cache-control': {value: 'public, max-age=31536000'},
+        },
+        body: EMPTY_SITEMAP_BODY
     };
 }
 
