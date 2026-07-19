@@ -159,7 +159,6 @@ const blockedBotPatterns = [
     'ccbot/',
     'aranea web-crawled corpora project',
     'intelx.io_bot',
-    'mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/537.36 (khtml, like gecko) chrome/148.0.0.0 safari/537.36',
     'perplexitybot/',
     'oai-searchbot/',
     'analyseseonet/',
