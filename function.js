@@ -126,7 +126,6 @@ const blockedBotPatterns = [
     /ptst\//,
     'seamus the search engine',
     'crios',
-    'spiderling',
     /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
     'lanai',
     'webtrackrcrawler',
