@@ -175,6 +175,7 @@ const blockedBotPatterns = [
     'siteauditbot/',
     'engagemiibot/',
     'amazonbot/',
+    'pathscan/',
     'googleother',
     'applebot',
     'gptbot/',

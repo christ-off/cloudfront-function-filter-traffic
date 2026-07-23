@@ -199,6 +199,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; GoogleOther-Image/1.0)", "GoogleOther-Image"],
     ["Mozilla/5.0 (compatible; GoogleOther-Video/1.0)", "GoogleOther-Video"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
+    ["Mozilla/5.0 (compatible; pathscan/1.0)", "pathscan"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
     ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
   ];
