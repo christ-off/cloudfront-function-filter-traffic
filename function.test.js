@@ -175,7 +175,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ],
     ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
-    ["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Googlebot"],
     ["python-httpx/0.28.1", "Python httpx"],
     ["python-requests/2.32.5", "Python requests"],
     ["Mozilla/4.0 (compatible; ms-office; MSOffice 16)", "MS Office SaaS"],
@@ -185,6 +184,20 @@ describe("scrapper bot blocking by user-agent", () => {
     ["RankPulseBot/0.1 ( https://github.com/rankpulse/rankpulse)", "RankPulseBot"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
+    ["Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)", "Gemini-Deep-Research"],
+    ["Googlebot-Image/1.0", "Googlebot-Image"],
+    ["Googlebot-Video/1.0", "Googlebot-Video"],
+    ["Googlebot-News", "Googlebot-News"],
+    ["Google-Agent/1.0", "Google-Agent"],
+    ["Google-Extended", "Google-Extended"],
+    ["Google-Firebase/1.0", "Google-Firebase"],
+    ["Google-Gemini-CLI/1.0", "Google-Gemini-CLI"],
+    ["Mozilla/5.0 (compatible; Google-InspectionTool/1.0)", "Google-InspectionTool"],
+    ["Google-NotebookLM/1.0", "Google-NotebookLM"],
+    ["Mozilla/5.0 (compatible; GoogleAgent-Mariner/1.0)", "GoogleAgent-Mariner"],
+    ["Mozilla/5.0 (compatible; GoogleOther)", "GoogleOther"],
+    ["Mozilla/5.0 (compatible; GoogleOther-Image/1.0)", "GoogleOther-Image"],
+    ["Mozilla/5.0 (compatible; GoogleOther-Video/1.0)", "GoogleOther-Video"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
     ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
@@ -547,6 +560,13 @@ describe("pass-through", () => {
 
   it("returns the request object unchanged for the root path", () => {
     const event = makeEvent({ uri: "/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows real Googlebot through", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    });
     expect(handler(event)).toEqual(event.request);
   });
 });
