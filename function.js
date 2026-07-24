@@ -10,11 +10,6 @@ const BOT_DECOYS = {
         contentType: 'application/atom+xml',
         body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>',
     },
-    '/rss.xml': {
-        etag: '"empty-rss-v1"',
-        contentType: 'application/rss+xml',
-        body: '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>',
-    },
     '/sitemap.xml': {
         etag: '"empty-sitemap-v1"',
         contentType: 'application/xml',
@@ -34,41 +29,31 @@ function handler(event) {
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
     const uriLower = uri.toLowerCase();
 
-    // ====================================================
     // Block requests with no user agent
-    // ====================================================
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
         return createNotFoundResponse();
     }
 
-    // =====================================================
     // Always allow ads.txt
-    // =====================================================
     if (uriLower === '/ads.txt') {
         return request;
     }
 
-    // ====================================================
     // Obvious security scans
-    // ====================================================
     if (isSecurityScanUri(uriLower)) {
         return createNotFoundResponse();
     }
 
     const ua = userAgentHeader.value.toLowerCase();
 
-    // ====================================================
     // Malformed Firefox UA (rv: version != firefox/ version)
-    // ====================================================
     if (isMalformedFirefoxUA(ua)) {
         return createNotFoundResponse();
     }
 
-    // ====================================================
     // DENIES blocked bots — except decoy paths (robots.txt,
     // feed.xml, sitemap.xml) which get harmless cached 200s
-    // ====================================================
     if (isBlockedBot(ua)) {
         const decoy = BOT_DECOYS[uriLower];
         if (decoy) {
@@ -77,16 +62,12 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // =====================================================
     // Always allow robots.txt for non-blocked traffic
-    // =====================================================
     if (uriLower === '/robots.txt') {
         return request;
     }
 
-    // ====================================================
     // Redirect pages missing trailing slash
-    // ====================================================
     if (needsTrailingSlash(uri)) {
         const correctUrl = uri + '/';
         if (isWhitelistedBot(ua)) {
@@ -120,7 +101,6 @@ const blockedBotSubstrings = [
     'got (https://github.com/sindresorhus/got',
     'palo alto networks',
     'semrushbot',
-    'mozilla/5.0 (x11; ubuntu; linux x86_64; rv:147.0) gecko/20100101 firefox/147.0',
     'headlesschrome',
     'trident', 'presto',
     'serankingbacklinksbot',
@@ -154,16 +134,9 @@ const blockedBotSubstrings = [
     'linkupbot/',
     'gemini-deep-research',
     'googlebot-image',
-    'googlebot-video',
-    'googlebot-news',
-    'google-agent',
     'google-cloudvertexbot',
     'google-extended',
-    'google-firebase',
-    'google-gemini-cli',
     'google-inspectiontool',
-    'google-notebooklm',
-    'googleagent-mariner',
     'ccbot/',
     'aranea web-crawled corpora project',
     'intelx.io_bot',
@@ -179,7 +152,6 @@ const blockedBotSubstrings = [
     'applebot',
     'gptbot/',
     'stackyenrich/',
-    'thewebreport/1.0; https://theweb.report',
     'welley/1.0 bot',
     'twitterbot/1.0',
     'facebookexternalhit/',

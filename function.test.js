@@ -169,10 +169,6 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
       "Peg Tech Inc. / RakSmart",
     ],
-    [
-      "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0",
-      "Firefox 147 (Ubuntu) suspected scraper",
-    ],
     ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
     ["python-httpx/0.28.1", "Python httpx"],
@@ -186,15 +182,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
     ["Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)", "Gemini-Deep-Research"],
     ["Googlebot-Image/1.0", "Googlebot-Image"],
-    ["Googlebot-Video/1.0", "Googlebot-Video"],
-    ["Googlebot-News", "Googlebot-News"],
-    ["Google-Agent/1.0", "Google-Agent"],
     ["Google-Extended", "Google-Extended"],
-    ["Google-Firebase/1.0", "Google-Firebase"],
-    ["Google-Gemini-CLI/1.0", "Google-Gemini-CLI"],
     ["Mozilla/5.0 (compatible; Google-InspectionTool/1.0)", "Google-InspectionTool"],
-    ["Google-NotebookLM/1.0", "Google-NotebookLM"],
-    ["Mozilla/5.0 (compatible; GoogleAgent-Mariner/1.0)", "GoogleAgent-Mariner"],
     ["Mozilla/5.0 (compatible; GoogleOther)", "GoogleOther"],
     ["Mozilla/5.0 (compatible; GoogleOther-Image/1.0)", "GoogleOther-Image"],
     ["Mozilla/5.0 (compatible; GoogleOther-Video/1.0)", "GoogleOther-Video"],
@@ -219,11 +208,10 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // Parametrized tests for decoy responses (robots.txt, feed.xml, rss.xml, sitemap.xml)
+  // Parametrized tests for decoy responses (robots.txt, feed.xml, sitemap.xml)
   const decoyTests = [
     ["/robots.txt", "text/plain", "User-agent", "robots.txt"],
     ["/feed.xml", "application/atom+xml", "<feed", "feed.xml"],
-    ["/rss.xml", "application/rss+xml", "<rss", "rss.xml"],
     ["/sitemap.xml", "application/xml", "<urlset", "sitemap.xml"],
   ];
 
