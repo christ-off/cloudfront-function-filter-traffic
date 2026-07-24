@@ -1,4 +1,11 @@
-When blockedBotPatterns reaches 100 entries, propose to refactor as a regexp
+When blockedBotPatterns reaches 100 entries, propose to refactor as a regexp.
+Note (measured at 66 entries): converting the `blockedBotSubstrings` array to a
+hand-written regex literal saves ~600 bytes of source but gives NO speed gain —
+line ~165 already compiles the array into one regex via `new RegExp(...join('|'))`
+at module load, so matching is already single-compiled-regex speed (the only cost
+saved is a one-time ~7 µs build per cold start). The literal also loses auto-escaping
+(`escapeRegExp`), so future entries with `(`, `)`, `.`, `/` would need manual escaping.
+Only worth it when actually near the 10 KB limit.
 
 # CloudFront Functions JS runtime constraints
 function.js runs in the CloudFront Functions JavaScript runtime (cloudfront-js-2.0), NOT Node.js/browser JS.
