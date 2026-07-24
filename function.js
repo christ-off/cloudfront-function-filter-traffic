@@ -109,9 +109,10 @@ function isSecurityScanUri(uri) {
     );
 }
 
-const blockedBotPatterns = [
+// Plain substrings matched case-insensitively against the User-Agent header.
+// Combined below into a single precompiled regex instead of N .includes() calls.
+const blockedBotSubstrings = [
     // Most frequent → least frequent (based on logs.db analysis)
-    (ua) => isStaleChrome(ua),
     'feedfetcher-google',
     'applewebkit/605.1.15',
     'sleepbot',
@@ -123,10 +124,8 @@ const blockedBotPatterns = [
     'headlesschrome',
     'trident', 'presto',
     'serankingbacklinksbot',
-    /ptst\//,
     'seamus the search engine',
     'crios',
-    /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
     'lanai',
     'webtrackrcrawler',
     'fxios',
@@ -184,12 +183,25 @@ const blockedBotPatterns = [
     'welley/1.0 bot',
     'twitterbot/1.0',
     'facebookexternalhit/',
-'meta-webindexer/',
+    'meta-webindexer/',
+];
+
+function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const blockedBotRegex = new RegExp(blockedBotSubstrings.map(escapeRegExp).join('|'));
+
+// Patterns that aren't plain substrings: dynamic checks and structured regexes.
+const blockedBotExtraPatterns = [
+    (ua) => isStaleChrome(ua),
+    /ptst\//,
+    /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
 ];
 
 function isBlockedBot(normalizedUserAgent) {
-    return blockedBotPatterns.some((pattern) => {
-        if (typeof pattern === 'string') return normalizedUserAgent.includes(pattern);
+    if (blockedBotRegex.test(normalizedUserAgent)) return true;
+    return blockedBotExtraPatterns.some((pattern) => {
         if (pattern instanceof RegExp) return pattern.test(normalizedUserAgent);
         return pattern(normalizedUserAgent);
     });
