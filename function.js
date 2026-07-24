@@ -184,6 +184,7 @@ const blockedBotPatterns = [
     'welley/1.0 bot',
     'twitterbot/1.0',
     'facebookexternalhit/',
+'meta-webindexer/',
 ];
 
 function isBlockedBot(normalizedUserAgent) {
