@@ -400,6 +400,68 @@ describe("stale Chrome ≤ 124 blocking by user-agent", () => {
 });
 
 // =====================================================
+// Safari < 15 (iOS) / < 17 (macOS) → 404
+// =====================================================
+describe("stale Safari blocking by user-agent", () => {
+  const blockedSafariAgents = [
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1",
+      "iPhone iOS 13 / Safari 13 (scraping UA)",
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+      "iPhone iOS 14 / Safari 14",
+    ],
+    [
+      "Mozilla/5.0 (iPad; CPU OS 12_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/12.0 Mobile/15E148 Safari/604.1",
+      "iPad iOS 12 / Safari 12",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
+      "macOS Safari 13",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+      "macOS Safari 15",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
+      "macOS Safari 16",
+    ],
+  ];
+
+  it.each(blockedSafariAgents)("blocks '%s' (%s)", (userAgent) => {
+    const result = handler(makeEvent({ userAgent }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("does not block Safari 17 (macOS Sonoma, baseline)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block Safari 18 (macOS Sequoia, modern)", () => {
+    const event = makeEvent({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block iPhone Safari 15 (baseline)", () => {
+    const event = makeEvent({ uri: "/", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block iPhone Safari 18 (modern)", () => {
+    const event = makeEvent({ uri: "/", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block bingbot with stale Safari version", () => {
+    const event = makeEvent({ uri: "/", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/12.0 Mobile/15E148 Safari/604.1 (compatible; bingbot/2.0)" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Trailing slash redirect
 // =====================================================
 describe("trailing slash redirect", () => {
@@ -541,6 +603,14 @@ describe("pass-through", () => {
   it("allows real Googlebot through", () => {
     const event = makeEvent({
       userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through iPhone Safari iOS 18.6 / Safari 26 on Mobile", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
     });
     expect(handler(event)).toEqual(event.request);
   });

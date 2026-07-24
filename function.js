@@ -166,6 +166,7 @@ const blockedBotRegex = new RegExp(blockedBotSubstrings.map(escapeRegExp).join('
 // Patterns that aren't plain substrings: dynamic checks and structured regexes.
 const blockedBotExtraPatterns = [
     (ua) => isStaleChrome(ua),
+    (ua) => isStaleSafari(ua),
     /ptst\//,
 ];
 
@@ -208,6 +209,18 @@ function isStaleChrome(ua) {
     const version = Number.parseInt(m[1], 10);
     // Chrome 124 = Apr 2024. Pre-125 in 2026 = bot indicator.
     return version <= 124;
+}
+
+function isStaleSafari(ua) {
+    if (KNOWN_CRAWLERS.some((c) => ua.includes(c))) return false;
+    const m = ua.match(/version\/(\d+)\./);
+    if (!m) return false;
+    const version = Number.parseInt(m[1], 10);
+    // Safari 17 = macOS Sonoma (Jun 2023). Pre-17 in 2026 = bot indicator.
+    if (ua.includes('iphone') || ua.includes('ipad')) {
+        return version < 15;
+    }
+    return version < 17;
 }
 
 function createPermanentRedirectResponse(correctUrl) {
