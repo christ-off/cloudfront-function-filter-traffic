@@ -95,7 +95,6 @@ function isSecurityScanUri(uri) {
 const blockedBotSubstrings = [
     // Most frequent → least frequent (based on logs.db analysis)
     'feedfetcher-google',
-    'applewebkit/605.1.15',
     'sleepbot',
     'petalbot',
     'got (https://github.com/sindresorhus/got',
@@ -168,7 +167,6 @@ const blockedBotRegex = new RegExp(blockedBotSubstrings.map(escapeRegExp).join('
 const blockedBotExtraPatterns = [
     (ua) => isStaleChrome(ua),
     /ptst\//,
-    /iphone os [1-9]_/,   // iOS 1–9, all end-of-life
 ];
 
 function isBlockedBot(normalizedUserAgent) {
