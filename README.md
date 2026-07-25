@@ -21,16 +21,15 @@ Requests matching automated-scan patterns return `404`:
 Requests with mismatched `rv:` and `firefox/` versions return `404`.
 
 ### 4. Bot / scraper blocking
-Requests matching `blockedBotPatterns` normally return `404`. But on well-known paths, blocked bots get harmless cached responses instead:
+Requests matching known bot/scraper user-agent patterns return `404`. But on well-known paths, blocked bots get harmless cached responses instead:
 
 - **`/robots.txt`** — `200 OK` with deny-all `robots.txt` body, ETag, cache headers
 - **`/feed.xml`** — `200 OK` with empty Atom feed, ETag, cache headers
-- **`/rss.xml`** — `200 OK` with empty RSS feed, ETag, cache headers
 - **`/sitemap.xml`** — `200 OK` with empty sitemap, ETag, cache headers
 
 Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive `304 Not Modified`.
 
-**Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto, CriOS, FxiOS), stale Chrome (≤124), end-of-life iOS (1–9), and 80+ other known bots/crawlers.
+**Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto), and 60+ other known bots/crawlers, matched case-insensitively against the User-Agent header.
 
 ### 5. Always-allow paths
 `/ads.txt` bypasses all checks and returns immediately (requires non-empty user-agent).
@@ -124,16 +123,14 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 141 tests:
+`function.test.js` covers all behaviours with 135 tests:
 
 | Suite | What is tested |
 |---|---|
 | Always-allow paths | `/ads.txt`; URI trim & lowercase normalisation |
 | Security scan blocking | File extensions, scanner folders, sensitive paths |
 | Blocked bots | Deny-all `/robots.txt`; empty `/feed.xml`; empty `/sitemap.xml`; 304 Not Modified on cache headers |
-| Bot patterns | 80+ patterns matched case-insensitively |
-| Stale Chrome blocking | Chrome ≤124 blocked; Chrome 125+ pass |
-| End-of-life iOS blocking | iOS 1–9 blocked; iOS 10+ pass |
+| Bot patterns | 60+ patterns matched case-insensitively |
 | Malformed Firefox UA | Mismatched `rv:` and `firefox/` versions blocked |
 | Null / empty UA blocking | Missing/empty/whitespace user-agent |
 | Trailing slash redirect | Folder paths redirected with custom page |
