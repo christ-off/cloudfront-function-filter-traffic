@@ -145,7 +145,6 @@ const blockedBotSubstrings = [
     'amazonbot/',
     'pathscan/',
     'googleother',
-    'applebot',
     'gptbot/',
     'stackyenrich/',
     'welley/1.0 bot',
