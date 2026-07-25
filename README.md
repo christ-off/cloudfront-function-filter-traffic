@@ -34,10 +34,7 @@ Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive
 
 **Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto), and 60+ other known bots/crawlers, matched case-insensitively against the User-Agent header.
 
-### 6. Trailing slash redirect
-Requests missing a trailing slash on folder-like paths are redirected with a custom page.
-
-### 7. Pass-through
+### 6. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -123,7 +120,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 132 tests:
+`function.test.js` covers all behaviours with 117 tests:
 
 | Suite | What is tested |
 |---|---|
@@ -133,7 +130,6 @@ npm run test:watch # watch mode (re-runs on file save)
 | Bot patterns | 60+ patterns matched case-insensitively |
 | Malformed Firefox UA | Mismatched `rv:` and `firefox/` versions blocked |
 | Null / empty UA blocking | Missing/empty/whitespace user-agent |
-| Trailing slash redirect | Folder paths redirected with custom page |
 | Pass-through | Normal requests forwarded unchanged |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.

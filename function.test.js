@@ -59,10 +59,8 @@ describe("PHP file blocking", () => {
   });
 
   it("does not block a path that merely contains 'php' as a substring", () => {
-    // /php-info has no dot and no trailing slash → trailing-slash redirect (not a 404 security block)
-    const result = handler(makeEvent({ uri: "/php-info" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toContain("L'adresse n'est pas correcte");
+    const event = makeEvent({ uri: "/php-info" });
+    expect(handler(event)).toEqual(event.request);
   });
 
   it("blocks a .php5 file", () => {
@@ -361,131 +359,6 @@ describe("always-allow paths bypass UA checks", () => {
 });
 
 // =====================================================
-// Trailing slash redirect
-// =====================================================
-describe("trailing slash redirect", () => {
-  // --- needsTrailingSlash: triggers redirect ---
-  it("returns 200 redirect page for /about (no trailing slash)", () => {
-    const result = handler(makeEvent({ uri: "/about" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("returns 200 redirect page for /contact/team (nested, no trailing slash)", () => {
-    const result = handler(makeEvent({ uri: "/contact/team" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("returns 200 redirect page for /php-info (no dot, not a security scan)", () => {
-    const result = handler(makeEvent({ uri: "/php-info" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  // --- needsTrailingSlash: pass-through ---
-  it("passes through / (root already has trailing slash)", () => {
-    const event = makeEvent({ uri: "/" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through /about/ (already has trailing slash)", () => {
-    const event = makeEvent({ uri: "/about/" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through /style.css (has dot — static resource)", () => {
-    const event = makeEvent({ uri: "/style.css" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through /image.avif (has dot — static resource)", () => {
-    const event = makeEvent({ uri: "/image.avif" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through /feed.xml (has dot)", () => {
-    const event = makeEvent({ uri: "/feed.xml" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  // --- 200 response content ---
-  it("body contains 'L'adresse n'est pas correcte'", () => {
-    const result = handler(makeEvent({ uri: "/about" }));
-    expect(result.body).toContain("L'adresse n'est pas correcte");
-  });
-
-  it("body contains meta http-equiv refresh pointing to /about/", () => {
-    const result = handler(makeEvent({ uri: "/about" }));
-    expect(result.body).toContain('<meta http-equiv="refresh"');
-    expect(result.body).toContain("0;url=/about/");
-  });
-
-  it("body contains link to correct relative URL /about/", () => {
-    const result = handler(makeEvent({ uri: "/about" }));
-    expect(result.body).toContain('href="/about/"');
-  });
-
-  it("response has content-type text/html; charset=UTF-8", () => {
-    const result = handler(makeEvent({ uri: "/about" }));
-    expect(result.headers["content-type"].value).toBe("text/html; charset=UTF-8");
-  });
-
-  // --- whitelisted bots → 301 ---
-  it("returns 301 for Qwant bot on /about", () => {
-    const result = handler(makeEvent({
-      uri: "/about",
-      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
-    }));
-    expect(result.statusCode).toBe(301);
-    expect(result.headers["location"].value).toBe("/about/");
-  });
-
-  it("returns 301 for Qwant bot on /page (second UA variant)", () => {
-    const result = handler(makeEvent({
-      uri: "/page",
-      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
-    }));
-    expect(result.statusCode).toBe(301);
-    expect(result.headers["location"].value).toBe("/page/");
-  });
-
-  it("Qwant on /about/ (already correct) passes through, no redirect", () => {
-    const event = makeEvent({
-      uri: "/about/",
-      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  // --- blocked bot hits bot-block before trailing-slash gate ---
-  it("blocked bot on /about still gets 404 (bot block runs first)", () => {
-    const result = handler(makeEvent({ uri: "/about", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  // --- case preservation in redirect URLs ---
-  it("preserves original case in redirect URL for /About", () => {
-    const result = handler(makeEvent({ uri: "/About" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toContain("href=\"/About/\"");
-    expect(result.body).toContain('0;url=/About/');
-  });
-
-  it("preserves original case and special chars in redirect URL", () => {
-    const result = handler(makeEvent({ uri: "/Le_grand_roman_des-maths_Mickaël_Launay" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toContain("/Le_grand_roman_des-maths_Mickaël_Launay/");
-  });
-
-  it("301 redirect preserves original case for whitelisted bot", () => {
-    const result = handler(makeEvent({
-      uri: "/Le_grand_roman_des-maths_Mickaël_Launay",
-      userAgent: "Mozilla/5.0 (compatible; Qwantbot/1.0_4600311;  https://help.qwant.com/bot/)",
-    }));
-    expect(result.statusCode).toBe(301);
-    expect(result.headers["location"].value).toBe("/Le_grand_roman_des-maths_Mickaël_Launay/");
-  });
-});
-
-// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
@@ -496,6 +369,11 @@ describe("pass-through", () => {
 
   it("returns the request object unchanged for the root path", () => {
     const event = makeEvent({ uri: "/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("returns the request object unchanged for a path with no trailing slash", () => {
+    const event = makeEvent({ uri: "/about" });
     expect(handler(event)).toEqual(event.request);
   });
 
