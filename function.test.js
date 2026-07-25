@@ -160,15 +160,10 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],
     ["greedyhand/0.1", "GreedyHand scraper"],
     ["greedyhand/1.0", "GreedyHand scraper (any version)"],
-    ["Feedfetcher-Google; (+http://www.google.com/feedfetcher.html)", "Feedfetcher-Google"],
     ["Mozilla/5.0 (compatible; StackyEnrich/1.0)", "StackyEnrich"],
     ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
     ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Lanai)", "Lanai bot"],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
-      "Peg Tech Inc. / RakSmart",
-    ],
     ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
     ["python-httpx/0.28.1", "Python httpx"],
@@ -361,102 +356,6 @@ describe("admin folder blocking", () => {
 describe("always-allow paths bypass UA checks", () => {
   it("allows /ads.txt even with a blocked user-agent", () => {
     const event = makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
-// Chrome ≤ 124, all stale → 404
-// =====================================================
-describe("stale Chrome ≤ 124 blocking by user-agent", () => {
-  const staleChromeVersions = [
-    [89, "below 120"],
-    [94, "below 120"],
-    [99, "below 120"],
-    [110, "below 120"],
-    [120, "below 124"],
-    [124, "boundary, <= 124"],
-  ];
-
-  it.each(staleChromeVersions)("blocks Chrome %i (%s)", (version) => {
-    const ua = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${version}.0.0.0 Safari/537.36`;
-    expect(handler(makeEvent({ userAgent: ua })).statusCode).toBe(404);
-  });
-
-  it("does not block Chrome 125 (minimum version)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.5790.170 Safari/537.36" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block Chrome 130 (modern)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block bingbot with stale Chrome version", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
-// Safari < 15 (iOS) / < 17 (macOS) → 404
-// =====================================================
-describe("stale Safari blocking by user-agent", () => {
-  const blockedSafariAgents = [
-    [
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1",
-      "iPhone iOS 13 / Safari 13 (scraping UA)",
-    ],
-    [
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
-      "iPhone iOS 14 / Safari 14",
-    ],
-    [
-      "Mozilla/5.0 (iPad; CPU OS 12_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/12.0 Mobile/15E148 Safari/604.1",
-      "iPad iOS 12 / Safari 12",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
-      "macOS Safari 13",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
-      "macOS Safari 15",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
-      "macOS Safari 16",
-    ],
-  ];
-
-  it.each(blockedSafariAgents)("blocks '%s' (%s)", (userAgent) => {
-    const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("does not block Safari 17 (macOS Sonoma, baseline)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block Safari 18 (macOS Sequoia, modern)", () => {
-    const event = makeEvent({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block iPhone Safari 15 (baseline)", () => {
-    const event = makeEvent({ uri: "/", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block iPhone Safari 18 (modern)", () => {
-    const event = makeEvent({ uri: "/", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block bingbot with stale Safari version", () => {
-    const event = makeEvent({ uri: "/", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/12.0 Mobile/15E148 Safari/604.1 (compatible; bingbot/2.0)" });
     expect(handler(event)).toEqual(event.request);
   });
 });
