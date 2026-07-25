@@ -1,10 +1,5 @@
 // Harmless static responses served to blocked bots on well-known paths
 const BOT_DECOYS = {
-    '/robots.txt': {
-        etag: '"deny-all-robots-v1"',
-        contentType: 'text/plain',
-        body: 'User-agent: *\nDisallow: /\n',
-    },
     '/feed.xml': {
         etag: '"empty-feed-v1"',
         contentType: 'application/atom+xml',
@@ -35,8 +30,8 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // Always allow ads.txt
-    if (uriLower === '/ads.txt') {
+    // Always allow ads.txt and robots.txt
+    if (uriLower === '/ads.txt' || uriLower === '/robots.txt') {
         return request;
     }
 
@@ -52,19 +47,14 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // DENIES blocked bots — except decoy paths (robots.txt,
-    // feed.xml, sitemap.xml) which get harmless cached 200s
+    // DENIES blocked bots — except decoy paths (feed.xml,
+    // sitemap.xml) which get harmless cached 200s
     if (isBlockedBot(ua)) {
         const decoy = BOT_DECOYS[uriLower];
         if (decoy) {
             return createDecoyResponse(request.headers, decoy);
         }
         return createNotFoundResponse();
-    }
-
-    // Always allow robots.txt for non-blocked traffic
-    if (uriLower === '/robots.txt') {
-        return request;
     }
 
     // Redirect pages missing trailing slash

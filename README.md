@@ -11,28 +11,27 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 ### 1. Missing user-agent blocking (404)
 Requests with no `User-Agent` header, an empty value, or whitespace-only value return `404`. This check runs first and cannot be bypassed.
 
-### 2. Security scan blocking (404)
+### 2. Always-allow paths
+`/ads.txt` and `/robots.txt` bypass all further checks and return unchanged (still requires a non-empty user-agent).
+
+### 3. Security scan blocking (404)
 Requests matching automated-scan patterns return `404`:
 - URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.phar`
 - Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, etc.
 - Sensitive paths: `/.env`, `/.git`, `/ip`
 
-### 3. Malformed Firefox user-agent blocking (404)
+### 4. Malformed Firefox user-agent blocking (404)
 Requests with mismatched `rv:` and `firefox/` versions return `404`.
 
-### 4. Bot / scraper blocking
+### 5. Bot / scraper blocking
 Requests matching known bot/scraper user-agent patterns return `404`. But on well-known paths, blocked bots get harmless cached responses instead:
 
-- **`/robots.txt`** — `200 OK` with deny-all `robots.txt` body, ETag, cache headers
 - **`/feed.xml`** — `200 OK` with empty Atom feed, ETag, cache headers
 - **`/sitemap.xml`** — `200 OK` with empty sitemap, ETag, cache headers
 
 Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive `304 Not Modified`.
 
 **Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto), and 60+ other known bots/crawlers, matched case-insensitively against the User-Agent header.
-
-### 5. Always-allow paths
-`/ads.txt` bypasses all checks and returns immediately (requires non-empty user-agent).
 
 ### 6. Trailing slash redirect
 Requests missing a trailing slash on folder-like paths are redirected with a custom page.
@@ -123,13 +122,13 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 135 tests:
+`function.test.js` covers all behaviours with 132 tests:
 
 | Suite | What is tested |
 |---|---|
 | Always-allow paths | `/ads.txt`; URI trim & lowercase normalisation |
 | Security scan blocking | File extensions, scanner folders, sensitive paths |
-| Blocked bots | Deny-all `/robots.txt`; empty `/feed.xml`; empty `/sitemap.xml`; 304 Not Modified on cache headers |
+| Blocked bots | Empty `/feed.xml`; empty `/sitemap.xml`; 304 Not Modified on cache headers |
 | Bot patterns | 60+ patterns matched case-insensitively |
 | Malformed Firefox UA | Mismatched `rv:` and `firefox/` versions blocked |
 | Null / empty UA blocking | Missing/empty/whitespace user-agent |

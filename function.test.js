@@ -203,9 +203,8 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // Parametrized tests for decoy responses (robots.txt, feed.xml, sitemap.xml)
+  // Parametrized tests for decoy responses (feed.xml, sitemap.xml)
   const decoyTests = [
-    ["/robots.txt", "text/plain", "User-agent", "robots.txt"],
     ["/feed.xml", "application/atom+xml", "<feed", "feed.xml"],
     ["/sitemap.xml", "application/xml", "<urlset", "sitemap.xml"],
   ];
