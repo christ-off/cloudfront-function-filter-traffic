@@ -1,9 +1,17 @@
-// Harmless static responses served to blocked bots on well-known paths
+// Harmless static responses served to blocked bots on well-known paths.
+// Purpose: a 404 on these paths would itself signal to a bot that the path
+// is worth retrying/enumerating further, so we mask blocked bots with a
+// believable empty payload instead — starving them of real page discovery.
 const BOT_DECOYS = {
     '/feed.xml': {
         etag: '"empty-feed-v1"',
         contentType: 'application/atom+xml',
         body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>',
+    },
+    '/rss.xml': {
+        etag: '"empty-rss-v1"',
+        contentType: 'application/rss+xml',
+        body: '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>',
     },
     '/sitemap.xml': {
         etag: '"empty-sitemap-v1"',
@@ -48,7 +56,7 @@ function handler(event) {
     }
 
     // DENIES blocked bots — except decoy paths (feed.xml,
-    // sitemap.xml) which get harmless cached 200s
+    // rss.xml, sitemap.xml) which get harmless cached 200s
     if (isBlockedBot(ua)) {
         const decoy = BOT_DECOYS[uriLower];
         if (decoy) {

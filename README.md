@@ -24,9 +24,10 @@ Requests matching automated-scan patterns return `404`:
 Requests with mismatched `rv:` and `firefox/` versions return `404`.
 
 ### 5. Bot / scraper blocking
-Requests matching known bot/scraper user-agent patterns return `404`. But on well-known paths, blocked bots get harmless cached responses instead:
+Requests matching known bot/scraper user-agent patterns return `404`. But on well-known paths, blocked bots get harmless cached responses instead of a `404` — a `404` would itself hint to the bot that the path is worth probing further, so these decoys mask the block and starve bad bots of real page discovery:
 
 - **`/feed.xml`** — `200 OK` with empty Atom feed, ETag, cache headers
+- **`/rss.xml`** — `200 OK` with empty RSS feed, ETag, cache headers
 - **`/sitemap.xml`** — `200 OK` with empty sitemap, ETag, cache headers
 
 Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive `304 Not Modified`.
@@ -128,7 +129,7 @@ npm run test:watch # watch mode (re-runs on file save)
 |---|---|
 | Always-allow paths | `/ads.txt`; URI trim & lowercase normalisation |
 | Security scan blocking | File extensions, scanner folders, sensitive paths |
-| Blocked bots | Empty `/feed.xml`; empty `/sitemap.xml`; 304 Not Modified on cache headers |
+| Blocked bots | Empty `/feed.xml`; empty `/rss.xml`; empty `/sitemap.xml`; 304 Not Modified on cache headers |
 | Bot patterns | 60+ patterns matched case-insensitively |
 | Malformed Firefox UA | Mismatched `rv:` and `firefox/` versions blocked |
 | Null / empty UA blocking | Missing/empty/whitespace user-agent |
