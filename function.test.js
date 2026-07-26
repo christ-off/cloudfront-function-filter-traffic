@@ -24,6 +24,11 @@ describe("always-allow paths", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("allows /llms.txt", () => {
+    const event = makeEvent({ uri: "/llms.txt" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
 
   it("normalises URI whitespace before checking (trim)", () => {
     const event = makeEvent({ uri: "  /robots.txt  " });
@@ -172,10 +177,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Wellesley/1.0 bot", "Wellesley"],
     ["RankPulseBot/0.1 ( https://github.com/rankpulse/rankpulse)", "RankPulseBot"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
-    ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
-    ["Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)", "Gemini-Deep-Research"],
     ["Googlebot-Image/1.0", "Googlebot-Image"],
-    ["Mozilla/5.0 (compatible; Google-InspectionTool/1.0)", "Google-InspectionTool"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
     ["Mozilla/5.0 (compatible; pathscan/1.0)", "pathscan"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
@@ -352,6 +354,11 @@ describe("always-allow paths bypass UA checks", () => {
     const event = makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("allows /llms.txt even with a blocked user-agent", () => {
+    const event = makeEvent({ uri: "/llms.txt", userAgent: "CCBot/2.0" });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
@@ -384,6 +391,27 @@ describe("pass-through", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows Google-CloudVertexBot through", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows Gemini-Deep-Research through", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("allows Google-InspectionTool through", () => {
+    const event = makeEvent({
+      userAgent: "Mozilla/5.0 (compatible; Google-InspectionTool/1.0)",
     });
     expect(handler(event)).toEqual(event.request);
   });

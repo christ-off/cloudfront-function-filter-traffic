@@ -38,8 +38,8 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // Always allow ads.txt and robots.txt
-    if (uriLower === '/ads.txt' || uriLower === '/robots.txt') {
+    // Always allow ads.txt, robots.txt and llms.txt
+    if (uriLower === '/ads.txt' || uriLower === '/robots.txt' || uriLower === '/llms.txt') {
         return request;
     }
 
@@ -119,10 +119,7 @@ const blockedBotSubstrings = [
     'wellesley/1.0',
     'rankpulsebot/',
     'linkupbot/',
-    'gemini-deep-research',
     'googlebot-image',
-    'google-cloudvertexbot',
-    'google-inspectiontool',
     'ccbot/',
     'aranea web-crawled corpora project',
     'intelx.io_bot',
