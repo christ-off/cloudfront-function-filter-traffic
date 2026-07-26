@@ -130,17 +130,14 @@ const blockedBotSubstrings = [
     'perplexitybot/',
     'oai-searchbot/',
     'analyseseonet/',
-    'chatgpt-user/',
     'siteauditbot/',
     'engagemiibot/',
     'amazonbot/',
     'pathscan/',
     'googleother',
-    'gptbot/',
     'stackyenrich/',
     'welley/1.0 bot',
     'twitterbot/1.0',
-    'facebookexternalhit/',
     'meta-webindexer/',
 ];
 
