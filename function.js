@@ -82,67 +82,27 @@ function isSecurityScanUri(uri) {
     );
 }
 
-// Plain substrings matched case-insensitively against the User-Agent header.
-// Combined below into a single precompiled regex instead of N .includes() calls.
-const blockedBotSubstrings = [
-    // Most frequent → least frequent (based on logs.db analysis)
-    'sleepbot',
-    'petalbot',
-    'got (https://github.com/sindresorhus/got',
-    'palo alto networks',
-    'semrushbot',
-    'headlesschrome',
-    'trident', 'presto',
-    'serankingbacklinksbot',
-    'seamus the search engine',
-    'crios',
-    'lanai',
-    'webtrackrcrawler',
-    'fxios',
-    'dataforseobot',
-    'bytespider',
-    'pimeyes-downloader-api',
-    'shapbot',
-    'shap-user',
-    'wellknownbot',
-    'ev-crawler',
-    'builtwith', 'timpibot',
-    'fyndbot', 'greedyhand/',
-    'scrapy',
-    'yasearchbrowser',
-    'yaapp_android',
-    'webscraperbot',
-    'python-httpx/',
-    'python-requests/',
-    'mozilla/4.0 (compatible; ms-office; msoffice 16)',
-    'wpbot/',
-    'siteanalysisbot/',
-    'cmssurvey/',
-    'reyilbot/',
-    'wellesley/1.0',
-    'rankpulsebot/',
-    'linkupbot/',
-    'googlebot-image',
-    'ccbot/',
-    'aranea web-crawled corpora project',
-    'intelx.io_bot',
-    'oai-searchbot/',
-    'analyseseonet/',
-    'siteauditbot/',
-    'engagemiibot/',
-    'amazonbot/',
-    'pathscan/',
-    'stackyenrich/',
-    'welley/1.0 bot',
-    'twitterbot/1.0',
-    'meta-webindexer/',
-];
-
-function escapeRegExp(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-const blockedBotRegex = new RegExp(blockedBotSubstrings.map(escapeRegExp).join('|'));
+// Plain substrings matched against the (already lowercased) User-Agent header,
+// as ONE regex literal. Written out literally rather than built at runtime from an
+// array: a literal is compiled when the script is parsed, whereas
+// `new RegExp(list.map(escape).join('|'))` re-does 53 escape calls, a map, a join
+// and a pattern compile on every script evaluation — pure compute we were paying for.
+//
+// Alternatives, in the same order (most → least frequent, per logs.db analysis):
+//   sleepbot, petalbot, got (sindresorhus/got), palo alto networks, semrushbot,
+//   headlesschrome, trident, presto, serankingbacklinksbot, seamus the search engine,
+//   crios, lanai, webtrackrcrawler, fxios, dataforseobot, bytespider,
+//   pimeyes-downloader-api, shapbot, shap-user, wellknownbot, ev-crawler, builtwith,
+//   timpibot, fyndbot, greedyhand/, scrapy, yasearchbrowser, yaapp_android,
+//   webscraperbot, python-httpx/, python-requests/, ms-office/msoffice 16, wpbot/,
+//   siteanalysisbot/, cmssurvey/, reyilbot/, wellesley/1.0, rankpulsebot/, linkupbot/,
+//   googlebot-image, ccbot/, aranea web-crawled corpora project, intelx.io_bot,
+//   oai-searchbot/, analyseseonet/, siteauditbot/, engagemiibot/, amazonbot/,
+//   pathscan/, stackyenrich/, welley/1.0 bot, twitterbot/1.0, meta-webindexer/
+//
+// To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
+// UA sample to the `blockedAgents` fixture in function.test.js.
+const blockedBotRegex = /sleepbot|petalbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|semrushbot|headlesschrome|trident|presto|serankingbacklinksbot|seamus the search engine|crios|lanai|webtrackrcrawler|fxios|dataforseobot|bytespider|pimeyes-downloader-api|shapbot|shap-user|wellknownbot|ev-crawler|builtwith|timpibot|fyndbot|greedyhand\/|scrapy|yasearchbrowser|yaapp_android|webscraperbot|python-httpx\/|python-requests\/|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|wpbot\/|siteanalysisbot\/|cmssurvey\/|reyilbot\/|wellesley\/1\.0|rankpulsebot\/|linkupbot\/|googlebot-image|ccbot\/|aranea web-crawled corpora project|intelx\.io_bot|oai-searchbot\/|analyseseonet\/|siteauditbot\/|engagemiibot\/|amazonbot\/|pathscan\/|stackyenrich\/|welley\/1\.0 bot|twitterbot\/1\.0|meta-webindexer\//;
 
 // ptst/ isn't a plain substring match (needs the trailing slash to avoid false positives).
 const ptstRegex = /ptst\//;
