@@ -22,6 +22,13 @@ const BOT_DECOYS = {
 
 function handler(event) {
     const request = event.request;
+
+    // Block requests with no user agent (cheap check, done before any URI decoding)
+    const userAgentHeader = request.headers['user-agent'];
+    if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
+        return createNotFoundResponse();
+    }
+
     let uri;
     try {
         uri = request.uri ? decodeURIComponent(request.uri).trim() : '';
@@ -31,12 +38,6 @@ function handler(event) {
 
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
     const uriLower = uri.toLowerCase();
-
-    // Block requests with no user agent
-    const userAgentHeader = request.headers['user-agent'];
-    if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createNotFoundResponse();
-    }
 
     // Always allow ads.txt, robots.txt and llms.txt
     if (uriLower === '/ads.txt' || uriLower === '/robots.txt' || uriLower === '/llms.txt') {
@@ -69,13 +70,15 @@ function handler(event) {
     return request;
 }
 
+// Combined into a single precompiled regex instead of two separate .test() calls.
+const securityScanRegex = /\.(php\d?|sql|bak|phtml|phar)$|^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/;
+
 function isSecurityScanUri(uri) {
     return (
         uri === '/ip' ||
         uri.includes('/.env') ||
         uri.startsWith('/.git') ||
-        /\.(php\d?|sql|bak|phtml|phar)$/.test(uri) ||
-        /^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/.test(uri)
+        securityScanRegex.test(uri)
     );
 }
 
