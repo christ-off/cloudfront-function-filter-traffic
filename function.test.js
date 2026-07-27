@@ -199,44 +199,31 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // Parametrized tests for decoy responses (feed.xml, rss.xml, sitemap.xml)
-  const decoyTests = [
-    ["/feed.xml", "application/atom+xml", "<feed", "feed.xml"],
-    ["/rss.xml", "application/rss+xml", "<rss", "rss.xml"],
-    ["/sitemap.xml", "application/xml", "<urlset", "sitemap.xml"],
-  ];
+  // Feed/sitemap paths get no special treatment: blocked bots are simply
+  // denied there like anywhere else (the decoy responses were removed).
+  const feedPaths = ["/feed.xml", "/rss.xml", "/sitemap.xml"];
 
-  describe.each(decoyTests)("decoy response for blocked bot on %s", (uri, contentType, bodyMarker) => {
-    it("returns 200 OK with cache headers", () => {
-      const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
-      expect(result.statusCode).toBe(200);
-      expect(result.headers["content-type"].value).toBe(contentType);
-      expect(result.body).toContain(bodyMarker);
-      expect(result.headers["etag"]).toBeDefined();
-      expect(result.headers["last-modified"]).toBeDefined();
-      expect(result.headers["cache-control"].value).toContain("max-age=31536000");
-    });
+  it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
+    const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(404);
+    expect(result.body).toBe("Not Found");
+  });
 
-    it("returns 304 on matching ETag", () => {
-      const first = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
-      const etag = first.headers["etag"].value;
-      const result = handler(makeEvent({
-        uri,
-        userAgent: "Scrapy/2.16.0",
-        extraHeaders: { "if-none-match": { value: etag } }
-      }));
-      expect(result.statusCode).toBe(304);
-      expect(result.headers["etag"].value).toBe(etag);
-    });
+  it.each(feedPaths)("ignores conditional request headers on %s", (uri) => {
+    const result = handler(makeEvent({
+      uri,
+      userAgent: "Scrapy/2.16.0",
+      extraHeaders: {
+        "if-none-match": { value: '"empty-feed-v1"' },
+        "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" },
+      }
+    }));
+    expect(result.statusCode).toBe(404);
+  });
 
-    it("returns 304 on If-Modified-Since", () => {
-      const result = handler(makeEvent({
-        uri,
-        userAgent: "Scrapy/2.16.0",
-        extraHeaders: { "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" } }
-      }));
-      expect(result.statusCode).toBe(304);
-    });
+  it.each(feedPaths)("still lets a normal browser through on %s", (uri) => {
+    const event = makeEvent({ uri, userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
   });
 });
 

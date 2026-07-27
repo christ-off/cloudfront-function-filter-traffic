@@ -24,15 +24,9 @@ Requests matching automated-scan patterns return `404`:
 Requests with mismatched `rv:` and `firefox/` versions return `404`.
 
 ### 5. Bot / scraper blocking
-Requests matching known bot/scraper user-agent patterns return `404`. But on well-known paths, blocked bots get harmless cached responses instead of a `404` — a `404` would itself hint to the bot that the path is worth probing further, so these decoys mask the block and starve bad bots of real page discovery:
+Requests matching known bot/scraper user-agent patterns return `404`, on every path.
 
-- **`/feed.xml`** — `200 OK` with empty Atom feed, ETag, cache headers
-- **`/rss.xml`** — `200 OK` with empty RSS feed, ETag, cache headers
-- **`/sitemap.xml`** — `200 OK` with empty sitemap, ETag, cache headers
-
-Subsequent requests with matching `If-None-Match` or `If-Modified-Since` receive `304 Not Modified`.
-
-**Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto), and 60+ other known bots/crawlers, matched case-insensitively against the User-Agent header.
+**Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, etc.), old browser tokens (Trident, Presto), and 50+ other known bots/crawlers, matched case-insensitively against the User-Agent header.
 
 ### 6. Pass-through
 All other requests are forwarded to the origin unchanged.
