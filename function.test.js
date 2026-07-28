@@ -182,6 +182,9 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; pathscan/1.0)", "pathscan"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
     ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
+    ["Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.4a) Gecko/20030401", "PPC Mach-O"],
+    ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
@@ -378,6 +381,22 @@ describe("pass-through", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through current Firefox on Linux", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through Tor Browser (Firefox ESR 128)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0",
     });
     expect(handler(event)).toEqual(event.request);
   });
