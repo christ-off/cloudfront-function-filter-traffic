@@ -191,6 +191,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["NavCrawl/0.4 ( https://example.com/bot)", "NavCrawl"],
     ["Mozilla/5.0 CMS-Detector/1.0", "CMS-Detector"],
     ["atlas-enrich/1.0", "atlas-enrich"],
+    ["Mozilla/5.0 (compatible; SiteScan/1.0; free-tier enrichment; respects robots)", "SiteScan"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

@@ -74,11 +74,11 @@ function isSecurityScanUri(uri) {
 //   pathscan/, stackyenrich/, welley/1.0 bot, twitterbot/1.0, meta-webindexer/,
 //   mach-o (PPC-era Mac UAs — no browser has emitted this token since Firefox 1.x),
 //   testsearchspider, ptst/ (trailing slash required, else it false-positives),
-//   xai-searchbot/, navcrawl/, cms-detector/, atlas-enrich/
+//   xai-searchbot/, navcrawl/, cms-detector/, atlas-enrich/, sitescan/
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js.
-const blockedBotRegex = /sleepbot|petalbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|semrushbot|headlesschrome|trident|presto|serankingbacklinksbot|seamus the search engine|crios|lanai|webtrackrcrawler|fxios|dataforseobot|bytespider|pimeyes-downloader-api|shapbot|shap-user|wellknownbot|ev-crawler|builtwith|timpibot|fyndbot|greedyhand\/|scrapy|yasearchbrowser|yaapp_android|webscraperbot|python-httpx\/|python-requests\/|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|wpbot\/|siteanalysisbot\/|cmssurvey\/|reyilbot\/|wellesley\/1\.0|rankpulsebot\/|linkupbot\/|googlebot-image|ccbot\/|aranea web-crawled corpora project|intelx\.io_bot|oai-searchbot\/|analyseseonet\/|siteauditbot\/|engagemiibot\/|amazonbot\/|pathscan\/|stackyenrich\/|welley\/1\.0 bot|twitterbot\/1\.0|meta-webindexer\/|mach-o|testsearchspider|ptst\/|xai-searchbot\/|navcrawl\/|cms-detector\/|atlas-enrich\//;
+const blockedBotRegex = /sleepbot|petalbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|semrushbot|headlesschrome|trident|presto|serankingbacklinksbot|seamus the search engine|crios|lanai|webtrackrcrawler|fxios|dataforseobot|bytespider|pimeyes-downloader-api|shapbot|shap-user|wellknownbot|ev-crawler|builtwith|timpibot|fyndbot|greedyhand\/|scrapy|yasearchbrowser|yaapp_android|webscraperbot|python-httpx\/|python-requests\/|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|wpbot\/|siteanalysisbot\/|cmssurvey\/|reyilbot\/|wellesley\/1\.0|rankpulsebot\/|linkupbot\/|googlebot-image|ccbot\/|aranea web-crawled corpora project|intelx\.io_bot|oai-searchbot\/|analyseseonet\/|siteauditbot\/|engagemiibot\/|amazonbot\/|pathscan\/|stackyenrich\/|welley\/1\.0 bot|twitterbot\/1\.0|meta-webindexer\/|mach-o|testsearchspider|ptst\/|xai-searchbot\/|navcrawl\/|cms-detector\/|atlas-enrich\/|sitescan\//;
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
