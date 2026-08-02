@@ -196,6 +196,11 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
       "known scraper spoofing Chrome/148 desktop UA",
     ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/144 desktop UA",
+    ],
+    ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
