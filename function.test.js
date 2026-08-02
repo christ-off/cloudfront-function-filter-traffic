@@ -192,6 +192,10 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 CMS-Detector/1.0", "CMS-Detector"],
     ["atlas-enrich/1.0", "atlas-enrich"],
     ["Mozilla/5.0 (compatible; SiteScan/1.0; free-tier enrichment; respects robots)", "SiteScan"],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/148 desktop UA",
+    ],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
