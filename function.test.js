@@ -200,6 +200,10 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
       "known scraper spoofing Chrome/144 desktop UA",
     ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/120 desktop UA",
+    ],
     ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
     ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
     ["DatabankMetasearchExperiment/0.2", "DatabankMetasearchExperiment"],
