@@ -202,6 +202,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ],
     ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
     ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
+    ["DatabankMetasearchExperiment/0.2", "DatabankMetasearchExperiment"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
