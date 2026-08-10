@@ -223,6 +223,7 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
       "known scraper spoofing Chrome/107 Windows UA",
     ],
+    ["SearchEngineBot/0.1", "SearchEngineBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
