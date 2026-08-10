@@ -203,6 +203,22 @@ describe("scrapper bot blocking by user-agent", () => {
     ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
     ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
     ["DatabankMetasearchExperiment/0.2", "DatabankMetasearchExperiment"],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/142 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/116 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/104 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/107 Windows UA",
+    ],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
