@@ -212,6 +212,18 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36",
       "any 2-digit Chrome major on the spoofed mac UA template",
     ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+      "Chrome/119 (110-139 range) on the spoofed mac UA template",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "Chrome/139 (top of 110-139 range) on the spoofed mac UA template",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+      "Chrome/110 (bottom of 110-139 range) on the spoofed mac UA template",
+    ],
     ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
     ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
     ["DatabankMetasearchExperiment/0.2", "DatabankMetasearchExperiment"],
@@ -462,10 +474,10 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through a real current Chrome on the spoofed mac UA template (3-digit, non-enumerated major)", () => {
+  it("passes through a real current Chrome on the spoofed mac UA template (3-digit, non-enumerated, above the 110-139 range)", () => {
     const event = makeEvent({
       uri: "/",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     });
     expect(handler(event)).toEqual(event.request);
   });

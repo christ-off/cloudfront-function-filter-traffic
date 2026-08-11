@@ -75,14 +75,16 @@ function isSecurityScanUri(uri) {
 //   mach-o (PPC-era Mac UAs — no browser has emitted this token since Firefox 1.x),
 //   testsearchspider, ptst/ (trailing slash required, else it false-positives),
 //   xai-searchbot/, navcrawl/, cms-detector/, atlas-enrich/, sitescan/,
-//   the intel mac os x 10_15_5/10_15_7 ... chrome/(144|148|120|any 2-digit
-//   major).x.x.x scraper UAs below (OS build and trailing Chrome version
-//   digits are generalized; any 2-digit major, i.e. 10-99, is inherently
-//   stale since Chrome passed version 100 in March 2022 and auto-updates —
-//   see CLAUDE.md: real Chrome only ever reports its major version, so a
-//   general .0.0.0 rule alone would false-positive; gating on this specific
-//   spoofed OS/UA template plus known-impossible majors keeps this safe),
-//   livelapbot/,
+//   the intel mac os x 10_15_5/10_15_7 ... chrome/(144|148|110-139|any
+//   2-digit major).x.x.x scraper UAs below (OS build and trailing Chrome
+//   version digits are generalized; any 2-digit major, i.e. 10-99, is
+//   inherently stale since Chrome passed version 100 in March 2022 and
+//   auto-updates; 110-139 covers Nov 2023-mid 2024 majors and is a wider,
+//   deliberately-accepted-risk range rather than single-version log
+//   evidence like 144/148 — see CLAUDE.md: real Chrome only ever reports
+//   its major version, so a general .0.0.0 rule alone would false-positive;
+//   gating on this specific spoofed OS/UA template plus known-impossible
+//   majors keeps this reasonably safe), livelapbot/,
 //   databankmetasearch (prefix, covers Production and Experiment variants),
 //   the exact windows nt 10.0; win64; x64 ... chrome/142.0.0.0,
 //   chrome/116.0.0.0, chrome/104.0.0.0, and chrome/107.0.0.0 scraper UAs
@@ -91,7 +93,7 @@ function isSecurityScanUri(uri) {
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js.
-const blockedBotRegex = /sleepbot|petalbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|semrushbot|headlesschrome|trident|presto|serankingbacklinksbot|seamus the search engine|crios|lanai|webtrackrcrawler|fxios|dataforseobot|bytespider|pimeyes-downloader-api|shapbot|shap-user|wellknownbot|ev-crawler|builtwith|timpibot|fyndbot|greedyhand\/|scrapy|yasearchbrowser|yaapp_android|webscraperbot|python-httpx\/|python-requests\/|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|wpbot\/|siteanalysisbot\/|cmssurvey\/|reyilbot\/|wellesley\/1\.0|rankpulsebot\/|linkupbot\/|googlebot-image|ccbot\/|aranea web-crawled corpora project|intelx\.io_bot|oai-searchbot\/|analyseseonet\/|siteauditbot\/|engagemiibot\/|amazonbot\/|pathscan\/|stackyenrich\/|welley\/1\.0 bot|twitterbot\/1\.0|meta-webindexer\/|mach-o|testsearchspider|ptst\/|xai-searchbot\/|navcrawl\/|cms-detector\/|atlas-enrich\/|sitescan\/|mozilla\/5\.0 \(macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|120|\d{2})\.\d+\.\d+\.\d+ safari\/537\.36|livelapbot\/|databankmetasearch|mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|116|104|107)\.0\.0\.0 safari\/537\.36|searchenginebot\//;
+const blockedBotRegex = /sleepbot|petalbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|semrushbot|headlesschrome|trident|presto|serankingbacklinksbot|seamus the search engine|crios|lanai|webtrackrcrawler|fxios|dataforseobot|bytespider|pimeyes-downloader-api|shapbot|shap-user|wellknownbot|ev-crawler|builtwith|timpibot|fyndbot|greedyhand\/|scrapy|yasearchbrowser|yaapp_android|webscraperbot|python-httpx\/|python-requests\/|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|wpbot\/|siteanalysisbot\/|cmssurvey\/|reyilbot\/|wellesley\/1\.0|rankpulsebot\/|linkupbot\/|googlebot-image|ccbot\/|aranea web-crawled corpora project|intelx\.io_bot|oai-searchbot\/|analyseseonet\/|siteauditbot\/|engagemiibot\/|amazonbot\/|pathscan\/|stackyenrich\/|welley\/1\.0 bot|twitterbot\/1\.0|meta-webindexer\/|mach-o|testsearchspider|ptst\/|xai-searchbot\/|navcrawl\/|cms-detector\/|atlas-enrich\/|sitescan\/|mozilla\/5\.0 \(macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+ safari\/537\.36|livelapbot\/|databankmetasearch|mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|116|104|107)\.0\.0\.0 safari\/537\.36|searchenginebot\//;
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
