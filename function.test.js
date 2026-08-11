@@ -460,6 +460,14 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("passes through Google Image Proxy despite its stale Firefox/11.0 UA", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("allows Google-CloudVertexBot through", () => {
     const event = makeEvent({
       userAgent: "Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)",

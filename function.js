@@ -29,6 +29,12 @@ function handler(event) {
 
     const ua = userAgentHeader.value.toLowerCase();
 
+    // Google Image Proxy (Gmail, etc. fetching embedded email images) hardcodes an
+    // old Firefox/11.0 UA — legitimate, not a scraper. Exempt before the stale-Firefox check.
+    if (ua.includes('googleimageproxy')) {
+        return request;
+    }
+
     // Outdated or malformed Firefox UA
     if (isSuspiciousFirefoxUA(ua)) {
         return createNotFoundResponse();
