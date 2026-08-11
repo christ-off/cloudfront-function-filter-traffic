@@ -63,10 +63,10 @@ describe("PHP file blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("does not block a path that merely contains 'php' as a substring", () => {
-    const event = makeEvent({ uri: "/php-info" });
-    expect(handler(event)).toEqual(event.request);
-  });
+    it("does not block a path that merely contains 'php' as a substring", () => {
+      const event = makeEvent({ uri: "/php-info" });
+      expect(handler(event)).toEqual(event.request);
+    });
 
   it("blocks a .php5 file", () => {
     expect(handler(makeEvent({ uri: "/shell.php5" })).statusCode).toBe(404);
@@ -203,6 +203,14 @@ describe("scrapper bot blocking by user-agent", () => {
     [
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "known scraper spoofing Chrome/120 desktop UA",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
+      "known scraper spoofing Chrome/83 Mac OS X 10_15_5 UA",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36",
+      "any 2-digit Chrome major on the spoofed mac UA template",
     ],
     ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
     ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
@@ -450,6 +458,14 @@ describe("pass-through", () => {
   it("allows Gemini-Deep-Research through", () => {
     const event = makeEvent({
       userAgent: "Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through a real current Chrome on the spoofed mac UA template (3-digit, non-enumerated major)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
     });
     expect(handler(event)).toEqual(event.request);
   });
