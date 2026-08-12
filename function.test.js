@@ -172,6 +172,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
     ["python-httpx/0.28.1", "Python httpx"],
     ["python-requests/2.32.5", "Python requests"],
+    ["Python/3.14 aiohttp/3.14.1", "Python aiohttp"],
     ["Mozilla/4.0 (compatible; ms-office; MSOffice 16)", "MS Office SaaS"],
     ["CMSSurvey/1.0; https://addedlovely.com/crawler", "CMSSurvey"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ReyilBot/0.1", "ReyilBot"],
