@@ -245,6 +245,7 @@ describe("scrapper bot blocking by user-agent", () => {
       "known scraper spoofing Chrome/107 Windows UA",
     ],
     ["SearchEngineBot/0.1", "SearchEngineBot"],
+    ["URL/Emacs Emacs/30.1 (X11; x86_64-pc-linux-gnu)", "Emacs URL/Emacs scraper"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
