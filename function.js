@@ -7,17 +7,20 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    let uri;
-    try {
-        uri = request.uri ? decodeURIComponent(request.uri).trim() : '';
-    } catch (_e) {
-        return createNotFoundResponse();
+    // Only ~3% of URIs contain a %-escape (per logs.db); skip the decode for the rest.
+    let uri = request.uri || '';
+    if (uri.indexOf('%') !== -1) {
+        try {
+            uri = decodeURIComponent(uri);
+        } catch (_e) {
+            return createNotFoundResponse();
+        }
     }
 
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
-    const uriLower = uri.toLowerCase();
+    const uriLower = uri.trim().toLowerCase();
 
-    // Always allow ads.txt, robots.txt and llms.txt
+    // Always allow ads.txt, robots.txt and llms.txt (even for blocked bots)
     if (uriLower === '/ads.txt' || uriLower === '/robots.txt' || uriLower === '/llms.txt') {
         return request;
     }
@@ -29,14 +32,18 @@ function handler(event) {
 
     const ua = userAgentHeader.value.toLowerCase();
 
-    // Google Image Proxy (Gmail, etc. fetching embedded email images) hardcodes an
-    // old Firefox/11.0 UA — legitimate, not a scraper. Exempt before the stale-Firefox check.
-    if (ua.includes('googleimageproxy')) {
-        return request;
+    // Anchored full-UA templates first: a ^ regex is tested at position 0 only,
+    // and these two templates alone cause ~63% of UA blocks (per logs.db), so
+    // most bots exit here without paying for the big alternation below.
+    if (spoofedChromeTemplateRegex.test(ua)) {
+        return createNotFoundResponse();
     }
 
-    // Outdated or malformed Firefox UA
-    if (isSuspiciousFirefoxUA(ua)) {
+    // Outdated or malformed Firefox UA. Google Image Proxy (Gmail, etc. fetching
+    // embedded email images) hardcodes an old Firefox/11.0 UA — legitimate, not a
+    // scraper, so it is exempted; the exemption substring scan only runs when the
+    // Firefox rule actually fires (~1% of traffic) instead of on every request.
+    if (isSuspiciousFirefoxUA(ua) && !ua.includes('googleimageproxy')) {
         return createNotFoundResponse();
     }
 
@@ -49,57 +56,61 @@ function handler(event) {
     return request;
 }
 
-// Combined into a single precompiled regex instead of two separate .test() calls.
-const securityScanRegex = /\.(php\d?|sql|bak|phtml|phar)$|^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)/;
+// Combined into a single precompiled regex instead of separate .test()/.includes()
+// calls: one pass over the URI covers extensions, folder prefixes, /.env and /.git.
+const securityScanRegex = /\.(php\d?|sql|bak|phtml|phar)$|^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)|\/\.env|^\/\.git/;
 
 function isSecurityScanUri(uri) {
-    return (
-        uri === '/ip' ||
-        uri.includes('/.env') ||
-        uri.startsWith('/.git') ||
-        securityScanRegex.test(uri)
-    );
+    return uri === '/ip' || securityScanRegex.test(uri);
 }
+
+// The two spoofed-Chrome full-UA templates, split out of blockedBotRegex and
+// anchored (they always match from position 0, so ^ makes the failure case a
+// single test instead of a scan at every character).
+//   - intel mac os x 10_15_5/10_15_7 ... chrome/(144|148|110-139|any 2-digit
+//     major).x.x.x: OS build and trailing Chrome version digits are generalized;
+//     any 2-digit major (10-99) is inherently stale since Chrome passed version
+//     100 in March 2022 and auto-updates; 110-139 covers Nov 2023-mid 2024
+//     majors and is a wider, deliberately-accepted-risk range rather than
+//     single-version log evidence like 144/148 — see CLAUDE.md: real Chrome
+//     only ever reports its major version, so a general .0.0.0 rule alone would
+//     false-positive; gating on this specific spoofed OS/UA template plus
+//     known-impossible majors keeps this reasonably safe.
+//   - windows nt 10.0; win64; x64 ... chrome/(142|116|104|107).0.0.0: same
+//     verbatim-per-version rationale as the mac entry.
+const spoofedChromeTemplateRegex = /^mozilla\/5\.0 \((?:macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+|windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|116|104|107)\.0\.0\.0) safari\/537\.36/;
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
 // as ONE regex literal. Written out literally rather than built at runtime from an
 // array: a literal is compiled when the script is parsed, whereas
-// `new RegExp(list.map(escape).join('|'))` re-does 56 escape calls, a map, a join
+// `new RegExp(list.map(escape).join('|'))` re-does the escape calls, a map, a join
 // and a pattern compile on every script evaluation — pure compute we were paying for.
 //
-// Alternatives, in the same order (most → least frequent, per logs.db analysis):
-//   sleepbot, petalbot, got (sindresorhus/got), palo alto networks, semrushbot,
-//   headlesschrome, trident, presto, serankingbacklinksbot, seamus the search engine,
-//   crios, lanai, webtrackrcrawler, fxios, dataforseobot, bytespider,
-//   pimeyes-downloader-api, shapbot, shap-user, wellknownbot, ev-crawler, builtwith,
-//   timpibot, fyndbot, greedyhand/, scrapy, yasearchbrowser, yaapp_android,
-//   webscraperbot, python-httpx/, python-requests/, ms-office/msoffice 16, wpbot/,
-//   siteanalysisbot/, cmssurvey/, reyilbot/, wellesley/1.0, rankpulsebot/, linkupbot/,
-//   aiohttp/, googlebot-image, ccbot/, aranea web-crawled corpora project, intelx.io_bot,
-//   oai-searchbot/, analyseseonet/, siteauditbot/, engagemiibot/, amazonbot/,
-//   pathscan/, stackyenrich/, welley/1.0 bot, twitterbot/1.0, meta-webindexer/,
-//   mach-o (PPC-era Mac UAs — no browser has emitted this token since Firefox 1.x),
-//   testsearchspider, ptst/ (trailing slash required, else it false-positives),
-//   xai-searchbot/, navcrawl/, cms-detector/, atlas-enrich/, sitescan/,
-//   the intel mac os x 10_15_5/10_15_7 ... chrome/(144|148|110-139|any
-//   2-digit major).x.x.x scraper UAs below (OS build and trailing Chrome
-//   version digits are generalized; any 2-digit major, i.e. 10-99, is
-//   inherently stale since Chrome passed version 100 in March 2022 and
-//   auto-updates; 110-139 covers Nov 2023-mid 2024 majors and is a wider,
-//   deliberately-accepted-risk range rather than single-version log
-//   evidence like 144/148 — see CLAUDE.md: real Chrome only ever reports
-//   its major version, so a general .0.0.0 rule alone would false-positive;
-//   gating on this specific spoofed OS/UA template plus known-impossible
-//   majors keeps this reasonably safe), livelapbot/,
+// Alternatives, in the same order (most → least frequent, per logs.db analysis
+// of the 3 months up to 2026-08; only match frequency of BLOCKED requests
+// matters for this order, non-matching UAs try every alternative regardless):
+//   linkupbot/, sleepbot, ms-office/msoffice 16, got (sindresorhus/got),
+//   palo alto networks, petalbot, trident, amazonbot/, oai-searchbot/,
+//   reyilbot/, ccbot/, aiohttp/, emacs (URL/Emacs scraper), meta-webindexer/,
+//   twitterbot/1.0, presto, lanai, analyseseonet/, scrapy, crios,
+//   headlesschrome, aranea web-crawled corpora project, pimeyes-downloader-api,
+//   bytespider, python-httpx/, mach-o (PPC-era Mac UAs — no browser has emitted
+//   this token since Firefox 1.x), intelx.io_bot, welley/1.0 bot,
+//   webtrackrcrawler, searchenginebot, python-requests/,
 //   databankmetasearch (prefix, covers Production and Experiment variants),
-//   the exact windows nt 10.0; win64; x64 ... chrome/142.0.0.0,
-//   chrome/116.0.0.0, chrome/104.0.0.0, and chrome/107.0.0.0 scraper UAs
-//   below (same verbatim-per-version rationale as the mac entry above),
-//   searchenginebot/, emacs (URL/Emacs scraper)
+//   shapbot, cms-detector/, fxios, navcrawl/, shap-user, wellknownbot,
+//   siteauditbot/, ptst/ (trailing slash required, else it false-positives),
+//   wellesley/1.0, pathscan/, ev-crawler, builtwith, timpibot, xai-searchbot/,
+//   semrushbot, greedyhand/, yasearchbrowser, livelapbot/, engagemiibot/,
+//   sitescan/, stackyenrich/, testsearchspider, atlas-enrich/, fyndbot,
+//   cmssurvey/, wpbot/, googlebot-image, rankpulsebot/, siteanalysisbot/,
+//   webscraperbot, serankingbacklinksbot, seamus the search engine,
+//   dataforseobot, yaapp_android
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
-// UA sample to the `blockedAgents` fixture in function.test.js.
-const blockedBotRegex = /sleepbot|petalbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|semrushbot|headlesschrome|trident|presto|serankingbacklinksbot|seamus the search engine|crios|lanai|webtrackrcrawler|fxios|dataforseobot|bytespider|pimeyes-downloader-api|shapbot|shap-user|wellknownbot|ev-crawler|builtwith|timpibot|fyndbot|greedyhand\/|scrapy|yasearchbrowser|yaapp_android|webscraperbot|python-httpx\/|python-requests\/|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|wpbot\/|siteanalysisbot\/|cmssurvey\/|reyilbot\/|wellesley\/1\.0|rankpulsebot\/|linkupbot\/|aiohttp\/|googlebot-image|ccbot\/|aranea web-crawled corpora project|intelx\.io_bot|oai-searchbot\/|analyseseonet\/|siteauditbot\/|engagemiibot\/|amazonbot\/|pathscan\/|stackyenrich\/|welley\/1\.0 bot|twitterbot\/1\.0|meta-webindexer\/|mach-o|testsearchspider|ptst\/|xai-searchbot\/|navcrawl\/|cms-detector\/|atlas-enrich\/|sitescan\/|mozilla\/5\.0 \(macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+ safari\/537\.36|livelapbot\/|databankmetasearch|mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|116|104|107)\.0\.0\.0 safari\/537\.36|searchenginebot|emacs\//;
+// UA sample to the `blockedAgents` fixture in function.test.js. Full-UA templates
+// belong in spoofedChromeTemplateRegex above instead.
+const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0 bot|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android/;
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
