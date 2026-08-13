@@ -95,7 +95,7 @@ function isSecurityScanUri(uri) {
 //   the exact windows nt 10.0; win64; x64 ... chrome/142.0.0.0,
 //   chrome/116.0.0.0, chrome/104.0.0.0, and chrome/107.0.0.0 scraper UAs
 //   below (same verbatim-per-version rationale as the mac entry above),
-//   searchenginebot/
+//   searchenginebot/, emacs (URL/Emacs scraper)
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js.
