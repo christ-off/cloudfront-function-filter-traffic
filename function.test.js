@@ -246,6 +246,10 @@ describe("scrapper bot blocking by user-agent", () => {
     ],
     ["SearchEngineBot/0.1", "SearchEngineBot"],
     ["URL/Emacs Emacs/30.1 (X11; x86_64-pc-linux-gnu)", "Emacs URL/Emacs scraper"],
+    [
+      "ImageBot/1.0 (compatible; research crawler; https://github.com/rom1504/img2dataset; opt-out: abuse.notification.dcomp12b@gmail.com;",
+      "ImageBot/img2dataset scraper",
+    ],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
