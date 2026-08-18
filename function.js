@@ -20,11 +20,6 @@ function handler(event) {
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
     const uriLower = uri.trim().toLowerCase();
 
-    // Always allow ads.txt, robots.txt and llms.txt (even for blocked bots)
-    if (uriLower === '/ads.txt' || uriLower === '/robots.txt' || uriLower === '/llms.txt') {
-        return request;
-    }
-
     // Obvious security scans
     if (isSecurityScanUri(uriLower)) {
         return createNotFoundResponse();

@@ -11,37 +11,6 @@ function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } =
 }
 
 // =====================================================
-// Always-allow paths
-// =====================================================
-describe("always-allow paths", () => {
-  it("allows /robots.txt", () => {
-    const event = makeEvent({ uri: "/robots.txt" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows /ads.txt", () => {
-    const event = makeEvent({ uri: "/ads.txt" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows /llms.txt", () => {
-    const event = makeEvent({ uri: "/llms.txt" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-
-  it("normalises URI whitespace before checking (trim)", () => {
-    const event = makeEvent({ uri: "  /robots.txt  " });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("normalises URI case before checking (lowercase)", () => {
-    const event = makeEvent({ uri: "/ROBOTS.TXT" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
 // /.well-known/traffic-advice — Chrome Private Prefetch Proxy
 // =====================================================
 // =====================================================
@@ -314,10 +283,6 @@ describe("null or empty user-agent blocking", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it("blocks even for robots.txt when user-agent is absent", () => {
-    const result = handler(makeEvent({ uri: "/robots.txt", userAgent: null }));
-    expect(result.statusCode).toBe(404);
-  });
 });
 
 // =====================================================
@@ -402,17 +367,17 @@ describe("admin folder blocking", () => {
 });
 
 // =====================================================
-// Always-allow paths with blocked user-agents
+// ads.txt / llms.txt with blocked user-agents
 // =====================================================
-describe("always-allow paths bypass UA checks", () => {
-  it("allows /ads.txt even with a blocked user-agent", () => {
-    const event = makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" });
-    expect(handler(event)).toEqual(event.request);
+describe("ads.txt and llms.txt follow normal UA blocking", () => {
+  it("blocks /ads.txt for a blocked user-agent", () => {
+    const result = handler(makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" }));
+    expect(result.statusCode).toBe(404);
   });
 
-  it("allows /llms.txt even with a blocked user-agent", () => {
-    const event = makeEvent({ uri: "/llms.txt", userAgent: "CCBot/2.0" });
-    expect(handler(event)).toEqual(event.request);
+  it("blocks /llms.txt for a blocked user-agent", () => {
+    const result = handler(makeEvent({ uri: "/llms.txt", userAgent: "CCBot/2.0" }));
+    expect(result.statusCode).toBe(404);
   });
 });
 
