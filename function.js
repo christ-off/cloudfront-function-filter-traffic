@@ -56,27 +56,12 @@ function handler(event) {
     return request;
 }
 
-// Combined into a single precompiled regex instead of separate .test()/.includes()
-// calls: one pass over the URI covers extensions, folder prefixes, /.env, /.git,
-// /.docker and known credential-scan filenames.
-//
-// Updated 2026-08-18 per 3-month logs.db analysis:
-//   - php\d? -> php\d* : scanners now request multi-digit suffixes (.php73, .php525),
-//     which the old single-digit cap silently let through.
-//   - dropped `phar`: zero hits across 3 months of logs, dead weight.
-//   - added wp-content|wp-json folder prefixes: 2.5k+ hits/3mo (WordPress plugin/theme
-//     and REST-API probing, incl. wp2shell UA) that `wp` alone doesn't cover since
-//     "wp-content"/"wp-json" don't share the `wp` prefix's (\/|$) boundary.
-//   - added config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|npmrc|htpasswd|tfstate
-//     extensions and /.docker/: a distributed credential-scanning sweep (30-40+
-//     distinct source IPs per filename) probing for leaked secrets — web.config,
-//     docker-compose.yaml, terraform.tfstate, .npmrc, .htpasswd, .boto, .s3cfg,
-//     rclone.conf, *.key/*.pem, trace.axd/elmah.axd. None of these extensions were
-//     ever served with a non-error status in 3 months of traffic.
-//   - added a root-level credential-filename group for .json specifically (NOT a
-//     blanket .json rule: /about/data/*.json and /pagefind/*.json are real,
-//     legitimately-served site data) — secrets.json, config.json, credentials.json,
-//     service-account.json, firebase-adminsdk.json, serviceAccountKey.json, etc.
+// Combined into a single precompiled regex: one pass over the URI covers
+// extensions, folder prefixes, /.env, /.git, /.docker and known
+// credential-scan filenames. The trailing .json group is NOT a blanket
+// `.json$` rule — /about/data/*.json and /pagefind/*.json are real,
+// legitimately-served site data — so only known credential-scan filenames
+// (secrets.json, config.json, service-account.json, etc.) are matched there.
 const securityScanRegex = /\.(php\d*|sql|bak|phtml|config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|npmrc|htpasswd|tfstate)$|^\/(images?|img|wp-includes|wp-content|wp-json|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)|\/\.env|\/\.docker\/|^\/\.git|^\/(secrets?|config|credentials?|service[-_]account|firebase-(?:adminsdk|service-account|config)|serviceaccountkey|settings|env|auth|app-config|appsettings|openapi|swagger|amplifyconfiguration)\.json$/;
 
 function isSecurityScanUri(uri) {
@@ -84,47 +69,21 @@ function isSecurityScanUri(uri) {
 }
 
 // The two spoofed-Chrome full-UA templates, split out of blockedBotRegex and
-// anchored (they always match from position 0, so ^ makes the failure case a
-// single test instead of a scan at every character).
-//   - intel mac os x 10_15_5/10_15_7 ... chrome/(144|148|110-139|any 2-digit
-//     major).x.x.x: OS build and trailing Chrome version digits are generalized;
-//     any 2-digit major (10-99) is inherently stale since Chrome passed version
-//     100 in March 2022 and auto-updates; 110-139 covers Nov 2023-mid 2024
-//     majors and is a wider, deliberately-accepted-risk range rather than
-//     single-version log evidence like 144/148 — see CLAUDE.md: real Chrome
-//     only ever reports its major version, so a general .0.0.0 rule alone would
-//     false-positive; gating on this specific spoofed OS/UA template plus
-//     known-impossible majors keeps this reasonably safe.
-//   - windows nt 10.0; win64; x64 ... chrome/(142|116|104|107).0.0.0: same
-//     verbatim-per-version rationale as the mac entry.
+// anchored (^ matches only at position 0, so the failure case is one test
+// instead of a scan at every character). Chrome auto-updates and only ever
+// reports its major version, so a bare .0.0.0 rule would false-positive on
+// real Chrome (see CLAUDE.md) — these Chrome/major values and the 10-99
+// impossible-major range are specific, observed-in-logs values gated behind
+// this exact spoofed OS/UA template, not a general rule.
 const spoofedChromeTemplateRegex = /^mozilla\/5\.0 \((?:macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+|windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|116|104|107)\.0\.0\.0) safari\/537\.36/;
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
-// as ONE regex literal. Written out literally rather than built at runtime from an
-// array: a literal is compiled when the script is parsed, whereas
-// `new RegExp(list.map(escape).join('|'))` re-does the escape calls, a map, a join
-// and a pattern compile on every script evaluation — pure compute we were paying for.
-//
-// Alternatives, in the same order (most → least frequent, per logs.db analysis
-// of the 3 months up to 2026-08; only match frequency of BLOCKED requests
-// matters for this order, non-matching UAs try every alternative regardless):
-//   linkupbot/, sleepbot, ms-office/msoffice 16, got (sindresorhus/got),
-//   palo alto networks, petalbot, trident, amazonbot/, oai-searchbot/,
-//   reyilbot/, ccbot/, aiohttp/, emacs (URL/Emacs scraper), meta-webindexer/,
-//   twitterbot/1.0, presto, lanai, analyseseonet/, scrapy, crios,
-//   headlesschrome, aranea web-crawled corpora project, pimeyes-downloader-api,
-//   bytespider, python-httpx/, mach-o (PPC-era Mac UAs — no browser has emitted
-//   this token since Firefox 1.x), intelx.io_bot, welley/1.0 bot,
-//   webtrackrcrawler, searchenginebot, python-requests/,
-//   databankmetasearch (prefix, covers Production and Experiment variants),
-//   shapbot, cms-detector/, fxios, navcrawl/, shap-user, wellknownbot,
-//   siteauditbot/, ptst/ (trailing slash required, else it false-positives),
-//   wellesley/1.0, pathscan/, ev-crawler, builtwith, timpibot, xai-searchbot/,
-//   semrushbot, greedyhand/, yasearchbrowser, livelapbot/, engagemiibot/,
-//   sitescan/, stackyenrich/, testsearchspider, atlas-enrich/, fyndbot,
-//   cmssurvey/, wpbot/, googlebot-image, rankpulsebot/, siteanalysisbot/,
-//   webscraperbot, serankingbacklinksbot, seamus the search engine,
-//   dataforseobot, yaapp_android, imagebot/, perplexitybot/, gptbot/
+// as ONE regex literal. Written out literally rather than built at runtime from
+// an array: a literal is compiled when the script is parsed, whereas
+// `new RegExp(list.map(escape).join('|'))` re-does the escape calls, a map, a
+// join and a pattern compile on every script evaluation — pure compute we were
+// paying for. Alternatives are ordered most- to least-frequent per logs.db so
+// common bots exit early (non-matching UAs still try every alternative).
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js. Full-UA templates
