@@ -268,6 +268,33 @@ describe("scrapper bot blocking by user-agent", () => {
 });
 
 // =====================================================
+// /robots.txt for a blocked bot → real disallow-all, not a 404
+// =====================================================
+describe("robots.txt disallow-all for blocked bots", () => {
+  it("answers a blocked bot's /robots.txt with a 200 disallow-all", () => {
+    const result = handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("text/plain");
+    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+  });
+
+  it("is case-insensitive on the URI", () => {
+    const result = handler(makeEvent({ uri: "/ROBOTS.TXT", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("does not affect other bot-blocking rules (e.g. security-scan URIs)", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("still lets a normal browser's /robots.txt through untouched", () => {
+    const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
 // Null or empty user-agent → 404
 // =====================================================
 describe("null or empty user-agent blocking", () => {

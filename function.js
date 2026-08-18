@@ -42,8 +42,13 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // Deny blocked bots
+    // Deny blocked bots. For /robots.txt specifically, answer with a real
+    // disallow-all instead of a 404 — a blocked scraper asking for robots.txt
+    // gets a correct, on-brand "you're not welcome here" rather than a generic miss.
     if (isBlockedBot(ua)) {
+        if (uriLower === '/robots.txt') {
+            return createDisallowAllRobotsResponse();
+        }
         return createNotFoundResponse();
     }
 
@@ -150,6 +155,15 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
+    };
+}
+
+function createDisallowAllRobotsResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {"content-type": {value: "text/plain"}},
+        body: 'User-agent: *\nDisallow: /\n'
     };
 }
 
