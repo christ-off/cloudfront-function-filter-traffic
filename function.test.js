@@ -275,6 +275,7 @@ describe("robots.txt disallow-all for blocked bots", () => {
     const result = handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("text/plain");
+    expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
     expect(result.body).toBe("User-agent: *\nDisallow: /\n");
   });
 

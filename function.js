@@ -162,7 +162,10 @@ function createDisallowAllRobotsResponse() {
     return {
         statusCode: 200,
         statusDescription: 'OK',
-        headers: {"content-type": {value: "text/plain"}},
+        headers: {
+            "content-type": {value: "text/plain"},
+            "cache-control": {value: "public, max-age=86400"}
+        },
         body: 'User-agent: *\nDisallow: /\n'
     };
 }
