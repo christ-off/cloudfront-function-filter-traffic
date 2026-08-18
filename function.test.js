@@ -219,6 +219,8 @@ describe("scrapper bot blocking by user-agent", () => {
       "ImageBot/1.0 (compatible; research crawler; https://github.com/rom1504/img2dataset; opt-out: abuse.notification.dcomp12b@gmail.com;",
       "ImageBot/img2dataset scraper",
     ],
+    ["Mozilla/5.0 (compatible; PerplexityBot/1.0; https://perplexity.ai/perplexitybot)", "PerplexityBot"],
+    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.3; https://openai.com/gptbot)", "GPTBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
