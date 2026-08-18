@@ -52,8 +52,27 @@ function handler(event) {
 }
 
 // Combined into a single precompiled regex instead of separate .test()/.includes()
-// calls: one pass over the URI covers extensions, folder prefixes, /.env and /.git.
-const securityScanRegex = /\.(php\d?|sql|bak|phtml|phar)$|^\/(images?|img|wp-includes|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)|\/\.env|^\/\.git/;
+// calls: one pass over the URI covers extensions, folder prefixes, /.env, /.git,
+// /.docker and known credential-scan filenames.
+//
+// Updated 2026-08-18 per 3-month logs.db analysis:
+//   - php\d? -> php\d* : scanners now request multi-digit suffixes (.php73, .php525),
+//     which the old single-digit cap silently let through.
+//   - dropped `phar`: zero hits across 3 months of logs, dead weight.
+//   - added wp-content|wp-json folder prefixes: 2.5k+ hits/3mo (WordPress plugin/theme
+//     and REST-API probing, incl. wp2shell UA) that `wp` alone doesn't cover since
+//     "wp-content"/"wp-json" don't share the `wp` prefix's (\/|$) boundary.
+//   - added config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|npmrc|htpasswd|tfstate
+//     extensions and /.docker/: a distributed credential-scanning sweep (30-40+
+//     distinct source IPs per filename) probing for leaked secrets — web.config,
+//     docker-compose.yaml, terraform.tfstate, .npmrc, .htpasswd, .boto, .s3cfg,
+//     rclone.conf, *.key/*.pem, trace.axd/elmah.axd. None of these extensions were
+//     ever served with a non-error status in 3 months of traffic.
+//   - added a root-level credential-filename group for .json specifically (NOT a
+//     blanket .json rule: /about/data/*.json and /pagefind/*.json are real,
+//     legitimately-served site data) — secrets.json, config.json, credentials.json,
+//     service-account.json, firebase-adminsdk.json, serviceAccountKey.json, etc.
+const securityScanRegex = /\.(php\d*|sql|bak|phtml|config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|npmrc|htpasswd|tfstate)$|^\/(images?|img|wp-includes|wp-content|wp-json|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma)(\/|$)|\/\.env|\/\.docker\/|^\/\.git|^\/(secrets?|config|credentials?|service[-_]account|firebase-(?:adminsdk|service-account|config)|serviceaccountkey|settings|env|auth|app-config|appsettings|openapi|swagger|amplifyconfiguration)\.json$/;
 
 function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);

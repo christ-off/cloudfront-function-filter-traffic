@@ -49,8 +49,9 @@ describe("PHP file blocking", () => {
     expect(handler(makeEvent({ uri: "/page.phtml" })).statusCode).toBe(404);
   });
 
-  it("blocks a .phar file", () => {
-    expect(handler(makeEvent({ uri: "/app.phar" })).statusCode).toBe(404);
+  it("blocks a multi-digit .phpNN suffix", () => {
+    expect(handler(makeEvent({ uri: "/zup.php73" })).statusCode).toBe(404);
+    expect(handler(makeEvent({ uri: "/about.php525" })).statusCode).toBe(404);
   });
 });
 
@@ -348,6 +349,81 @@ describe(".sql and .bak file blocking", () => {
 
   it("blocks a .bak file", () => {
     expect(handler(makeEvent({ uri: "/config.bak" })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Security scan blocking — WordPress content/API probing → 404
+// =====================================================
+describe("wp-content and wp-json blocking", () => {
+  it("blocks /wp-content/ paths", () => {
+    expect(handler(makeEvent({ uri: "/wp-content/uploads/" })).statusCode).toBe(404);
+    expect(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })).statusCode).toBe(404);
+  });
+
+  it("blocks /wp-json/ paths", () => {
+    expect(handler(makeEvent({ uri: "/wp-json/" })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Security scan blocking — credential/config file scanning → 404
+// =====================================================
+describe("credential and config file scanning", () => {
+  const extensionCases = [
+    "/web.config",
+    "/docker-compose.yaml",
+    "/.gitlab-ci.yml",
+    "/.aider.conf.yml",
+    "/rclone.conf",
+    "/server.key",
+    "/key.pem",
+    "/trace.axd",
+    "/.boto",
+    "/.s3cfg",
+    "/.npmrc",
+    "/.htpasswd",
+    "/terraform.tfstate",
+  ];
+
+  it.each(extensionCases)("blocks %s", (uri) => {
+    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  });
+
+  it("blocks /.docker/config.json", () => {
+    expect(handler(makeEvent({ uri: "/.docker/config.json" })).statusCode).toBe(404);
+  });
+
+  const secretJsonCases = [
+    "/secrets.json",
+    "/config.json",
+    "/credentials.json",
+    "/service-account.json",
+    "/service_account.json",
+    "/firebase-adminsdk.json",
+    "/serviceAccountKey.json",
+    "/settings.json",
+    "/env.json",
+    "/auth.json",
+    "/app-config.json",
+    "/appsettings.json",
+    "/openapi.json",
+    "/swagger.json",
+    "/amplifyconfiguration.json",
+  ];
+
+  it.each(secretJsonCases)("blocks root-level %s", (uri) => {
+    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  });
+
+  it("does not block legitimate nested .json data files", () => {
+    const event = makeEvent({ uri: "/about/data/blogs.json" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block /manifest.json", () => {
+    const event = makeEvent({ uri: "/manifest.json" });
+    expect(handler(event)).toEqual(event.request);
   });
 });
 
