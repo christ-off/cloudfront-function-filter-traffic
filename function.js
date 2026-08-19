@@ -30,7 +30,7 @@ function handler(event) {
     // Anchored full-UA templates first: a ^ regex is tested at position 0 only,
     // and these two templates alone cause ~63% of UA blocks (per logs.db), so
     // most bots exit here without paying for the big alternation below.
-    if (spoofedChromeTemplateRegex.test(ua)) {
+    if (spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua)) {
         return createNotFoundResponse();
     }
 
@@ -68,14 +68,16 @@ function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
 }
 
-// The two spoofed-Chrome full-UA templates, split out of blockedBotRegex and
-// anchored (^ matches only at position 0, so the failure case is one test
-// instead of a scan at every character). Chrome auto-updates and only ever
-// reports its major version, so a bare .0.0.0 rule would false-positive on
-// real Chrome (see CLAUDE.md) — these Chrome/major values and the 10-99
-// impossible-major range are specific, observed-in-logs values gated behind
-// this exact spoofed OS/UA template, not a general rule.
-const spoofedChromeTemplateRegex = /^mozilla\/5\.0 \((?:macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+|windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|116|104|107)\.0\.0\.0) safari\/537\.36/;
+// The two spoofed-Chrome full-UA templates, anchored (^ matches only at
+// position 0, so the failure case is one test instead of a scan at every
+// character) and split into their own regexes to keep each one's alternation
+// count under the linter's complexity threshold. Chrome auto-updates and
+// only ever reports its major version, so a bare .0.0.0 rule would
+// false-positive on real Chrome (see CLAUDE.md) — these Chrome/major values
+// and the impossible-major ranges are specific, observed-in-logs values
+// gated behind their exact spoofed OS/UA template, not a general rule.
+const spoofedChromeMacRegex = /^mozilla\/5\.0 \(macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+ safari\/537\.36/;
+const spoofedChromeWindowsRegex = /^mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|\d{2}|1[0-2]\d)\.0\.0\.0 safari\/537\.36/;
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
 // as ONE regex literal. Written out literally rather than built at runtime from
@@ -87,7 +89,7 @@ const spoofedChromeTemplateRegex = /^mozilla\/5\.0 \((?:macintosh; intel mac os 
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js. Full-UA templates
-// belong in spoofedChromeTemplateRegex above instead.
+// belong in spoofedChromeMacRegex / spoofedChromeWindowsRegex above instead.
 const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0 bot|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\//;
 
 function isBlockedBot(normalizedUserAgent) {
