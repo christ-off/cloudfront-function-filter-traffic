@@ -30,7 +30,7 @@ function handler(event) {
     // Anchored full-UA templates first: a ^ regex is tested at position 0 only,
     // and these two templates alone cause ~63% of UA blocks (per logs.db), so
     // most bots exit here without paying for the big alternation below.
-    if (spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua)) {
+    if (spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua) || truncatedWindowsUaRegex.test(ua)) {
         return createNotFoundResponse();
     }
 
@@ -78,6 +78,11 @@ function isSecurityScanUri(uri) {
 // gated behind their exact spoofed OS/UA template, not a general rule.
 const spoofedChromeMacRegex = /^mozilla\/5\.0 \(macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+ safari\/537\.36/;
 const spoofedChromeWindowsRegex = /^mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|\d{2}|1[0-2]\d)\.0\.0\.0 safari\/537\.36/;
+
+// Truncated UA: a real browser always continues past AppleWebKit/537.36 with
+// "(KHTML, like Gecko) Chrome/... Safari/...", so a string that stops dead
+// right here is a bot with a copy-pasted, incomplete UA, not a real Chrome/Edge.
+const truncatedWindowsUaRegex = /^mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36$/;
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
 // as ONE regex literal. Written out literally rather than built at runtime from
