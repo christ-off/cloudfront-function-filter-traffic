@@ -230,6 +230,10 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       "truncated Windows UA missing KHTML/Chrome/Safari tail",
     ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+      "malformed Chrome claim missing AppleWebKit/KHTML entirely",
+    ],
     ["SearchEngineBot/0.1", "SearchEngineBot"],
     ["URL/Emacs Emacs/30.1 (X11; x86_64-pc-linux-gnu)", "Emacs URL/Emacs scraper"],
     [

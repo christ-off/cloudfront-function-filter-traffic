@@ -34,6 +34,15 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    // Malformed Chrome claim: every real Chromium browser emits "AppleWebKit/537.36
+    // (KHTML, like Gecko)" immediately before the "Chrome/" token, so a UA with
+    // "chrome/" but no "applewebkit" is a hand-built/incomplete UA, not a browser —
+    // catches malformed strings the exact-template regexes above don't cover
+    // (e.g. "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0").
+    if (ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1) {
+        return createNotFoundResponse();
+    }
+
     // Outdated or malformed Firefox UA. Google Image Proxy (Gmail, etc. fetching
     // embedded email images) hardcodes an old Firefox/11.0 UA — legitimate, not a
     // scraper, so it is exempted; the exemption substring scan only runs when the
