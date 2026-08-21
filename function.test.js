@@ -108,6 +108,7 @@ describe("scrapper bot blocking by user-agent", () => {
       "Mozilla/5.0 (Linux; Android 7.1.1; MI MAX 2 Build/NMF26F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36 YaApp_Android/10.61 YaSearchBrowser/10.61",
       "YaApp_Android full UA",
     ],
+    ["Mozilla/5.0 (compatible; LoadedBot/1.0; https://loaded.ai/bot)", "LoadedBot (ignores robots.txt)"],
     ["YaApp_Android/10.61", "YaApp_Android token"],
     ["YaSearchBrowser/10.61", "YaSearchBrowser token"],
     ["Seamus The Search Engine/1.0", "Seamus the search engine"],
