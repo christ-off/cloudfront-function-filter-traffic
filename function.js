@@ -30,7 +30,7 @@ function handler(event) {
     // Anchored full-UA templates first: a ^ regex is tested at position 0 only,
     // and these two templates alone cause ~63% of UA blocks (per logs.db), so
     // most bots exit here without paying for the big alternation below.
-    if (spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua) || truncatedWindowsUaRegex.test(ua)) {
+    if (spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua) || spoofedChromeLinuxRegex.test(ua) || truncatedWindowsUaRegex.test(ua)) {
         return createNotFoundResponse();
     }
 
@@ -77,21 +77,38 @@ function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
 }
 
-// The two spoofed-Chrome full-UA templates, anchored (^ matches only at
-// position 0, so the failure case is one test instead of a scan at every
-// character) and split into their own regexes to keep each one's alternation
-// count under the linter's complexity threshold. Chrome auto-updates and
-// only ever reports its major version, so a bare .0.0.0 rule would
-// false-positive on real Chrome (see CLAUDE.md) — these Chrome/major values
-// and the impossible-major ranges are specific, observed-in-logs values
-// gated behind their exact spoofed OS/UA template, not a general rule.
-const spoofedChromeMacRegex = /^mozilla\/5\.0 \(macintosh; intel mac os x 10_15_[57]\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:144|148|1[1-3]\d|\d{2})\.\d+\.\d+\.\d+ safari\/537\.36/;
-const spoofedChromeWindowsRegex = /^mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36 \(khtml, like gecko\) chrome\/(?:142|\d{2}|1[0-2]\d)\.0\.0\.0 safari\/537\.36/;
+// Shared literal fragments of the spoofed/truncated-Chrome full-UA templates
+// below, factored out so the three spoofed-OS regexes (and the truncated one)
+// can't drift out of sync with each other. Composed into RegExp objects once,
+// at parse time — not rebuilt per request.
+const UA_OPEN = 'mozilla\\/5\\.0 \\(';
+const CLOSE_APPLEWEBKIT = '\\) applewebkit\\/537\\.36';
+const KHTML_CHROME = ' \\(khtml, like gecko\\) chrome\\/';
+const SAFARI_TAIL = ' safari\\/537\\.36';
+const WINDOWS_PLATFORM = 'windows nt 10\\.0; win64; x64';
+const MAC_PLATFORM = 'macintosh; intel mac os x 10_15_[57]';
+const LINUX_PLATFORM = 'x11; linux aarch64';
+
+// Chrome auto-updates and only ever reports its major version, so a bare
+// .0.0.0 rule would false-positive on real Chrome (see CLAUDE.md) — but each
+// of these three regexes only fires on an exact spoofed OS/engine template
+// already, so gating that on "major version 149 or below" is safe: real
+// Chrome is well past 149 by now and only ever climbs from here.
+const STALE_CHROME_VERSION = '(?:1[0-4]\\d|\\d{2})\\.\\d+\\.\\d+\\.\\d+';
+
+// Anchored (^ matches only at position 0, so the failure case is one test
+// instead of a scan at every character) and split into separate regexes to
+// keep each one's alternation count under the linter's complexity threshold.
+const spoofedChromeMacRegex = new RegExp('^' + UA_OPEN + MAC_PLATFORM + CLOSE_APPLEWEBKIT + KHTML_CHROME + STALE_CHROME_VERSION + SAFARI_TAIL);
+const spoofedChromeWindowsRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + KHTML_CHROME + STALE_CHROME_VERSION + SAFARI_TAIL);
+// Real desktop Chrome on Linux overwhelmingly reports "X11; Linux x86_64" —
+// aarch64 here is itself a rare/suspicious platform claim for a desktop UA.
+const spoofedChromeLinuxRegex = new RegExp('^' + UA_OPEN + LINUX_PLATFORM + CLOSE_APPLEWEBKIT + KHTML_CHROME + STALE_CHROME_VERSION + SAFARI_TAIL);
 
 // Truncated UA: a real browser always continues past AppleWebKit/537.36 with
 // "(KHTML, like Gecko) Chrome/... Safari/...", so a string that stops dead
 // right here is a bot with a copy-pasted, incomplete UA, not a real Chrome/Edge.
-const truncatedWindowsUaRegex = /^mozilla\/5\.0 \(windows nt 10\.0; win64; x64\) applewebkit\/537\.36$/;
+const truncatedWindowsUaRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + '$');
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
 // as ONE regex literal. Written out literally rather than built at runtime from
