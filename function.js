@@ -43,11 +43,8 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // Outdated or malformed Firefox UA. Google Image Proxy (Gmail, etc. fetching
-    // embedded email images) hardcodes an old Firefox/11.0 UA — legitimate, not a
-    // scraper, so it is exempted; the exemption substring scan only runs when the
-    // Firefox rule actually fires (~1% of traffic) instead of on every request.
-    if (isSuspiciousFirefoxUA(ua) && !ua.includes('googleimageproxy')) {
+    // Outdated or malformed Firefox UA.
+    if (isSuspiciousFirefoxUA(ua)) {
         return createNotFoundResponse();
     }
 
@@ -120,7 +117,7 @@ const truncatedWindowsUaRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CL
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js. Full-UA templates
-// belong in spoofedChromeMacRegex / spoofedChromeWindowsRegex above instead.
+// belong in spoofedChromeMacRegex / spoofedChromeWindowsRegex / spoofedChromeLinuxRegex above instead.
 const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0 bot|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\//;
 
 function isBlockedBot(normalizedUserAgent) {
@@ -132,13 +129,10 @@ function isBlockedBot(normalizedUserAgent) {
 // Tor Browser also reports an ESR major (115+), so privacy users are unaffected.
 const MIN_FIREFOX_MAJOR = 100;
 
-function isSuspiciousFirefoxUA(ua) {
+                    function isSuspiciousFirefoxUA(ua) {
     const ff = ua.match(/firefox\/(\d+)\./);
     if (!ff) return false;
-    if (parseInt(ff[1], 10) < MIN_FIREFOX_MAJOR) return true;
-    // Malformed: the rv: version must mirror the firefox/ major version
-    const rv = ua.match(/rv:(\d+)\./);
-    return !!rv && rv[1] !== ff[1];
+    return parseInt(ff[1], 10) < MIN_FIREFOX_MAJOR;
 }
 
 function createNotFoundResponse() {

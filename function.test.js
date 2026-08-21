@@ -158,6 +158,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.4a) Gecko/20030401", "PPC Mach-O"],
     ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
+    ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "Google Image Proxy's stale Firefox/11.0 UA"],
     ["TestSearchSpider/0.1", "TestSearchSpider"],
     ["TestSearchSpider/2.0", "TestSearchSpider (any version)"],
     ["NavCrawl/0.4 ( https://example.com/bot)", "NavCrawl"],
@@ -570,10 +571,10 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through Google Image Proxy despite its stale Firefox/11.0 UA", () => {
+  it("passes through real Firefox 121 with its frozen rv:109.0 (Mozilla's IE11-workaround UA freeze)", () => {
     const event = makeEvent({
       uri: "/",
-      userAgent: "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",
+      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0",
     });
     expect(handler(event)).toEqual(event.request);
   });
