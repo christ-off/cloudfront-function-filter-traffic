@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
   }
   Object.assign(headers, extraHeaders);
-  return { request: { uri, headers } };
+  const event = { request: { uri, headers } };
+  if (ip !== undefined) {
+    event.viewer = { ip };
+  }
+  return event;
 }
 
 // =====================================================
@@ -52,6 +56,40 @@ describe("PHP file blocking", () => {
   it("blocks a multi-digit .phpNN suffix", () => {
     expect(handler(makeEvent({ uri: "/zup.php73" })).statusCode).toBe(404);
     expect(handler(makeEvent({ uri: "/about.php525" })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// Security scan blocking — even-ending IPs get the EICAR test string
+// =====================================================
+describe("EICAR test response for even-ending IPs on security scan URIs", () => {
+  const EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+
+  it("returns 200 with the EICAR string when the IP ends in an even digit", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php", ip: "1.2.3.4" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe(EICAR);
+    expect(result.headers["content-type"].value).toBe("text/plain");
+  });
+
+  it("still 404s a security scan URI when the IP ends in an odd digit", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php", ip: "1.2.3.5" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("still 404s a security scan URI when there is no viewer IP", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("does not affect non-security-scan URIs regardless of IP parity", () => {
+    const event = makeEvent({ uri: "/", ip: "1.2.3.4" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("treats a non-decimal (e.g. IPv6 hex) last character as not even", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php", ip: "::a" }));
+    expect(result.statusCode).toBe(404);
   });
 });
 

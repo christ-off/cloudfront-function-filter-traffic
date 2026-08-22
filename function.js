@@ -20,8 +20,13 @@ function handler(event) {
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
     const uriLower = uri.trim().toLowerCase();
 
-    // Obvious security scans
+    // Obvious security scans. Experiment: serve the EICAR test string to scanners
+    // whose IP happens to end in an even digit, instead of the usual 404.
     if (isSecurityScanUri(uriLower)) {
+        const clientIp = event.viewer && event.viewer.ip;
+        if (clientIp && isEvenEndingIp(clientIp)) {
+            return createEicarTestResponse();
+        }
         return createNotFoundResponse();
     }
 
@@ -72,6 +77,15 @@ const securityScanRegex = /\.(php\d*|sql|bak|phtml|config|ya?ml|toml|conf|key|pe
 
 function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
+}
+
+// A number's parity depends only on its last digit, so this works for the
+// last octet of an IPv4 address without splitting on dots. IPv6 addresses
+// ending in a hex letter (a-f) aren't decimal digits, so they fall through
+// to false (parseInt returns NaN) rather than being misread.
+function isEvenEndingIp(ip) {
+    const digit = parseInt(ip.charAt(ip.length - 1), 10);
+    return !isNaN(digit) && digit % 2 === 0;
 }
 
 // Shared literal fragments of the spoofed/truncated-Chrome full-UA templates
@@ -141,6 +155,18 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
+    };
+}
+
+// Per the EICAR spec, the body must be ONLY the 68-byte test string (no markup,
+// no wrapping) — some AV/gateway engines do an exact-length or exact-prefix
+// match rather than a substring scan, so HTML around it risks a false negative.
+function createEicarTestResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {"content-type": {value: "text/plain"}},
+        body: 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
     };
 }
 
