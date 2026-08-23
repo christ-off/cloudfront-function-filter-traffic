@@ -87,6 +87,31 @@ describe("EICAR test response for even-ending IPs on security scan URIs", () => 
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("also returns EICAR for even-ending IPs on a spoofed-Chrome UA match", () => {
+    const result = handler(
+      makeEvent({
+        uri: "/",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ip: "1.2.3.4",
+      })
+    );
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe(EICAR);
+  });
+
+  it("still 404s a spoofed-Chrome UA match when the IP ends in an odd digit", () => {
+    const result = handler(
+      makeEvent({
+        uri: "/",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ip: "1.2.3.5",
+      })
+    );
+    expect(result.statusCode).toBe(404);
+  });
+
   it("treats a non-decimal (e.g. IPv6 hex) last character as not even", () => {
     const result = handler(makeEvent({ uri: "/wp-login.php", ip: "::a" }));
     expect(result.statusCode).toBe(404);

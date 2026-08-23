@@ -19,38 +19,12 @@ function handler(event) {
 
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
     const uriLower = uri.trim().toLowerCase();
-
-    // Obvious security scans. Experiment: serve the EICAR test string to scanners
-    // whose IP happens to end in an even digit, instead of the usual 404.
-    if (isSecurityScanUri(uriLower)) {
-        const clientIp = event.viewer && event.viewer.ip;
-        if (clientIp && isEvenEndingIp(clientIp)) {
-            return createEicarTestResponse();
-        }
-        return createNotFoundResponse();
-    }
-
     const ua = userAgentHeader.value.toLowerCase();
 
-    // Anchored full-UA templates first: a ^ regex is tested at position 0 only,
-    // and these two templates alone cause ~63% of UA blocks (per logs.db), so
-    // most bots exit here without paying for the big alternation below.
-    if (spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua) || spoofedChromeLinuxRegex.test(ua) || truncatedWindowsUaRegex.test(ua)) {
-        return createNotFoundResponse();
-    }
-
-    // Malformed Chrome claim: every real Chromium browser emits "AppleWebKit/537.36
-    // (KHTML, like Gecko)" immediately before the "Chrome/" token, so a UA with
-    // "chrome/" but no "applewebkit" is a hand-built/incomplete UA, not a browser —
-    // catches malformed strings the exact-template regexes above don't cover
-    // (e.g. "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0").
-    if (ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1) {
-        return createNotFoundResponse();
-    }
-
-    // Outdated or malformed Firefox UA.
-    if (isSuspiciousFirefoxUA(ua)) {
-        return createNotFoundResponse();
+    // Bad actors (see isBadActor) on an even-ending IP get the EICAR test
+    // string (see eicarOr404) instead of the usual 404.
+    if (isBadActor(uriLower, ua)) {
+        return eicarOr404(event);
     }
 
     // Deny blocked bots. For /robots.txt specifically, answer with a real
@@ -67,6 +41,16 @@ function handler(event) {
     return request;
 }
 
+// Security scans, spoofed/malformed Chrome UAs and outdated Firefox UAs.
+// Ordered most- to least-frequent (per logs.db) so common cases
+// short-circuit before the rarer, costlier checks run.
+function isBadActor(uri, ua) {
+    return isSecurityScanUri(uri) ||
+        isSpoofedChromeUA(ua) ||
+        isMalformedChromeClaim(ua) ||
+        isSuspiciousFirefoxUA(ua);
+}
+
 // Combined into a single precompiled regex: one pass over the URI covers
 // extensions, folder prefixes, /.env, /.git, /.docker and known
 // credential-scan filenames. The trailing .json group is NOT a blanket
@@ -77,15 +61,6 @@ const securityScanRegex = /\.(php\d*|sql|bak|phtml|config|ya?ml|toml|conf|key|pe
 
 function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
-}
-
-// A number's parity depends only on its last digit, so this works for the
-// last octet of an IPv4 address without splitting on dots. IPv6 addresses
-// ending in a hex letter (a-f) aren't decimal digits, so they fall through
-// to false (parseInt returns NaN) rather than being misread.
-function isEvenEndingIp(ip) {
-    const digit = parseInt(ip.charAt(ip.length - 1), 10);
-    return !isNaN(digit) && digit % 2 === 0;
 }
 
 // Shared literal fragments of the spoofed/truncated-Chrome full-UA templates
@@ -121,6 +96,48 @@ const spoofedChromeLinuxRegex = new RegExp('^' + UA_OPEN + LINUX_PLATFORM + CLOS
 // right here is a bot with a copy-pasted, incomplete UA, not a real Chrome/Edge.
 const truncatedWindowsUaRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + '$');
 
+// These two templates alone cause ~63% of UA blocks (per logs.db).
+function isSpoofedChromeUA(ua) {
+    return spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua) || spoofedChromeLinuxRegex.test(ua) || truncatedWindowsUaRegex.test(ua);
+}
+
+// Every real Chromium browser emits "AppleWebKit/537.36 (KHTML, like Gecko)"
+// immediately before the "Chrome/" token, so a UA with "chrome/" but no
+// "applewebkit" is a hand-built/incomplete UA, not a browser — catches
+// malformed strings the exact-template regexes above don't cover (e.g.
+// "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0").
+function isMalformedChromeClaim(ua) {
+    return ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1;
+}
+
+// Firefox auto-updates, so a stale major version is a scraper with a hardcoded UA, not
+// a real user. 100 shipped in May 2022 and every still-maintained ESR is far above it;
+// Tor Browser also reports an ESR major (115+), so privacy users are unaffected.
+const MIN_FIREFOX_MAJOR = 100;
+
+function isSuspiciousFirefoxUA(ua) {
+    const ff = ua.match(/firefox\/(\d+)\./);
+    if (!ff) return false;
+    return parseInt(ff[1], 10) < MIN_FIREFOX_MAJOR;
+}
+
+// A number's parity depends only on its last digit, so this works for the
+// last octet of an IPv4 address without splitting on dots. IPv6 addresses
+// ending in a hex letter (a-f) aren't decimal digits, so they fall through
+// to false (parseInt returns NaN) rather than being misread.
+function isEvenEndingIp(ip) {
+    const digit = parseInt(ip.charAt(ip.length - 1), 10);
+    return !isNaN(digit) && digit % 2 === 0;
+}
+
+function eicarOr404(event) {
+    const clientIp = event.viewer && event.viewer.ip;
+    if (clientIp && isEvenEndingIp(clientIp)) {
+        return createEicarTestResponse();
+    }
+    return createNotFoundResponse();
+}
+
 // Plain substrings matched against the (already lowercased) User-Agent header,
 // as ONE regex literal. Written out literally rather than built at runtime from
 // an array: a literal is compiled when the script is parsed, whereas
@@ -136,17 +153,6 @@ const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-off
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
-}
-
-// Firefox auto-updates, so a stale major version is a scraper with a hardcoded UA, not
-// a real user. 100 shipped in May 2022 and every still-maintained ESR is far above it;
-// Tor Browser also reports an ESR major (115+), so privacy users are unaffected.
-const MIN_FIREFOX_MAJOR = 100;
-
-                    function isSuspiciousFirefoxUA(ua) {
-    const ff = ua.match(/firefox\/(\d+)\./);
-    if (!ff) return false;
-    return parseInt(ff[1], 10) < MIN_FIREFOX_MAJOR;
 }
 
 function createNotFoundResponse() {
