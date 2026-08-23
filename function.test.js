@@ -132,6 +132,11 @@ describe("bad folder blocking", () => {
     ["/blog/post/1", "blog"],
     ["/backup/db.sql", "backup"],
     ["/cgi-bin/test.cgi", "cgi-bin"],
+    ["/vendor/autoload.php", "vendor"],
+    ["/uploads/shell.php", "uploads"],
+    ["/plugins/malicious.php", "plugins"],
+    ["/login", "login (bare)"],
+    ["/login/", "login (trailing slash)"],
   ];
 
   it.each(cases)("serves EICAR for %s (%s)", (uri) => {
@@ -145,6 +150,16 @@ describe("bad folder blocking", () => {
   it("does not block a path that shares a prefix but is a different folder", () => {
     // /images2 or /blog-post should NOT be caught — regex anchors with (\/|$)
     const event = makeEvent({ uri: "/images2/logo.png" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block a path that merely shares a prefix with 'login' or 'uploads'", () => {
+    expect(handler(makeEvent({ uri: "/loginpage" }))).toEqual(makeEvent({ uri: "/loginpage" }).request);
+    expect(handler(makeEvent({ uri: "/uploads2/x" }))).toEqual(makeEvent({ uri: "/uploads2/x" }).request);
+  });
+
+  it("does not block an ACME HTTP-01 domain-validation challenge under /.well-known/", () => {
+    const event = makeEvent({ uri: "/.well-known/acme-challenge/some-token" });
     expect(handler(event)).toEqual(event.request);
   });
 
