@@ -186,6 +186,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["CMSSurvey/1.0; https://addedlovely.com/crawler", "CMSSurvey"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ReyilBot/0.1", "ReyilBot"],
     ["Wellesley/1.0 bot", "Wellesley"],
+    ["Welley/1.0 bot", "Welley/1.0 bot"],
+    ["Welley/1.0", "Welley/1.0 (no bot suffix)"],
     ["RankPulseBot/0.1 ( https://github.com/rankpulse/rankpulse)", "RankPulseBot"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
     ["Googlebot-Image/1.0", "Googlebot-Image"],
