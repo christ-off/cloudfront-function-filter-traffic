@@ -60,7 +60,7 @@ describe("PHP file blocking", () => {
 });
 
 // =====================================================
-// Bad actors (security-scan URIs, spoofed/malformed Chrome UAs, stale
+// Bad actors (security-scan URIs, truncated/malformed Chrome UAs, stale
 // Firefox UAs) get the EICAR test string instead of a 404.
 // =====================================================
 describe("EICAR test response for bad actors", () => {
@@ -80,66 +80,6 @@ describe("EICAR test response for bad actors", () => {
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
     ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "Google Image Proxy's stale Firefox/11.0 UA"],
     [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/148 desktop UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/144 desktop UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/120 desktop UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
-      "known scraper spoofing Chrome/83 Mac OS X 10_15_5 UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36",
-      "any 2-digit Chrome major on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-      "Chrome/119 (100-149 range) on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Chrome/149 (top of 100-149 range) on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36",
-      "Chrome/100 (bottom of 100-149 range) on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/142 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/116 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/104 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/107 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/120 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
-      "Chrome/80 (2-digit stale major) on the spoofed windows UA template",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Chrome/149 (top of 100-149 range) on the spoofed windows UA template",
-    ],
-    [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       "truncated Windows UA missing KHTML/Chrome/Safari tail",
     ],
@@ -147,22 +87,31 @@ describe("EICAR test response for bad actors", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
       "malformed Chrome claim missing AppleWebKit/KHTML entirely",
     ],
-    [
-      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/139 Linux aarch64 UA",
-    ],
-    [
-      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36",
-      "Chrome/100 (bottom of 100-149 range) on the spoofed linux UA template",
-    ],
-    [
-      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Chrome/149 (top of 100-149 range) on the spoofed linux UA template",
-    ],
   ];
 
   it.each(badActorAgents)("serves EICAR for '%s' (%s)", (userAgent) => {
     expectEicar(handler(makeEvent({ userAgent })));
+  });
+
+  // A Chrome major-version range is NOT a reliable spoof signal: real Chrome
+  // freezes its UA to major.0.0.0, and real users sit on a wide range of
+  // majors depending on when they last updated. logs.db showed exactly this
+  // template as the two most common real UAs in production traffic — any of
+  // these versions must pass through regardless of OS or how "stale" the
+  // major version looks (see CLAUDE.md: never block Chrome solely on the
+  // .0.0.0 minor/patch version).
+  const realChromeAgents = [
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36", "Chrome/148 macOS"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120 macOS"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36", "Chrome/83 macOS (older 4-part version)"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120 Windows"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36", "Chrome/80 Windows"],
+    ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36", "Chrome/139 Linux aarch64"],
+  ];
+
+  it.each(realChromeAgents)("passes through '%s' (%s)", (userAgent) => {
+    const event = makeEvent({ uri: "/", userAgent });
+    expect(handler(event)).toEqual(event.request);
   });
 });
 
@@ -619,7 +568,7 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through a real current Chrome on the spoofed mac UA template (above the 100-149 range)", () => {
+  it("passes through Chrome/150 on macOS", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
@@ -627,7 +576,7 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through a real current Chrome on the spoofed windows UA template (above the 100-149 range)", () => {
+  it("passes through Chrome/150 on Windows", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
@@ -635,7 +584,7 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through a real current Chrome on Linux x86_64 (not the spoofed aarch64 platform)", () => {
+  it("passes through a real current Chrome on Linux x86_64 (aarch64 desktop Chrome would be unusual but is no longer specially blocked)", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",

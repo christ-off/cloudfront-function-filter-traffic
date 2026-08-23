@@ -40,12 +40,12 @@ function handler(event) {
     return request;
 }
 
-// Security scans, spoofed/malformed Chrome UAs and outdated Firefox UAs.
+// Security scans, truncated/malformed Chrome UAs and outdated Firefox UAs.
 // Ordered most- to least-frequent (per logs.db) so common cases
 // short-circuit before the rarer, costlier checks run.
 function isBadActor(uri, ua) {
     return isSecurityScanUri(uri) ||
-        isSpoofedChromeUA(ua) ||
+        isTruncatedChromeUA(ua) ||
         isMalformedChromeClaim(ua) ||
         isSuspiciousFirefoxUA(ua);
 }
@@ -62,42 +62,28 @@ function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
 }
 
-// Shared literal fragments of the spoofed/truncated-Chrome full-UA templates
-// below, factored out so the three spoofed-OS regexes (and the truncated one)
-// can't drift out of sync with each other. Composed into RegExp objects once,
-// at parse time — not rebuilt per request.
+// Shared literal fragments of the truncated-Chrome full-UA template below,
+// factored out for readability. Composed into a RegExp object once, at parse
+// time — not rebuilt per request.
 const UA_OPEN = 'mozilla\\/5\\.0 \\(';
 const CLOSE_APPLEWEBKIT = '\\) applewebkit\\/537\\.36';
-const KHTML_CHROME = ' \\(khtml, like gecko\\) chrome\\/';
-const SAFARI_TAIL = ' safari\\/537\\.36';
 const WINDOWS_PLATFORM = 'windows nt 10\\.0; win64; x64';
-const MAC_PLATFORM = 'macintosh; intel mac os x 10_15_[57]';
-const LINUX_PLATFORM = 'x11; linux aarch64';
 
-// Chrome auto-updates and only ever reports its major version, so a bare
-// .0.0.0 rule would false-positive on real Chrome (see CLAUDE.md) — but each
-// of these three regexes only fires on an exact spoofed OS/engine template
-// already, so gating that on "major version 149 or below" is safe: real
-// Chrome is well past 149 by now and only ever climbs from here.
-const STALE_CHROME_VERSION = '(?:1[0-4]\\d|\\d{2})\\.\\d+\\.\\d+\\.\\d+';
-
-// Anchored (^ matches only at position 0, so the failure case is one test
-// instead of a scan at every character) and split into separate regexes to
-// keep each one's alternation count under the linter's complexity threshold.
-const spoofedChromeMacRegex = new RegExp('^' + UA_OPEN + MAC_PLATFORM + CLOSE_APPLEWEBKIT + KHTML_CHROME + STALE_CHROME_VERSION + SAFARI_TAIL);
-const spoofedChromeWindowsRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + KHTML_CHROME + STALE_CHROME_VERSION + SAFARI_TAIL);
-// Real desktop Chrome on Linux overwhelmingly reports "X11; Linux x86_64" —
-// aarch64 here is itself a rare/suspicious platform claim for a desktop UA.
-const spoofedChromeLinuxRegex = new RegExp('^' + UA_OPEN + LINUX_PLATFORM + CLOSE_APPLEWEBKIT + KHTML_CHROME + STALE_CHROME_VERSION + SAFARI_TAIL);
+// NOTE: an exact-template match on OS/engine string plus a Chrome major-version
+// range used to be treated as "spoofed" here, but real Chrome (which freezes
+// its UA to major.0.0.0, and whose major version varies widely across users who
+// haven't updated yet) produces this exact template too — logs.db showed the
+// two most common UAs in real traffic matching it. Structure alone can't tell
+// real Chrome from spoofed Chrome; don't reintroduce a version-based rule here
+// (see CLAUDE.md: never block Chrome solely on the .0.0.0 minor/patch version).
 
 // Truncated UA: a real browser always continues past AppleWebKit/537.36 with
 // "(KHTML, like Gecko) Chrome/... Safari/...", so a string that stops dead
 // right here is a bot with a copy-pasted, incomplete UA, not a real Chrome/Edge.
 const truncatedWindowsUaRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + '$');
 
-// These two templates alone cause ~63% of UA blocks (per logs.db).
-function isSpoofedChromeUA(ua) {
-    return spoofedChromeMacRegex.test(ua) || spoofedChromeWindowsRegex.test(ua) || spoofedChromeLinuxRegex.test(ua) || truncatedWindowsUaRegex.test(ua);
+function isTruncatedChromeUA(ua) {
+    return truncatedWindowsUaRegex.test(ua);
 }
 
 // Every real Chromium browser emits "AppleWebKit/537.36 (KHTML, like Gecko)"
@@ -129,8 +115,7 @@ function isSuspiciousFirefoxUA(ua) {
 // common bots exit early (non-matching UAs still try every alternative).
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
-// UA sample to the `blockedAgents` fixture in function.test.js. Full-UA templates
-// belong in spoofedChromeMacRegex / spoofedChromeWindowsRegex / spoofedChromeLinuxRegex above instead.
+// UA sample to the `blockedAgents` fixture in function.test.js.
 const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\//;
 
 function isBlockedBot(normalizedUserAgent) {
