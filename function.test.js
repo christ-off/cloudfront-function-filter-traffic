@@ -137,6 +137,10 @@ describe("bad folder blocking", () => {
     ["/plugins/malicious.php", "plugins"],
     ["/login", "login (bare)"],
     ["/login/", "login (trailing slash)"],
+    ["/webmail/", "webmail"],
+    ["/roundcube/", "roundcube"],
+    ["/mail/", "mail"],
+    ["/rc/", "rc"],
   ];
 
   it.each(cases)("serves EICAR for %s (%s)", (uri) => {
@@ -156,6 +160,11 @@ describe("bad folder blocking", () => {
   it("does not block a path that merely shares a prefix with 'login' or 'uploads'", () => {
     expect(handler(makeEvent({ uri: "/loginpage" }))).toEqual(makeEvent({ uri: "/loginpage" }).request);
     expect(handler(makeEvent({ uri: "/uploads2/x" }))).toEqual(makeEvent({ uri: "/uploads2/x" }).request);
+  });
+
+  it("does not block a path that merely shares a prefix with 'mail' or 'rc'", () => {
+    expect(handler(makeEvent({ uri: "/mailing-list" }))).toEqual(makeEvent({ uri: "/mailing-list" }).request);
+    expect(handler(makeEvent({ uri: "/rcfiles/x" }))).toEqual(makeEvent({ uri: "/rcfiles/x" }).request);
   });
 
   it("does not block an ACME HTTP-01 domain-validation challenge under /.well-known/", () => {
