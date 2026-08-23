@@ -1,39 +1,39 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
   }
   Object.assign(headers, extraHeaders);
-  const event = { request: { uri, headers } };
-  if (ip !== undefined) {
-    event.viewer = { ip };
-  }
-  return event;
+  return { request: { uri, headers } };
+}
+
+const EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+
+function expectEicar(result) {
+  expect(result.statusCode).toBe(200);
+  expect(result.body).toBe(EICAR);
 }
 
 // =====================================================
 // /.well-known/traffic-advice — Chrome Private Prefetch Proxy
 // =====================================================
 // =====================================================
-// Security scan blocking — PHP files → 404
+// Security scan blocking — PHP files → EICAR test string
 // =====================================================
 describe("PHP file blocking", () => {
-  it("blocks a .php file at the root", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expect(result.statusCode).toBe(404);
+  it("serves EICAR for a .php file at the root", () => {
+    expectEicar(handler(makeEvent({ uri: "/wp-login.php" })));
   });
 
-  it("blocks a .php file in a sub-directory", () => {
-    const result = handler(makeEvent({ uri: "/path/to/script.php" }));
-    expect(result.statusCode).toBe(404);
+  it("serves EICAR for a .php file in a sub-directory", () => {
+    expectEicar(handler(makeEvent({ uri: "/path/to/script.php" })));
   });
 
   it("PHP block is case-insensitive due to URI normalisation", () => {
-    const result = handler(makeEvent({ uri: "/Shell.PHP" }));
-    expect(result.statusCode).toBe(404);
+    expectEicar(handler(makeEvent({ uri: "/Shell.PHP" })));
   });
 
     it("does not block a path that merely contains 'php' as a substring", () => {
@@ -41,85 +41,133 @@ describe("PHP file blocking", () => {
       expect(handler(event)).toEqual(event.request);
     });
 
-  it("blocks a .php5 file", () => {
-    expect(handler(makeEvent({ uri: "/shell.php5" })).statusCode).toBe(404);
+  it("serves EICAR for a .php5 file", () => {
+    expectEicar(handler(makeEvent({ uri: "/shell.php5" })));
   });
 
-  it("blocks a .php7 file", () => {
-    expect(handler(makeEvent({ uri: "/shell.php7" })).statusCode).toBe(404);
+  it("serves EICAR for a .php7 file", () => {
+    expectEicar(handler(makeEvent({ uri: "/shell.php7" })));
   });
 
-  it("blocks a .phtml file", () => {
-    expect(handler(makeEvent({ uri: "/page.phtml" })).statusCode).toBe(404);
+  it("serves EICAR for a .phtml file", () => {
+    expectEicar(handler(makeEvent({ uri: "/page.phtml" })));
   });
 
-  it("blocks a multi-digit .phpNN suffix", () => {
-    expect(handler(makeEvent({ uri: "/zup.php73" })).statusCode).toBe(404);
-    expect(handler(makeEvent({ uri: "/about.php525" })).statusCode).toBe(404);
+  it("serves EICAR for a multi-digit .phpNN suffix", () => {
+    expectEicar(handler(makeEvent({ uri: "/zup.php73" })));
+    expectEicar(handler(makeEvent({ uri: "/about.php525" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — even-ending IPs get the EICAR test string
+// Bad actors (security-scan URIs, spoofed/malformed Chrome UAs, stale
+// Firefox UAs) get the EICAR test string instead of a 404.
 // =====================================================
-describe("EICAR test response for even-ending IPs on security scan URIs", () => {
-  const EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
-
-  it("returns 200 with the EICAR string when the IP ends in an even digit", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php", ip: "1.2.3.4" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toBe(EICAR);
+describe("EICAR test response for bad actors", () => {
+  it("returns 200 with the EICAR string for a security scan URI", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php" }));
+    expectEicar(result);
     expect(result.headers["content-type"].value).toBe("text/plain");
   });
 
-  it("still 404s a security scan URI when the IP ends in an odd digit", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php", ip: "1.2.3.5" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("still 404s a security scan URI when there is no viewer IP", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("does not affect non-security-scan URIs regardless of IP parity", () => {
-    const event = makeEvent({ uri: "/", ip: "1.2.3.4" });
+  it("does not affect non-security-scan URIs", () => {
+    const event = makeEvent({ uri: "/" });
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("also returns EICAR for even-ending IPs on a spoofed-Chrome UA match", () => {
-    const result = handler(
-      makeEvent({
-        uri: "/",
-        userAgent:
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        ip: "1.2.3.4",
-      })
-    );
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toBe(EICAR);
-  });
+  const badActorAgents = [
+    ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
+    ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "Google Image Proxy's stale Firefox/11.0 UA"],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/148 desktop UA",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/144 desktop UA",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/120 desktop UA",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
+      "known scraper spoofing Chrome/83 Mac OS X 10_15_5 UA",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36",
+      "any 2-digit Chrome major on the spoofed mac UA template",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+      "Chrome/119 (100-149 range) on the spoofed mac UA template",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "Chrome/149 (top of 100-149 range) on the spoofed mac UA template",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36",
+      "Chrome/100 (bottom of 100-149 range) on the spoofed mac UA template",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/142 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/116 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/104 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/107 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/120 Windows UA",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
+      "Chrome/80 (2-digit stale major) on the spoofed windows UA template",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "Chrome/149 (top of 100-149 range) on the spoofed windows UA template",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "truncated Windows UA missing KHTML/Chrome/Safari tail",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+      "malformed Chrome claim missing AppleWebKit/KHTML entirely",
+    ],
+    [
+      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "known scraper spoofing Chrome/139 Linux aarch64 UA",
+    ],
+    [
+      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36",
+      "Chrome/100 (bottom of 100-149 range) on the spoofed linux UA template",
+    ],
+    [
+      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "Chrome/149 (top of 100-149 range) on the spoofed linux UA template",
+    ],
+  ];
 
-  it("still 404s a spoofed-Chrome UA match when the IP ends in an odd digit", () => {
-    const result = handler(
-      makeEvent({
-        uri: "/",
-        userAgent:
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        ip: "1.2.3.5",
-      })
-    );
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("treats a non-decimal (e.g. IPv6 hex) last character as not even", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php", ip: "::a" }));
-    expect(result.statusCode).toBe(404);
+  it.each(badActorAgents)("serves EICAR for '%s' (%s)", (userAgent) => {
+    expectEicar(handler(makeEvent({ userAgent })));
   });
 });
 
 // =====================================================
-// Security scan blocking — bad folder prefixes → 404
+// Security scan blocking — bad folder prefixes → EICAR
 // =====================================================
 describe("bad folder blocking", () => {
   const cases = [
@@ -137,12 +185,12 @@ describe("bad folder blocking", () => {
     ["/cgi-bin/test.cgi", "cgi-bin"],
   ];
 
-  it.each(cases)("blocks %s (%s)", (uri) => {
-    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  it.each(cases)("serves EICAR for %s (%s)", (uri) => {
+    expectEicar(handler(makeEvent({ uri })));
   });
 
-  it("blocks a bad folder path with no trailing content (bare folder)", () => {
-    expect(handler(makeEvent({ uri: "/cgi-bin" })).statusCode).toBe(404);
+  it("serves EICAR for a bad folder path with no trailing content (bare folder)", () => {
+    expectEicar(handler(makeEvent({ uri: "/cgi-bin" })));
   });
 
   it("does not block a path that shares a prefix but is a different folder", () => {
@@ -152,12 +200,11 @@ describe("bad folder blocking", () => {
   });
 
   it("blocking is case-insensitive due to URI normalisation", () => {
-    const result = handler(makeEvent({ uri: "/WP-INCLUDES/load.php" }));
-    expect(result.statusCode).toBe(404);
+    expectEicar(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
   });
 
-  it("blocks /ip (server IP disclosure probe)", () => {
-    expect(handler(makeEvent({ uri: "/ip" })).statusCode).toBe(404);
+  it("serves EICAR for /ip (server IP disclosure probe)", () => {
+    expectEicar(handler(makeEvent({ uri: "/ip" })));
   });
 });
 
@@ -221,98 +268,15 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
     ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
     ["Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.4a) Gecko/20030401", "PPC Mach-O"],
-    ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
-    ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "Google Image Proxy's stale Firefox/11.0 UA"],
     ["TestSearchSpider/0.1", "TestSearchSpider"],
     ["TestSearchSpider/2.0", "TestSearchSpider (any version)"],
     ["NavCrawl/0.4 ( https://example.com/bot)", "NavCrawl"],
     ["Mozilla/5.0 CMS-Detector/1.0", "CMS-Detector"],
     ["atlas-enrich/1.0", "atlas-enrich"],
     ["Mozilla/5.0 (compatible; SiteScan/1.0; free-tier enrichment; respects robots)", "SiteScan"],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/148 desktop UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/144 desktop UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/120 desktop UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
-      "known scraper spoofing Chrome/83 Mac OS X 10_15_5 UA",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36",
-      "any 2-digit Chrome major on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-      "Chrome/119 (100-149 range) on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Chrome/149 (top of 100-149 range) on the spoofed mac UA template",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36",
-      "Chrome/100 (bottom of 100-149 range) on the spoofed mac UA template",
-    ],
     ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
     ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
     ["DatabankMetasearchExperiment/0.2", "DatabankMetasearchExperiment"],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/142 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/116 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/104 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/107 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/120 Windows UA",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
-      "Chrome/80 (2-digit stale major) on the spoofed windows UA template",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Chrome/149 (top of 100-149 range) on the spoofed windows UA template",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      "truncated Windows UA missing KHTML/Chrome/Safari tail",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-      "malformed Chrome claim missing AppleWebKit/KHTML entirely",
-    ],
-    [
-      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-      "known scraper spoofing Chrome/139 Linux aarch64 UA",
-    ],
-    [
-      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36",
-      "Chrome/100 (bottom of 100-149 range) on the spoofed linux UA template",
-    ],
-    [
-      "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Chrome/149 (top of 100-149 range) on the spoofed linux UA template",
-    ],
     ["SearchEngineBot/0.1", "SearchEngineBot"],
     ["URL/Emacs Emacs/30.1 (X11; x86_64-pc-linux-gnu)", "Emacs URL/Emacs scraper"],
     [
@@ -383,9 +347,9 @@ describe("robots.txt disallow-all for blocked bots", () => {
     expect(result.statusCode).toBe(200);
   });
 
-  it("does not affect other bot-blocking rules (e.g. security-scan URIs)", () => {
+  it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
     const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(404);
+    expectEicar(result);
   });
 
   it("still lets a normal browser's /robots.txt through untouched", () => {
@@ -419,19 +383,16 @@ describe("null or empty user-agent blocking", () => {
 // Percent-encoded URI bypass prevention
 // =====================================================
 describe("percent-encoded URI handling", () => {
-  it("blocks a .php file with an encoded dot (%2E)", () => {
-    const result = handler(makeEvent({ uri: "/wp-login%2Ephp" }));
-    expect(result.statusCode).toBe(404);
+  it("serves EICAR for a .php file with an encoded dot (%2E)", () => {
+    expectEicar(handler(makeEvent({ uri: "/wp-login%2Ephp" })));
   });
 
-  it("blocks a bad folder with an encoded character (%77p-includes)", () => {
-    const result = handler(makeEvent({ uri: "/%77p-includes/load.php" }));
-    expect(result.statusCode).toBe(404);
+  it("serves EICAR for a bad folder with an encoded character (%77p-includes)", () => {
+    expectEicar(handler(makeEvent({ uri: "/%77p-includes/load.php" })));
   });
 
-  it("blocks cgi-bin with an encoded hyphen (%2D)", () => {
-    const result = handler(makeEvent({ uri: "/cgi%2Dbin/test" }));
-    expect(result.statusCode).toBe(404);
+  it("serves EICAR for cgi-bin with an encoded hyphen (%2D)", () => {
+    expectEicar(handler(makeEvent({ uri: "/cgi%2Dbin/test" })));
   });
 
   it("returns 404 for a malformed percent-encoded URI", () => {
@@ -442,59 +403,59 @@ describe("percent-encoded URI handling", () => {
 
 
 // =====================================================
-// Security scan blocking — .env and .git URIs → 404
+// Security scan blocking — .env and .git URIs → EICAR
 // =====================================================
 describe(".env and .git URI blocking", () => {
-  it("blocks /.env", () => {
-    expect(handler(makeEvent({ uri: "/.env" })).statusCode).toBe(404);
+  it("serves EICAR for /.env", () => {
+    expectEicar(handler(makeEvent({ uri: "/.env" })));
   });
 
-  it("blocks /.env.local", () => {
-    expect(handler(makeEvent({ uri: "/.env.local" })).statusCode).toBe(404);
+  it("serves EICAR for /.env.local", () => {
+    expectEicar(handler(makeEvent({ uri: "/.env.local" })));
   });
 
-  it("blocks /config/.env inside a subdirectory", () => {
-    expect(handler(makeEvent({ uri: "/config/.env" })).statusCode).toBe(404);
+  it("serves EICAR for /config/.env inside a subdirectory", () => {
+    expectEicar(handler(makeEvent({ uri: "/config/.env" })));
   });
 
-  it("blocks /.git/config", () => {
-    expect(handler(makeEvent({ uri: "/.git/config" })).statusCode).toBe(404);
+  it("serves EICAR for /.git/config", () => {
+    expectEicar(handler(makeEvent({ uri: "/.git/config" })));
   });
 
-  it("blocks /.git (bare)", () => {
-    expect(handler(makeEvent({ uri: "/.git" })).statusCode).toBe(404);
+  it("serves EICAR for /.git (bare)", () => {
+    expectEicar(handler(makeEvent({ uri: "/.git" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — .sql and .bak extensions → 404
+// Security scan blocking — .sql and .bak extensions → EICAR
 // =====================================================
 describe(".sql and .bak file blocking", () => {
-  it("blocks a .sql file", () => {
-    expect(handler(makeEvent({ uri: "/dump.sql" })).statusCode).toBe(404);
+  it("serves EICAR for a .sql file", () => {
+    expectEicar(handler(makeEvent({ uri: "/dump.sql" })));
   });
 
-  it("blocks a .bak file", () => {
-    expect(handler(makeEvent({ uri: "/config.bak" })).statusCode).toBe(404);
+  it("serves EICAR for a .bak file", () => {
+    expectEicar(handler(makeEvent({ uri: "/config.bak" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — WordPress content/API probing → 404
+// Security scan blocking — WordPress content/API probing → EICAR
 // =====================================================
 describe("wp-content and wp-json blocking", () => {
-  it("blocks /wp-content/ paths", () => {
-    expect(handler(makeEvent({ uri: "/wp-content/uploads/" })).statusCode).toBe(404);
-    expect(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })).statusCode).toBe(404);
+  it("serves EICAR for /wp-content/ paths", () => {
+    expectEicar(handler(makeEvent({ uri: "/wp-content/uploads/" })));
+    expectEicar(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
   });
 
-  it("blocks /wp-json/ paths", () => {
-    expect(handler(makeEvent({ uri: "/wp-json/" })).statusCode).toBe(404);
+  it("serves EICAR for /wp-json/ paths", () => {
+    expectEicar(handler(makeEvent({ uri: "/wp-json/" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — credential/config file scanning → 404
+// Security scan blocking — credential/config file scanning → EICAR
 // =====================================================
 describe("credential and config file scanning", () => {
   const extensionCases = [
@@ -513,12 +474,12 @@ describe("credential and config file scanning", () => {
     "/terraform.tfstate",
   ];
 
-  it.each(extensionCases)("blocks %s", (uri) => {
-    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  it.each(extensionCases)("serves EICAR for %s", (uri) => {
+    expectEicar(handler(makeEvent({ uri })));
   });
 
-  it("blocks /.docker/config.json", () => {
-    expect(handler(makeEvent({ uri: "/.docker/config.json" })).statusCode).toBe(404);
+  it("serves EICAR for /.docker/config.json", () => {
+    expectEicar(handler(makeEvent({ uri: "/.docker/config.json" })));
   });
 
   const secretJsonCases = [
@@ -539,8 +500,8 @@ describe("credential and config file scanning", () => {
     "/amplifyconfiguration.json",
   ];
 
-  it.each(secretJsonCases)("blocks root-level %s", (uri) => {
-    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  it.each(secretJsonCases)("serves EICAR for root-level %s", (uri) => {
+    expectEicar(handler(makeEvent({ uri })));
   });
 
   it("does not block legitimate nested .json data files", () => {
@@ -555,7 +516,7 @@ describe("credential and config file scanning", () => {
 });
 
 // =====================================================
-// Security scan blocking — admin folder variants → 404
+// Security scan blocking — admin folder variants → EICAR
 // =====================================================
 describe("admin folder blocking", () => {
   const cases = [
@@ -566,8 +527,8 @@ describe("admin folder blocking", () => {
     ["/pma/index.php", "pma"],
   ];
 
-  it.each(cases)("blocks %s (%s)", (uri) => {
-    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  it.each(cases)("serves EICAR for %s (%s)", (uri) => {
+    expectEicar(handler(makeEvent({ uri })));
   });
 });
 

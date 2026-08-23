@@ -21,10 +21,9 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // Bad actors (see isBadActor) on an even-ending IP get the EICAR test
-    // string (see eicarOr404) instead of the usual 404.
+    // Bad actors (see isBadActor) get the EICAR test string instead of the usual 404.
     if (isBadActor(uriLower, ua)) {
-        return eicarOr404(event);
+        return createEicarTestResponse();
     }
 
     // Deny blocked bots. For /robots.txt specifically, answer with a real
@@ -119,23 +118,6 @@ function isSuspiciousFirefoxUA(ua) {
     const ff = ua.match(/firefox\/(\d+)\./);
     if (!ff) return false;
     return parseInt(ff[1], 10) < MIN_FIREFOX_MAJOR;
-}
-
-// A number's parity depends only on its last digit, so this works for the
-// last octet of an IPv4 address without splitting on dots. IPv6 addresses
-// ending in a hex letter (a-f) aren't decimal digits, so they fall through
-// to false (parseInt returns NaN) rather than being misread.
-function isEvenEndingIp(ip) {
-    const digit = parseInt(ip.charAt(ip.length - 1), 10);
-    return !isNaN(digit) && digit % 2 === 0;
-}
-
-function eicarOr404(event) {
-    const clientIp = event.viewer && event.viewer.ip;
-    if (clientIp && isEvenEndingIp(clientIp)) {
-        return createEicarTestResponse();
-    }
-    return createNotFoundResponse();
 }
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
