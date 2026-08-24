@@ -269,6 +269,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; PerplexityBot/1.0; https://perplexity.ai/perplexitybot)", "PerplexityBot"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.3; https://openai.com/gptbot)", "GPTBot"],
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
+    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "GoogleOther"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
