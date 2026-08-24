@@ -10,30 +10,28 @@ function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } =
   return { request: { uri, headers } };
 }
 
-const EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
-
-function expectEicar(result) {
-  expect(result.statusCode).toBe(200);
-  expect(result.body).toBe(EICAR);
+function expectNotFound(result) {
+  expect(result.statusCode).toBe(404);
+  expect(result.body).toBe("Not Found");
 }
 
 // =====================================================
 // /.well-known/traffic-advice — Chrome Private Prefetch Proxy
 // =====================================================
 // =====================================================
-// Security scan blocking — PHP files → EICAR test string
+// Security scan blocking — PHP files → 404
 // =====================================================
 describe("PHP file blocking", () => {
-  it("serves EICAR for a .php file at the root", () => {
-    expectEicar(handler(makeEvent({ uri: "/wp-login.php" })));
+  it("returns 404 for a .php file at the root", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-login.php" })));
   });
 
-  it("serves EICAR for a .php file in a sub-directory", () => {
-    expectEicar(handler(makeEvent({ uri: "/path/to/script.php" })));
+  it("returns 404 for a .php file in a sub-directory", () => {
+    expectNotFound(handler(makeEvent({ uri: "/path/to/script.php" })));
   });
 
   it("PHP block is case-insensitive due to URI normalisation", () => {
-    expectEicar(handler(makeEvent({ uri: "/Shell.PHP" })));
+    expectNotFound(handler(makeEvent({ uri: "/Shell.PHP" })));
   });
 
     it("does not block a path that merely contains 'php' as a substring", () => {
@@ -41,32 +39,32 @@ describe("PHP file blocking", () => {
       expect(handler(event)).toEqual(event.request);
     });
 
-  it("serves EICAR for a .php5 file", () => {
-    expectEicar(handler(makeEvent({ uri: "/shell.php5" })));
+  it("returns 404 for a .php5 file", () => {
+    expectNotFound(handler(makeEvent({ uri: "/shell.php5" })));
   });
 
-  it("serves EICAR for a .php7 file", () => {
-    expectEicar(handler(makeEvent({ uri: "/shell.php7" })));
+  it("returns 404 for a .php7 file", () => {
+    expectNotFound(handler(makeEvent({ uri: "/shell.php7" })));
   });
 
-  it("serves EICAR for a .phtml file", () => {
-    expectEicar(handler(makeEvent({ uri: "/page.phtml" })));
+  it("returns 404 for a .phtml file", () => {
+    expectNotFound(handler(makeEvent({ uri: "/page.phtml" })));
   });
 
-  it("serves EICAR for a multi-digit .phpNN suffix", () => {
-    expectEicar(handler(makeEvent({ uri: "/zup.php73" })));
-    expectEicar(handler(makeEvent({ uri: "/about.php525" })));
+  it("returns 404 for a multi-digit .phpNN suffix", () => {
+    expectNotFound(handler(makeEvent({ uri: "/zup.php73" })));
+    expectNotFound(handler(makeEvent({ uri: "/about.php525" })));
   });
 });
 
 // =====================================================
 // Bad actors (security-scan URIs, truncated/malformed Chrome UAs, stale
-// Firefox UAs) get the EICAR test string instead of a 404.
+// Firefox UAs) get a 404 like everything else.
 // =====================================================
-describe("EICAR test response for bad actors", () => {
-  it("returns 200 with the EICAR string for a security scan URI", () => {
+describe("404 response for bad actors", () => {
+  it("returns 404 for a security scan URI", () => {
     const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expectEicar(result);
+    expectNotFound(result);
     expect(result.headers["content-type"].value).toBe("text/plain");
   });
 
@@ -89,8 +87,8 @@ describe("EICAR test response for bad actors", () => {
     ],
   ];
 
-  it.each(badActorAgents)("serves EICAR for '%s' (%s)", (userAgent) => {
-    expectEicar(handler(makeEvent({ userAgent })));
+  it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
+    expectNotFound(handler(makeEvent({ userAgent })));
   });
 
   // A Chrome major-version range is NOT a reliable spoof signal: real Chrome
@@ -116,7 +114,7 @@ describe("EICAR test response for bad actors", () => {
 });
 
 // =====================================================
-// Security scan blocking — bad folder prefixes → EICAR
+// Security scan blocking — bad folder prefixes → 404
 // =====================================================
 describe("bad folder blocking", () => {
   const cases = [
@@ -143,12 +141,12 @@ describe("bad folder blocking", () => {
     ["/rc/", "rc"],
   ];
 
-  it.each(cases)("serves EICAR for %s (%s)", (uri) => {
-    expectEicar(handler(makeEvent({ uri })));
+  it.each(cases)("returns 404 for %s (%s)", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 
-  it("serves EICAR for a bad folder path with no trailing content (bare folder)", () => {
-    expectEicar(handler(makeEvent({ uri: "/cgi-bin" })));
+  it("returns 404 for a bad folder path with no trailing content (bare folder)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/cgi-bin" })));
   });
 
   it("does not block a path that shares a prefix but is a different folder", () => {
@@ -173,11 +171,11 @@ describe("bad folder blocking", () => {
   });
 
   it("blocking is case-insensitive due to URI normalisation", () => {
-    expectEicar(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
+    expectNotFound(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
   });
 
-  it("serves EICAR for /ip (server IP disclosure probe)", () => {
-    expectEicar(handler(makeEvent({ uri: "/ip" })));
+  it("returns 404 for /ip (server IP disclosure probe)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/ip" })));
   });
 });
 
@@ -322,7 +320,7 @@ describe("robots.txt disallow-all for blocked bots", () => {
 
   it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
     const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
-    expectEicar(result);
+    expectNotFound(result);
   });
 
   it("still lets a normal browser's /robots.txt through untouched", () => {
@@ -356,16 +354,16 @@ describe("null or empty user-agent blocking", () => {
 // Percent-encoded URI bypass prevention
 // =====================================================
 describe("percent-encoded URI handling", () => {
-  it("serves EICAR for a .php file with an encoded dot (%2E)", () => {
-    expectEicar(handler(makeEvent({ uri: "/wp-login%2Ephp" })));
+  it("returns 404 for a .php file with an encoded dot (%2E)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-login%2Ephp" })));
   });
 
-  it("serves EICAR for a bad folder with an encoded character (%77p-includes)", () => {
-    expectEicar(handler(makeEvent({ uri: "/%77p-includes/load.php" })));
+  it("returns 404 for a bad folder with an encoded character (%77p-includes)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/%77p-includes/load.php" })));
   });
 
-  it("serves EICAR for cgi-bin with an encoded hyphen (%2D)", () => {
-    expectEicar(handler(makeEvent({ uri: "/cgi%2Dbin/test" })));
+  it("returns 404 for cgi-bin with an encoded hyphen (%2D)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/cgi%2Dbin/test" })));
   });
 
   it("returns 404 for a malformed percent-encoded URI", () => {
@@ -376,59 +374,59 @@ describe("percent-encoded URI handling", () => {
 
 
 // =====================================================
-// Security scan blocking — .env and .git URIs → EICAR
+// Security scan blocking — .env and .git URIs → 404
 // =====================================================
 describe(".env and .git URI blocking", () => {
-  it("serves EICAR for /.env", () => {
-    expectEicar(handler(makeEvent({ uri: "/.env" })));
+  it("returns 404 for /.env", () => {
+    expectNotFound(handler(makeEvent({ uri: "/.env" })));
   });
 
-  it("serves EICAR for /.env.local", () => {
-    expectEicar(handler(makeEvent({ uri: "/.env.local" })));
+  it("returns 404 for /.env.local", () => {
+    expectNotFound(handler(makeEvent({ uri: "/.env.local" })));
   });
 
-  it("serves EICAR for /config/.env inside a subdirectory", () => {
-    expectEicar(handler(makeEvent({ uri: "/config/.env" })));
+  it("returns 404 for /config/.env inside a subdirectory", () => {
+    expectNotFound(handler(makeEvent({ uri: "/config/.env" })));
   });
 
-  it("serves EICAR for /.git/config", () => {
-    expectEicar(handler(makeEvent({ uri: "/.git/config" })));
+  it("returns 404 for /.git/config", () => {
+    expectNotFound(handler(makeEvent({ uri: "/.git/config" })));
   });
 
-  it("serves EICAR for /.git (bare)", () => {
-    expectEicar(handler(makeEvent({ uri: "/.git" })));
+  it("returns 404 for /.git (bare)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/.git" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — .sql and .bak extensions → EICAR
+// Security scan blocking — .sql and .bak extensions → 404
 // =====================================================
 describe(".sql and .bak file blocking", () => {
-  it("serves EICAR for a .sql file", () => {
-    expectEicar(handler(makeEvent({ uri: "/dump.sql" })));
+  it("returns 404 for a .sql file", () => {
+    expectNotFound(handler(makeEvent({ uri: "/dump.sql" })));
   });
 
-  it("serves EICAR for a .bak file", () => {
-    expectEicar(handler(makeEvent({ uri: "/config.bak" })));
+  it("returns 404 for a .bak file", () => {
+    expectNotFound(handler(makeEvent({ uri: "/config.bak" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — WordPress content/API probing → EICAR
+// Security scan blocking — WordPress content/API probing → 404
 // =====================================================
 describe("wp-content and wp-json blocking", () => {
-  it("serves EICAR for /wp-content/ paths", () => {
-    expectEicar(handler(makeEvent({ uri: "/wp-content/uploads/" })));
-    expectEicar(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
+  it("returns 404 for /wp-content/ paths", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads/" })));
+    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
   });
 
-  it("serves EICAR for /wp-json/ paths", () => {
-    expectEicar(handler(makeEvent({ uri: "/wp-json/" })));
+  it("returns 404 for /wp-json/ paths", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-json/" })));
   });
 });
 
 // =====================================================
-// Security scan blocking — credential/config file scanning → EICAR
+// Security scan blocking — credential/config file scanning → 404
 // =====================================================
 describe("credential and config file scanning", () => {
   const extensionCases = [
@@ -447,12 +445,12 @@ describe("credential and config file scanning", () => {
     "/terraform.tfstate",
   ];
 
-  it.each(extensionCases)("serves EICAR for %s", (uri) => {
-    expectEicar(handler(makeEvent({ uri })));
+  it.each(extensionCases)("returns 404 for %s", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 
-  it("serves EICAR for /.docker/config.json", () => {
-    expectEicar(handler(makeEvent({ uri: "/.docker/config.json" })));
+  it("returns 404 for /.docker/config.json", () => {
+    expectNotFound(handler(makeEvent({ uri: "/.docker/config.json" })));
   });
 
   const secretJsonCases = [
@@ -473,8 +471,8 @@ describe("credential and config file scanning", () => {
     "/amplifyconfiguration.json",
   ];
 
-  it.each(secretJsonCases)("serves EICAR for root-level %s", (uri) => {
-    expectEicar(handler(makeEvent({ uri })));
+  it.each(secretJsonCases)("returns 404 for root-level %s", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 
   it("does not block legitimate nested .json data files", () => {
@@ -489,7 +487,7 @@ describe("credential and config file scanning", () => {
 });
 
 // =====================================================
-// Security scan blocking — admin folder variants → EICAR
+// Security scan blocking — admin folder variants → 404
 // =====================================================
 describe("admin folder blocking", () => {
   const cases = [
@@ -500,8 +498,8 @@ describe("admin folder blocking", () => {
     ["/pma/index.php", "pma"],
   ];
 
-  it.each(cases)("serves EICAR for %s (%s)", (uri) => {
-    expectEicar(handler(makeEvent({ uri })));
+  it.each(cases)("returns 404 for %s (%s)", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 });
 

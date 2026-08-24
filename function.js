@@ -21,9 +21,8 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // Bad actors (see isBadActor) get the EICAR test string instead of the usual 404.
     if (isBadActor(uriLower, ua)) {
-        return createEicarTestResponse();
+        return createNotFoundResponse();
     }
 
     // Deny blocked bots. For /robots.txt specifically, answer with a real
@@ -128,18 +127,6 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
-    };
-}
-
-// Per the EICAR spec, the body must be ONLY the 68-byte test string (no markup,
-// no wrapping) — some AV/gateway engines do an exact-length or exact-prefix
-// match rather than a substring scan, so HTML around it risks a false negative.
-function createEicarTestResponse() {
-    return {
-        statusCode: 200,
-        statusDescription: 'OK',
-        headers: {"content-type": {value: "text/plain"}},
-        body: 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
     };
 }
 
