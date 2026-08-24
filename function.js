@@ -104,21 +104,23 @@ function isMalformedChromeClaim(ua) {
 // users, so this floor is deliberately much lower than MIN_FIREFOX_MAJOR.
 const MIN_CHROME_MAJOR = 99;
 
-function isSuspiciousChromeUA(ua) {
-    const chrome = ua.match(/chrome\/(\d+)\./);
-    if (!chrome) return false;
-    return parseInt(chrome[1], 10) < MIN_CHROME_MAJOR;
-}
-
 // Firefox auto-updates, so a stale major version is a scraper with a hardcoded UA, not
 // a real user. 100 shipped in May 2022 and every still-maintained ESR is far above it;
 // Tor Browser also reports an ESR major (115+), so privacy users are unaffected.
 const MIN_FIREFOX_MAJOR = 100;
 
+function isBelowMinMajor(ua, versionRegex, minMajor) {
+    const match = ua.match(versionRegex);
+    if (!match) return false;
+    return parseInt(match[1], 10) < minMajor;
+}
+
+function isSuspiciousChromeUA(ua) {
+    return isBelowMinMajor(ua, /chrome\/(\d+)\./, MIN_CHROME_MAJOR);
+}
+
 function isSuspiciousFirefoxUA(ua) {
-    const ff = ua.match(/firefox\/(\d+)\./);
-    if (!ff) return false;
-    return parseInt(ff[1], 10) < MIN_FIREFOX_MAJOR;
+    return isBelowMinMajor(ua, /firefox\/(\d+)\./, MIN_FIREFOX_MAJOR);
 }
 
 // Plain substrings matched against the (already lowercased) User-Agent header,
