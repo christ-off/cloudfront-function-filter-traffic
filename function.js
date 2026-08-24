@@ -46,6 +46,7 @@ function isBadActor(uri, ua) {
     return isSecurityScanUri(uri) ||
         isTruncatedChromeUA(ua) ||
         isMalformedChromeClaim(ua) ||
+        isSuspiciousChromeUA(ua) ||
         isSuspiciousFirefoxUA(ua);
 }
 
@@ -70,11 +71,11 @@ const WINDOWS_PLATFORM = 'windows nt 10\\.0; win64; x64';
 
 // NOTE: an exact-template match on OS/engine string plus a Chrome major-version
 // range used to be treated as "spoofed" here, but real Chrome (which freezes
-// its UA to major.0.0.0, and whose major version varies widely across users who
-// haven't updated yet) produces this exact template too — logs.db showed the
+// its UA to major.0.0.0) produces this exact template too — logs.db showed the
 // two most common UAs in real traffic matching it. Structure alone can't tell
-// real Chrome from spoofed Chrome; don't reintroduce a version-based rule here
-// (see CLAUDE.md: never block Chrome solely on the .0.0.0 minor/patch version).
+// real Chrome from spoofed Chrome (see CLAUDE.md: never block Chrome solely on
+// the .0.0.0 minor/patch version) — but see MIN_CHROME_MAJOR below for a
+// separate, evidence-backed floor on the version number itself.
 
 // Truncated UA: a real browser always continues past AppleWebKit/537.36 with
 // "(KHTML, like Gecko) Chrome/... Safari/...", so a string that stops dead
@@ -92,6 +93,21 @@ function isTruncatedChromeUA(ua) {
 // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0").
 function isMalformedChromeClaim(ua) {
     return ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1;
+}
+
+// Below Chrome/99 (shipped March 2022), logs.db shows no organic signal at all: every
+// major from 70-98 either never fetches this site's real assets (main.css,
+// bootstrap.bundle.min.js) or does so only from a single narrow IP/country cluster
+// (headless-browser monitoring tools, not real users). From 99 up, genuine multi-country
+// sessions loading real assets appear (confirmed at 106, 110, 116, 131) despite those
+// majors being well over a year stale — Chrome users lag updates far more than Firefox
+// users, so this floor is deliberately much lower than MIN_FIREFOX_MAJOR.
+const MIN_CHROME_MAJOR = 99;
+
+function isSuspiciousChromeUA(ua) {
+    const chrome = ua.match(/chrome\/(\d+)\./);
+    if (!chrome) return false;
+    return parseInt(chrome[1], 10) < MIN_CHROME_MAJOR;
 }
 
 // Firefox auto-updates, so a stale major version is a scraper with a hardcoded UA, not

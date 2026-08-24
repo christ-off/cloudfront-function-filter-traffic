@@ -17,10 +17,11 @@ Requests matching automated-scan patterns return `404`:
 - Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, etc.
 - Sensitive paths: `/.env`, `/.git`, `/.docker/`, known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
-### 3. Spoofed / malformed Chrome UA blocking (404)
+### 3. Spoofed / malformed / stale Chrome UA blocking (404)
 - Two exact full-UA templates for spoofed Chrome-on-macOS and Chrome-on-Windows strings
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
+- A `Chrome/` major version below 99 (shipped March 2022) — logs.db shows no organic traffic below this floor (no real asset loads, or loads confined to a single bot/monitoring IP cluster), while majors 99+ show genuine multi-country sessions
 
 ### 4. Malformed / outdated Firefox user-agent blocking (404)
 Requests with a `Firefox/` major version below 100, or a mismatched `rv:` vs. `Firefox/` version, return `404`. Exempted: Google Image Proxy's hardcoded `Firefox/11.0` UA (legitimate embedded-image fetching, not a scraper).
@@ -116,7 +117,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 197 tests:
+`function.test.js` covers all behaviours with 199 tests:
 
 | Suite | What is tested |
 |---|---|

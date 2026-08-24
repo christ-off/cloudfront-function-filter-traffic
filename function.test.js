@@ -85,25 +85,37 @@ describe("404 response for bad actors", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
       "malformed Chrome claim missing AppleWebKit/KHTML entirely",
     ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
+      "Chrome/83 (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
+      "Chrome/80 (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
+    ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
+      "Chrome/98, one below the floor",
+    ],
   ];
 
   it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
     expectNotFound(handler(makeEvent({ userAgent })));
   });
 
-  // A Chrome major-version range is NOT a reliable spoof signal: real Chrome
-  // freezes its UA to major.0.0.0, and real users sit on a wide range of
-  // majors depending on when they last updated. logs.db showed exactly this
-  // template as the two most common real UAs in production traffic — any of
-  // these versions must pass through regardless of OS or how "stale" the
-  // major version looks (see CLAUDE.md: never block Chrome solely on the
-  // .0.0.0 minor/patch version).
+  // A Chrome major-version range is NOT a reliable spoof signal by structure
+  // alone: real Chrome freezes its UA to major.0.0.0, and logs.db showed
+  // exactly this template as the two most common real UAs in production
+  // traffic (see CLAUDE.md: never block Chrome solely on the .0.0.0
+  // minor/patch version). MIN_CHROME_MAJOR below is a separate, much lower
+  // floor than Firefox's — Chrome users lag updates far more, and logs.db
+  // confirms genuine multi-country sessions loading real site assets on
+  // majors as old as 99, just none below it.
   const realChromeAgents = [
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36", "Chrome/148 macOS"],
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120 macOS"],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36", "Chrome/83 macOS (older 4-part version)"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120 Windows"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36", "Chrome/80 Windows"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36", "Chrome/99, exactly at the floor"],
     ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36", "Chrome/139 Linux aarch64"],
   ];
 
