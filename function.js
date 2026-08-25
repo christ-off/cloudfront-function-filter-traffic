@@ -25,12 +25,15 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // Deny blocked bots. For /robots.txt specifically, answer with a real
-    // disallow-all instead of a 404 — a blocked scraper asking for robots.txt
+    // Deny blocked bots. For /robots.txt and /sitemap.xml specifically, answer with a real
+    // disallow-all / empty sitemap instead of a 404 — a blocked scraper asking for either
     // gets a correct, on-brand "you're not welcome here" rather than a generic miss.
     if (isBlockedBot(ua)) {
         if (uriLower === '/robots.txt') {
             return createDisallowAllRobotsResponse();
+        }
+        if (uriLower === '/sitemap.xml') {
+            return createEmptySitemapResponse();
         }
         return createNotFoundResponse();
     }
@@ -157,6 +160,18 @@ function createDisallowAllRobotsResponse() {
             "cache-control": {value: "public, max-age=86400"}
         },
         body: 'User-agent: *\nDisallow: /\n'
+    };
+}
+
+function createEmptySitemapResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {
+            "content-type": {value: "application/xml"},
+            "cache-control": {value: "public, max-age=86400"}
+        },
+        body: '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
     };
 }
 

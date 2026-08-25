@@ -288,9 +288,10 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // Feed/sitemap paths get no special treatment: blocked bots are simply
-  // denied there like anywhere else (the decoy responses were removed).
-  const feedPaths = ["/feed.xml", "/rss.xml", "/sitemap.xml"];
+  // Feed paths get no special treatment: blocked bots are simply denied
+  // there like anywhere else (the decoy responses were removed). /sitemap.xml
+  // is the exception — see "sitemap.xml empty urlset for blocked bots" below.
+  const feedPaths = ["/feed.xml", "/rss.xml"];
 
   it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
     const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
@@ -340,6 +341,36 @@ describe("robots.txt disallow-all for blocked bots", () => {
 
   it("still lets a normal browser's /robots.txt through untouched", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Empty sitemap.xml for blocked bots
+// =====================================================
+describe("sitemap.xml empty urlset for blocked bots", () => {
+  it("answers a blocked bot's /sitemap.xml with a 200 empty urlset", () => {
+    const result = handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("application/xml");
+    expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
+    expect(result.body).toBe(
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
+    );
+  });
+
+  it("is case-insensitive on the URI", () => {
+    const result = handler(makeEvent({ uri: "/SITEMAP.XML", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
+    expectNotFound(result);
+  });
+
+  it("still lets a normal browser's /sitemap.xml through untouched", () => {
+    const event = makeEvent({ uri: "/sitemap.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
     expect(handler(event)).toEqual(event.request);
   });
 });
