@@ -27,7 +27,7 @@ Requests matching automated-scan patterns return `404`:
 Requests with a `Firefox/` major version below 100, or a mismatched `rv:` vs. `Firefox/` version, return `404`. Exempted: Google Image Proxy's hardcoded `Firefox/11.0` UA (legitimate embedded-image fetching, not a scraper).
 
 ### 5. Bot / scraper blocking
-Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt`, which gets a real `200` disallow-all body, and `/sitemap.xml`, which gets a real `200` empty `<urlset>` body, instead of a 404, so a blocked scraper checking either gets a correct answer.
+Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt`, which gets a real `200` disallow-all body, and `/sitemap.xml`, which gets a real `200` empty `<urlset>` body, instead of a 404, so a blocked scraper checking either gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those two paths.
 
 **Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
@@ -117,7 +117,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 203 tests:
+`function.test.js` covers all behaviours with 205 tests:
 
 | Suite | What is tested |
 |---|---|

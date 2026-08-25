@@ -329,6 +329,15 @@ describe("robots.txt disallow-all for blocked bots", () => {
     expect(result.body).toBe("User-agent: *\nDisallow: /\n");
   });
 
+  it("also answers a bad-actor UA's (not just a blocked bot's) /robots.txt with a 200 disallow-all", () => {
+    const result = handler(makeEvent({
+      uri: "/robots.txt",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
+    }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+  });
+
   it("is case-insensitive on the URI", () => {
     const result = handler(makeEvent({ uri: "/ROBOTS.TXT", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);
@@ -354,6 +363,17 @@ describe("sitemap.xml empty urlset for blocked bots", () => {
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("application/xml");
     expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
+    expect(result.body).toBe(
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
+    );
+  });
+
+  it("also answers a bad-actor UA's (not just a blocked bot's) /sitemap.xml with a 200 empty urlset", () => {
+    const result = handler(makeEvent({
+      uri: "/sitemap.xml",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
+    }));
+    expect(result.statusCode).toBe(200);
     expect(result.body).toBe(
       '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
     );

@@ -21,14 +21,11 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    if (isBadActor(uriLower, ua)) {
-        return createNotFoundResponse();
-    }
-
-    // Deny blocked bots. For /robots.txt and /sitemap.xml specifically, answer with a real
-    // disallow-all / empty sitemap instead of a 404 — a blocked scraper asking for either
-    // gets a correct, on-brand "you're not welcome here" rather than a generic miss.
-    if (isBlockedBot(ua)) {
+    // Deny bad actors and blocked bots alike. For /robots.txt and /sitemap.xml
+    // specifically, answer with a real disallow-all / empty sitemap instead of a
+    // 404 — a bad actor or blocked scraper asking for either gets a correct,
+    // on-brand "you're not welcome here" rather than a generic miss.
+    if (isBadActor(uriLower, ua) || isBlockedBot(ua)) {
         if (uriLower === '/robots.txt') {
             return createDisallowAllRobotsResponse();
         }
