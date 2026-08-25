@@ -117,7 +117,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 208 tests:
+`function.test.js` covers all behaviours with 209 tests:
 
 | Suite | What is tested |
 |---|---|

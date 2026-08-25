@@ -271,6 +271,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "GoogleOther"],
     ["koofie.net/1.0 ( https://koofie.net/bot)", "koofie.net bot"],
+    ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "FeedFetcher-Google"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
