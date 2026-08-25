@@ -27,7 +27,7 @@ Requests matching automated-scan patterns return `404`:
 Requests with a `Firefox/` major version below 100, or a mismatched `rv:` vs. `Firefox/` version, return `404`. Exempted: Google Image Proxy's hardcoded `Firefox/11.0` UA (legitimate embedded-image fetching, not a scraper).
 
 ### 5. Bot / scraper blocking
-Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt`, which gets a real `200` disallow-all body, and `/sitemap.xml`, which gets a real `200` empty `<urlset>` body, instead of a 404, so a blocked scraper checking either gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those two paths.
+Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body), `/sitemap.xml` (a real `200` empty `<urlset>` body), and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
 
 **Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
@@ -117,14 +117,15 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 205 tests:
+`function.test.js` covers all behaviours with 208 tests:
 
 | Suite | What is tested |
 |---|---|
 | PHP / bad folder / security scan blocking | File extensions, scanner folders, sensitive/credential paths, `/ip` |
 | Scrapper bot blocking by user-agent | 60+ bot/scraper patterns, matched case-insensitively |
-| robots.txt disallow-all for blocked bots | Blocked bots get a 200 disallow-all body on `/robots.txt`; normal browsers pass through untouched |
-| sitemap.xml empty urlset for blocked bots | Blocked bots get a 200 empty `<urlset>` body on `/sitemap.xml`; normal browsers pass through untouched |
+| robots.txt disallow-all for blocked bots | Blocked bots and bad actors get a 200 disallow-all body on `/robots.txt`; normal browsers pass through untouched |
+| sitemap.xml empty urlset for blocked bots | Blocked bots and bad actors get a 200 empty `<urlset>` body on `/sitemap.xml`; normal browsers pass through untouched |
+| feed.xml empty atom feed for blocked bots | Blocked bots and bad actors get a 200 empty `<feed>` body on `/feed.xml`; normal browsers pass through untouched |
 | Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
 | Percent-encoded URI handling | URI decoding before pattern matching |
 | ads.txt and llms.txt | Follow normal UA blocking rules (no special bypass) |

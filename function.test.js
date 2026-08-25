@@ -288,10 +288,10 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // Feed paths get no special treatment: blocked bots are simply denied
-  // there like anywhere else (the decoy responses were removed). /sitemap.xml
-  // is the exception — see "sitemap.xml empty urlset for blocked bots" below.
-  const feedPaths = ["/feed.xml", "/rss.xml"];
+  // /rss.xml gets no special treatment: blocked bots are simply denied there
+  // like anywhere else (the decoy responses were removed). /sitemap.xml and
+  // /feed.xml are the exceptions — see their dedicated describe blocks below.
+  const feedPaths = ["/rss.xml"];
 
   it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
     const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
@@ -391,6 +391,47 @@ describe("sitemap.xml empty urlset for blocked bots", () => {
 
   it("still lets a normal browser's /sitemap.xml through untouched", () => {
     const event = makeEvent({ uri: "/sitemap.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Empty feed.xml for blocked bots
+// =====================================================
+describe("feed.xml empty atom feed for blocked bots", () => {
+  it("answers a blocked bot's /feed.xml with a 200 empty atom feed", () => {
+    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("application/atom+xml");
+    expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
+    expect(result.body).toBe(
+      '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
+    );
+  });
+
+  it("also answers a bad-actor UA's (not just a blocked bot's) /feed.xml with a 200 empty atom feed", () => {
+    const result = handler(makeEvent({
+      uri: "/feed.xml",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
+    }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe(
+      '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
+    );
+  });
+
+  it("is case-insensitive on the URI", () => {
+    const result = handler(makeEvent({ uri: "/FEED.XML", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
+    expectNotFound(result);
+  });
+
+  it("still lets a normal browser's /feed.xml through untouched", () => {
+    const event = makeEvent({ uri: "/feed.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
     expect(handler(event)).toEqual(event.request);
   });
 });
@@ -653,6 +694,14 @@ describe("pass-through", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through Feeder (feeder.co) with its embedded UA token", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (feeder.co; Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
     });
     expect(handler(event)).toEqual(event.request);
   });

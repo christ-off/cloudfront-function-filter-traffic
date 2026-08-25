@@ -21,16 +21,20 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // Deny bad actors and blocked bots alike. For /robots.txt and /sitemap.xml
-    // specifically, answer with a real disallow-all / empty sitemap instead of a
-    // 404 — a bad actor or blocked scraper asking for either gets a correct,
-    // on-brand "you're not welcome here" rather than a generic miss.
+    // Deny bad actors and blocked bots alike. For /robots.txt, /sitemap.xml and
+    // /feed.xml specifically, answer with a real disallow-all / empty sitemap /
+    // empty feed instead of a 404 — a bad actor or blocked scraper asking for
+    // any of these gets a correct, on-brand "you're not welcome here" rather
+    // than a generic miss.
     if (isBadActor(uriLower, ua) || isBlockedBot(ua)) {
         if (uriLower === '/robots.txt') {
             return createDisallowAllRobotsResponse();
         }
         if (uriLower === '/sitemap.xml') {
             return createEmptySitemapResponse();
+        }
+        if (uriLower === '/feed.xml') {
+            return createEmptyFeedResponse();
         }
         return createNotFoundResponse();
     }
@@ -169,6 +173,18 @@ function createEmptySitemapResponse() {
             "cache-control": {value: "public, max-age=86400"}
         },
         body: '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
+    };
+}
+
+function createEmptyFeedResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {
+            "content-type": {value: "application/atom+xml"},
+            "cache-control": {value: "public, max-age=86400"}
+        },
+        body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
     };
 }
 
