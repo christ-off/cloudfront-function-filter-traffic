@@ -606,6 +606,14 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("allows real Bingbot through", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("passes through Chrome/150 on Windows", () => {
     const event = makeEvent({
       uri: "/",
