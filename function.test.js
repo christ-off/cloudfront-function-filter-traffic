@@ -197,6 +197,7 @@ describe("bad folder blocking", () => {
 // =====================================================
 describe("scrapper bot blocking by user-agent", () => {
   const blockedAgents = [
+    ["Mozilla/5.0 (compatible; Amzn-SearchBot/1.0; https://developer.amazon.com/support/amazonbot)", "Amzn-SearchBot"],
     [
       "Mozilla/5.0 (Linux; Android 7.1.1; MI MAX 2 Build/NMF26F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36 YaApp_Android/10.61 YaSearchBrowser/10.61",
       "YaApp_Android full UA",
