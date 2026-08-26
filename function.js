@@ -86,17 +86,12 @@ const UA_OPEN = 'mozilla\\/5\\.0 \\(';
 const CLOSE_APPLEWEBKIT = '\\) applewebkit\\/537\\.36';
 const WINDOWS_PLATFORM = 'windows nt 10\\.0; win64; x64';
 
-// NOTE: an exact-template match on OS/engine string plus a Chrome major-version
-// range used to be treated as "spoofed" here, but real Chrome (which freezes
-// its UA to major.0.0.0) produces this exact template too — logs.db showed the
-// two most common UAs in real traffic matching it. Structure alone can't tell
-// real Chrome from spoofed Chrome (see CLAUDE.md: never block Chrome solely on
-// the .0.0.0 minor/patch version) — but see MIN_CHROME_MAJOR below for a
-// separate, evidence-backed floor on the version number itself.
+// Real Chrome freezes its UA to major.0.0.0 (see CLAUDE.md: never block on
+// that alone) — see MIN_CHROME_MAJOR below for the evidence-backed floor.
 
-// Truncated UA: a real browser always continues past AppleWebKit/537.36 with
-// "(KHTML, like Gecko) Chrome/... Safari/...", so a string that stops dead
-// right here is a bot with a copy-pasted, incomplete UA, not a real Chrome/Edge.
+// A real browser always continues past AppleWebKit/537.36 with
+// "(KHTML, like Gecko) Chrome/... Safari/..."; a string that stops dead
+// right here is a bot with a copy-pasted, incomplete UA.
 const truncatedWindowsUaRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + '$');
 
 function isTruncatedChromeUA(ua) {
@@ -112,23 +107,14 @@ function isMalformedChromeClaim(ua) {
     return ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1;
 }
 
-// Below Chrome/99 (shipped March 2022), logs.db shows no organic signal at all: every
-// major from 70-98 either never fetches this site's real assets (main.css,
-// bootstrap.bundle.min.js) or does so only from a single narrow IP/country cluster
-// (headless-browser monitoring tools, not real users). From 99 up, genuine multi-country
-// sessions loading real assets appear (confirmed at 106, 110, 116, 131) despite those
-// majors being well over a year stale — Chrome users lag updates far more than Firefox
-// users, so this floor is deliberately much lower than MIN_FIREFOX_MAJOR.
-// Chrome's User-Agent Reduction (fully rolled out by Chrome 113, 2023) froze the
-// Chrome token to "major.0.0.0" for every platform — real Chrome 113+ never
-// reports its actual build/patch number anymore, so a full version there
-// (e.g. "Chrome/130.0.6723.70") is a scraper/HTTP client using a stale,
-// pre-freeze UA template. Two exclusions keep this from false-positiving:
-// - below CHROME_UA_FREEZE_MAJOR, full versions were the real, expected
-//   format (see the Chrome/99.0.4844.51 case in realChromeAgents below).
-// - a "compatible;" token means the UA is a self-identifying crawler (e.g.
-//   Bingbot ships "Chrome/116.0.1938.76" as part of its documented template,
-//   not a spoofed browser).
+// Below Chrome/99 (March 2022), logs.db shows no organic signal — no real
+// multi-country sessions loading real assets. Chrome users lag updates far
+// more than Firefox users, so this floor is much lower than MIN_FIREFOX_MAJOR.
+// Chrome 113+ froze the Chrome token to "major.0.0.0" (User-Agent Reduction) —
+// a full build/patch there (e.g. "Chrome/130.0.6723.70") is a scraper on a
+// stale template. Excludes majors <113 (full versions were real pre-freeze,
+// see Chrome/99.0.4844.51 below) and "compatible;" crawlers (e.g. Bingbot
+// legitimately ships a full version as part of its documented template).
 const CHROME_UA_FREEZE_MAJOR = 113;
 const chromeVersionRegex = /chrome\/(\d+)\.(\d+\.\d+\.\d+)/;
 
@@ -142,9 +128,8 @@ function isFullVersionChromeUA(ua) {
 
 const MIN_CHROME_MAJOR = 99;
 
-// Firefox auto-updates, so a stale major version is a scraper with a hardcoded UA, not
-// a real user. 100 shipped in May 2022 and every still-maintained ESR is far above it;
-// Tor Browser also reports an ESR major (115+), so privacy users are unaffected.
+// Firefox auto-updates, so a stale major is a hardcoded scraper UA, not a real
+// user. 100 (May 2022) is below every maintained ESR, Tor's included (115+).
 const MIN_FIREFOX_MAJOR = 100;
 
 function isBelowMinMajor(ua, versionRegex, minMajor) {
@@ -161,16 +146,12 @@ function isSuspiciousFirefoxUA(ua) {
     return isBelowMinMajor(ua, /firefox\/(\d+)\./, MIN_FIREFOX_MAJOR);
 }
 
-// Plain substrings matched against the (already lowercased) User-Agent header,
-// as ONE regex literal. Written out literally rather than built at runtime from
-// an array: a literal is compiled when the script is parsed, whereas
-// `new RegExp(list.map(escape).join('|'))` re-does the escape calls, a map, a
-// join and a pattern compile on every script evaluation — pure compute we were
-// paying for. Alternatives are ordered most- to least-frequent per logs.db so
-// common bots exit early (non-matching UAs still try every alternative).
+// Plain substrings matched against the lowercased UA, as ONE precompiled regex
+// literal (cheaper than building one from an array at runtime). Ordered most-
+// to least-frequent per logs.db.
 //
-// To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
-// UA sample to the `blockedAgents` fixture in function.test.js.
+// To add a bot: append `|your-token` (escaping . ( ) / as \. \( \) \/) and add
+// a UA sample to `blockedAgents` in function.test.js.
 const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|amzn-searchbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|feedfetcher-google|domain-intel\/|screaming frog seo spider|openclaw/;
 
 function isBlockedBot(normalizedUserAgent) {
