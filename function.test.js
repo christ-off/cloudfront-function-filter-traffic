@@ -101,6 +101,10 @@ describe("404 response for bad actors", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "exact-string block: bursty /.php and / requests from a handful of IPs over the last 3 months (logs.db's older aggregate showed this string as mostly organic; recent request-pattern evidence overrides that for this exact UA)",
     ],
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.70 Safari/537.36",
+      "full build/patch version — post-UA-reduction Chrome never reports this",
+    ],
   ];
 
   it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
@@ -277,6 +281,9 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "GoogleOther"],
     ["koofie.net/1.0 ( https://koofie.net/bot)", "koofie.net bot"],
     ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "FeedFetcher-Google"],
+    ["domain-intel/0.1", "domain-intel bot"],
+    ["Screaming Frog SEO Spider/19.2", "Screaming Frog SEO Spider"],
+    ["Mozilla/5.0 (compatible; OpenClaw-CN-Reach/1.0)", "OpenClaw-CN-Reach"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

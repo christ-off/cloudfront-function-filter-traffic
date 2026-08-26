@@ -50,6 +50,7 @@ function isBadActor(uri, ua) {
     return isSecurityScanUri(uri) ||
         isTruncatedChromeUA(ua) ||
         isMalformedChromeClaim(ua) ||
+        isFullVersionChromeUA(ua) ||
         isSuspiciousChromeUA(ua) ||
         isSuspiciousFirefoxUA(ua) ||
         isKnownBadExactUA(ua);
@@ -118,6 +119,27 @@ function isMalformedChromeClaim(ua) {
 // sessions loading real assets appear (confirmed at 106, 110, 116, 131) despite those
 // majors being well over a year stale — Chrome users lag updates far more than Firefox
 // users, so this floor is deliberately much lower than MIN_FIREFOX_MAJOR.
+// Chrome's User-Agent Reduction (fully rolled out by Chrome 113, 2023) froze the
+// Chrome token to "major.0.0.0" for every platform — real Chrome 113+ never
+// reports its actual build/patch number anymore, so a full version there
+// (e.g. "Chrome/130.0.6723.70") is a scraper/HTTP client using a stale,
+// pre-freeze UA template. Two exclusions keep this from false-positiving:
+// - below CHROME_UA_FREEZE_MAJOR, full versions were the real, expected
+//   format (see the Chrome/99.0.4844.51 case in realChromeAgents below).
+// - a "compatible;" token means the UA is a self-identifying crawler (e.g.
+//   Bingbot ships "Chrome/116.0.1938.76" as part of its documented template,
+//   not a spoofed browser).
+const CHROME_UA_FREEZE_MAJOR = 113;
+const chromeVersionRegex = /chrome\/(\d+)\.(\d+\.\d+\.\d+)/;
+
+function isFullVersionChromeUA(ua) {
+    if (ua.indexOf('compatible;') !== -1) return false;
+    const match = ua.match(chromeVersionRegex);
+    if (!match) return false;
+    if (parseInt(match[1], 10) < CHROME_UA_FREEZE_MAJOR) return false;
+    return match[2] !== '0.0.0';
+}
+
 const MIN_CHROME_MAJOR = 99;
 
 // Firefox auto-updates, so a stale major version is a scraper with a hardcoded UA, not
@@ -149,7 +171,7 @@ function isSuspiciousFirefoxUA(ua) {
 //
 // To add a bot: append `|your-token` (escaping . ( ) and / as \. \( \) \/) and add a
 // UA sample to the `blockedAgents` fixture in function.test.js.
-const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|amzn-searchbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|feedfetcher-google/;
+const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|petalbot|trident|amazonbot\/|amzn-searchbot\/|oai-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|serankingbacklinksbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|feedfetcher-google|domain-intel\/|screaming frog seo spider|openclaw/;
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
