@@ -36,6 +36,112 @@ All other requests are forwarded to the origin unchanged.
 
 ---
 
+## Blocking rules — rationale
+
+`function.js` keeps only a one-line pointer comment for anything longer than a
+sentence; the full reasoning (evidence, edge cases, why a pattern is shaped
+the way it is) lives here instead, to keep the deployed file under
+CloudFront's 10 KB function-size limit. Each heading below matches the
+identifier the code points at.
+
+### uri-decoding
+Only ~3% of URIs contain a `%`-escape (per `logs.db`); the rest skip the
+`decodeURIComponent` call entirely.
+
+### bad-actor-response-mapping
+`/robots.txt`, `/sitemap.xml` and `/feed.xml` get a real disallow-all / empty
+sitemap / empty feed instead of a 404 for bad actors and blocked bots alike —
+a correct, on-brand "you're not welcome here" rather than a generic miss.
+
+### bad-actor-check-order
+`isBadActor` runs security scans, then truncated/malformed/full-version
+Chrome UAs, then outdated Firefox UAs, ordered most- to least-frequent per
+`logs.db` so common cases short-circuit before rarer, costlier checks run.
+
+### known-bad-exact-uas
+UAs structurally indistinguishable from real traffic but confirmed bad by
+request pattern (bursty `/.php` and `/` from a few IPs), not by structure —
+unlike the Chrome-version checks below, this does **not** generalize to a
+template. Current entry: `Chrome/120.0.0.0` on Windows — logs.db's older
+aggregate showed this string as mostly organic, but recent request-pattern
+evidence (bursty scans from a handful of IPs over 3 months) overrides that
+for this exact UA.
+
+### security-scan-regex
+Combined into a single precompiled regex: one pass over the URI covers
+extensions, folder prefixes, `/.env`, `/.git`, `/.docker` and known
+credential-scan filenames. The trailing `.json` group is **not** a blanket
+`.json$` rule — `/about/data/*.json` and `/pagefind/*.json` are real,
+legitimately-served site data — so only known credential-scan filenames
+(`secrets.json`, `config.json`, `service-account.json`, etc.) are matched
+there.
+
+### truncated-chrome-ua
+A real browser always continues past `AppleWebKit/537.36` with
+`(KHTML, like Gecko) Chrome/... Safari/...`. A string that stops dead right
+after `AppleWebKit/537.36` is a bot with a copy-pasted, incomplete UA, not a
+real Chrome/Edge. The shared literal fragments (`UA_OPEN`, `CLOSE_APPLEWEBKIT`,
+`WINDOWS_PLATFORM`) are factored out for readability and composed into a
+`RegExp` once at parse time, not rebuilt per request.
+
+An exact-template match on OS/engine string plus a Chrome major-version range
+used to be treated as "spoofed" here, but real Chrome (which freezes its UA
+to `major.0.0.0`) produces this exact template too — logs.db showed the two
+most common UAs in real traffic matching it. Structure alone can't tell real
+Chrome from spoofed Chrome (see `CLAUDE.md`: never block Chrome solely on the
+`.0.0.0` minor/patch version) — see [min-chrome-major](#min-chrome-major) for
+a separate, evidence-backed floor on the version number itself.
+
+### malformed-chrome-claim
+Every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)`
+immediately before the `Chrome/` token, so a UA with `chrome/` but no
+`applewebkit` is a hand-built/incomplete UA, not a browser — catches
+malformed strings the exact-template regexes above don't cover (e.g.
+`Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0`).
+
+### full-version-chrome-ua
+Chrome's User-Agent Reduction (fully rolled out by Chrome 113, 2023) froze
+the Chrome token to `major.0.0.0` for every platform — real Chrome 113+ never
+reports its actual build/patch number anymore, so a full version there (e.g.
+`Chrome/130.0.6723.70`) is a scraper/HTTP client using a stale, pre-freeze UA
+template. Two exclusions keep this from false-positiving:
+- below `CHROME_UA_FREEZE_MAJOR` (113), full versions were the real, expected
+  format — see `Chrome/99.0.4844.51` in the pass-through fixtures.
+- a `compatible;` token means the UA is a self-identifying crawler (e.g.
+  Bingbot ships `Chrome/116.0.1938.76` as part of its documented template,
+  not a spoofed browser).
+
+### min-chrome-major
+Below Chrome/99 (shipped March 2022), `logs.db` shows no organic signal at
+all: every major from 70–98 either never fetches this site's real assets
+(`main.css`, `bootstrap.bundle.min.js`) or does so only from a single narrow
+IP/country cluster (headless-browser monitoring tools, not real users). From
+99 up, genuine multi-country sessions loading real assets appear (confirmed
+at 106, 110, 116, 131) despite those majors being well over a year stale —
+Chrome users lag updates far more than Firefox users, so this floor is
+deliberately much lower than [min-firefox-major](#min-firefox-major).
+
+### min-firefox-major
+Firefox auto-updates, so a stale major version is a scraper with a
+hardcoded UA, not a real user. 100 shipped in May 2022 and every
+still-maintained ESR is far above it; Tor Browser also reports an ESR major
+(115+), so privacy users are unaffected.
+
+### blocked-bot-regex
+Plain substrings matched against the (already lowercased) User-Agent header,
+as ONE regex literal. Written out literally rather than built at runtime
+from an array: a literal is compiled when the script is parsed, whereas
+`new RegExp(list.map(escape).join('|'))` re-does the escape calls, a map, a
+join and a pattern compile on every script evaluation — pure compute we were
+paying for. Alternatives are ordered most- to least-frequent per `logs.db` so
+common bots exit early (non-matching UAs still try every alternative).
+
+To add a bot: append `|your-token` (escaping `.`, `(`, `)` and `/` as
+`\.`, `\(`, `\)`, `\/`) and add a UA sample to the `blockedAgents` fixture in
+`function.test.js`.
+
+---
+
 ## Why a CloudFront Function (not Lambda@Edge)?
 
 CloudFront Functions run at **every edge location** with sub-millisecond startup and are ~6× cheaper than Lambda@Edge. They are the right tool for stateless, CPU-light request manipulation that requires no network I/O, no large runtimes, and no response body streaming. This filter fits that profile exactly: pure string matching, no external calls.
