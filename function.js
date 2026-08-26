@@ -51,7 +51,19 @@ function isBadActor(uri, ua) {
         isTruncatedChromeUA(ua) ||
         isMalformedChromeClaim(ua) ||
         isSuspiciousChromeUA(ua) ||
-        isSuspiciousFirefoxUA(ua);
+        isSuspiciousFirefoxUA(ua) ||
+        isKnownBadExactUA(ua);
+}
+
+// UAs structurally indistinguishable from real traffic but confirmed bad by
+// request pattern (bursty /.php and / from a few IPs), not by structure —
+// so unlike isSuspiciousChromeUA this does NOT generalize to a template.
+const knownBadExactUAs = [
+    'mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/120.0.0.0 safari/537.36'
+];
+
+function isKnownBadExactUA(ua) {
+    return knownBadExactUAs.indexOf(ua) !== -1;
 }
 
 // Combined into a single precompiled regex: one pass over the URI covers
