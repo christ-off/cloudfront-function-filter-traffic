@@ -46,17 +46,7 @@ function isBadActor(uri, ua) {
         isMalformedChromeClaim(ua) ||
         isFullVersionChromeUA(ua) ||
         isSuspiciousChromeUA(ua) ||
-        isSuspiciousFirefoxUA(ua) ||
-        isKnownBadExactUA(ua);
-}
-
-// rationale: README.md#known-bad-exact-uas
-const knownBadExactUAs = [
-    'mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/120.0.0.0 safari/537.36'
-];
-
-function isKnownBadExactUA(ua) {
-    return knownBadExactUAs.indexOf(ua) !== -1;
+        isSuspiciousFirefoxUA(ua);
 }
 
 // rationale: README.md#security-scan-regex

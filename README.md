@@ -18,9 +18,9 @@ Requests matching automated-scan patterns return `404`:
 - Sensitive paths: `/.env`, `/.git`, `/.docker/`, known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
 ### 3. Spoofed / malformed / stale Chrome UA blocking (404)
-- Two exact full-UA templates for spoofed Chrome-on-macOS and Chrome-on-Windows strings
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
+- A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
 - A `Chrome/` major version below 99 (shipped March 2022) — logs.db shows no organic traffic below this floor (no real asset loads, or loads confined to a single bot/monitoring IP cluster), while majors 99+ show genuine multi-country sessions
 
 ### 4. Malformed / outdated Firefox user-agent blocking (404)
@@ -57,15 +57,6 @@ a correct, on-brand "you're not welcome here" rather than a generic miss.
 `isBadActor` runs security scans, then truncated/malformed/full-version
 Chrome UAs, then outdated Firefox UAs, ordered most- to least-frequent per
 `logs.db` so common cases short-circuit before rarer, costlier checks run.
-
-### known-bad-exact-uas
-UAs structurally indistinguishable from real traffic but confirmed bad by
-request pattern (bursty `/.php` and `/` from a few IPs), not by structure —
-unlike the Chrome-version checks below, this does **not** generalize to a
-template. Current entry: `Chrome/120.0.0.0` on Windows — logs.db's older
-aggregate showed this string as mostly organic, but recent request-pattern
-evidence (bursty scans from a handful of IPs over 3 months) overrides that
-for this exact UA.
 
 ### security-scan-regex
 Combined into a single precompiled regex: one pass over the URI covers
@@ -223,7 +214,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 209 tests:
+`function.test.js` covers all behaviours with 215 tests:
 
 | Suite | What is tested |
 |---|---|

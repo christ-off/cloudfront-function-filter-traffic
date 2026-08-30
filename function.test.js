@@ -98,10 +98,6 @@ describe("404 response for bad actors", () => {
       "Chrome/98, one below the floor",
     ],
     [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "exact-string block: bursty /.php and / requests from a handful of IPs over the last 3 months (logs.db's older aggregate showed this string as mostly organic; recent request-pattern evidence overrides that for this exact UA)",
-    ],
-    [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.70 Safari/537.36",
       "full build/patch version — post-UA-reduction Chrome never reports this",
     ],
