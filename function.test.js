@@ -285,6 +285,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Sharkey (like Discordbot)", "Sharkey"],
     ["Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)", "Baiduspider"],
     ["Mozilla/5.0 (compatible; Reflectionbot/1.0; https://reflection.ai/bot)", "Reflectionbot"],
+    ["Lightpanda/1.0 internal-testing-crawler", "Lightpanda"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
