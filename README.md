@@ -131,6 +131,9 @@ To add a bot: append `|your-token` (escaping `.`, `(`, `)` and `/` as
 `\.`, `\(`, `\)`, `\/`) and add a UA sample to the `blockedAgents` fixture in
 `function.test.js`.
 
+`seojuice-searchbot/` (SEOJuice, `seojuice.io`) is blocked because it does
+not obey `robots.txt`.
+
 ---
 
 ## Why a CloudFront Function (not Lambda@Edge)?
@@ -214,7 +217,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 215 tests:
+`function.test.js` covers all behaviours with 222 tests:
 
 | Suite | What is tested |
 |---|---|
