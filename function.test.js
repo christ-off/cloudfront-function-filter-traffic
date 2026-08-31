@@ -286,6 +286,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)", "Baiduspider"],
     ["Mozilla/5.0 (compatible; Reflectionbot/1.0; https://reflection.ai/bot)", "Reflectionbot"],
     ["Lightpanda/1.0 internal-testing-crawler", "Lightpanda"],
+    ["Mozilla/5.0 (compatible; ForestEngine/1.0; +https://forestengine.net/)", "ForestEngine"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
