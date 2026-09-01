@@ -288,6 +288,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Lightpanda/1.0 internal-testing-crawler", "Lightpanda"],
     ["Mozilla/5.0 (compatible; ForestEngine/1.0; +https://forestengine.net/)", "ForestEngine"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; SEOJuice-SearchBot/1.0; https://seojuice.io/bot", "SEOJuice-SearchBot"],
+    ["Mozilla/5.0 (compatible; coccocbot-web/1.0; http://help.coccoc.com/searchengine)", "coccocbot-web"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

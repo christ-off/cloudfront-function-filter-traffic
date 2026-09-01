@@ -134,6 +134,9 @@ To add a bot: append `|your-token` (escaping `.`, `(`, `)` and `/` as
 `seojuice-searchbot/` (SEOJuice, `seojuice.io`) is blocked because it does
 not obey `robots.txt`.
 
+`coccocbot` (Coc Coc, `coccoc.com`, a Vietnamese search engine crawler) is
+blocked at the user's request.
+
 ---
 
 ## Why a CloudFront Function (not Lambda@Edge)?
