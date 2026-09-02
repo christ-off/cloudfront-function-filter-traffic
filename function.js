@@ -87,7 +87,9 @@ function isFullVersionChromeUA(ua) {
 const MIN_CHROME_MAJOR = 99;
 
 // rationale: README.md#min-firefox-major
-const MIN_FIREFOX_MAJOR = 100;
+const MIN_FIREFOX_MAJOR = 139;
+// rationale: README.md#firefox-esr-115-exemption
+const FIREFOX_ESR_115_MAJOR = 115;
 
 function isBelowMinMajor(ua, versionRegex, minMajor) {
     const match = ua.match(versionRegex);
@@ -100,7 +102,11 @@ function isSuspiciousChromeUA(ua) {
 }
 
 function isSuspiciousFirefoxUA(ua) {
-    return isBelowMinMajor(ua, /firefox\/(\d+)\./, MIN_FIREFOX_MAJOR);
+    const match = ua.match(/firefox\/(\d+)\./);
+    if (!match) return false;
+    const major = parseInt(match[1], 10);
+    if (major === FIREFOX_ESR_115_MAJOR) return false;
+    return major < MIN_FIREFOX_MAJOR;
 }
 
 // rationale: README.md#blocked-bot-regex

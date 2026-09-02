@@ -76,6 +76,7 @@ describe("404 response for bad actors", () => {
   const badActorAgents = [
     ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0", "outdated Firefox 138 (below MIN_FIREFOX_MAJOR)"],
     ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "Google Image Proxy's stale Firefox/11.0 UA"],
     [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -685,18 +686,26 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through Tor Browser (Firefox ESR 128)", () => {
+  it("passes through Tor Browser (Firefox ESR 140)", () => {
     const event = makeEvent({
       uri: "/",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; rv:140.0) Gecko/20100101 Firefox/140.0",
     });
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through real Firefox 121 with its frozen rv:109.0 (Mozilla's IE11-workaround UA freeze)", () => {
+  it("passes through real Firefox 140 with its frozen rv:109.0 (Mozilla's IE11-workaround UA freeze)", () => {
     const event = makeEvent({
       uri: "/",
-      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0",
+      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/140.0",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through Firefox ESR 115 (Mozilla's extended-support train for legacy OSes)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Windows NT 6.1; rv:115.0) Gecko/20100101 Firefox/115.0",
     });
     expect(handler(event)).toEqual(event.request);
   });

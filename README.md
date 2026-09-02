@@ -23,8 +23,8 @@ Requests matching automated-scan patterns return `404`:
 - A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
 - A `Chrome/` major version below 99 (shipped March 2022) — logs.db shows no organic traffic below this floor (no real asset loads, or loads confined to a single bot/monitoring IP cluster), while majors 99+ show genuine multi-country sessions
 
-### 4. Malformed / outdated Firefox user-agent blocking (404)
-Requests with a `Firefox/` major version below 100, or a mismatched `rv:` vs. `Firefox/` version, return `404`. Exempted: Google Image Proxy's hardcoded `Firefox/11.0` UA (legitimate embedded-image fetching, not a scraper).
+### 4. Outdated Firefox user-agent blocking (404)
+Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
 
 ### 5. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body), `/sitemap.xml` (a real `200` empty `<urlset>` body), and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
@@ -114,9 +114,19 @@ deliberately much lower than [min-firefox-major](#min-firefox-major).
 
 ### min-firefox-major
 Firefox auto-updates, so a stale major version is a scraper with a
-hardcoded UA, not a real user. 100 shipped in May 2022 and every
-still-maintained ESR is far above it; Tor Browser also reports an ESR major
-(115+), so privacy users are unaffected.
+hardcoded UA, not a real user. 139 shipped in June 2025 and is below every
+Firefox release still in general support (current ESR is 140+); the one
+still-maintained release below it is carved out separately, see
+[firefox-esr-115-exemption](#firefox-esr-115-exemption).
+
+### firefox-esr-115-exemption
+Firefox ESR 115 is normally end-of-life, but Mozilla has repeatedly extended
+its security updates for Windows 7/8.1 and old macOS versions (currently
+through March 2027) — a real, still-patched browser used by a legacy-OS
+population, not a scraper. Its major is exempted by exact match rather than
+folded into the min-version floor, so it doesn't drag the floor down for
+everything else. Tor Browser also reports an ESR major (115 or higher), so
+privacy users on the current Tor ESR base remain unaffected either way.
 
 ### blocked-bot-regex
 Plain substrings matched against the (already lowercased) User-Agent header,
