@@ -21,7 +21,7 @@ Requests matching automated-scan patterns return `404`:
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
 - A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
-- A `Chrome/` major version below 99 (shipped March 2022) — logs.db shows no organic traffic below this floor (no real asset loads, or loads confined to a single bot/monitoring IP cluster), while majors 99+ show genuine multi-country sessions
+- A `Chrome/` major version below 149 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
 
 ### 4. Outdated Firefox user-agent blocking (404)
 Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
@@ -97,20 +97,54 @@ reports its actual build/patch number anymore, so a full version there (e.g.
 `Chrome/130.0.6723.70`) is a scraper/HTTP client using a stale, pre-freeze UA
 template. Two exclusions keep this from false-positiving:
 - below `CHROME_UA_FREEZE_MAJOR` (113), full versions were the real, expected
-  format — see `Chrome/99.0.4844.51` in the pass-through fixtures.
+  format (e.g. `Chrome/99.0.4844.51`); those majors are now caught by
+  [min-chrome-major](#min-chrome-major) anyway, but the guard still matters
+  for UAs that floor exempts.
 - a `compatible;` token means the UA is a self-identifying crawler (e.g.
   Bingbot ships `Chrome/116.0.1938.76` as part of its documented template,
   not a spoofed browser).
 
 ### min-chrome-major
-Below Chrome/99 (shipped March 2022), `logs.db` shows no organic signal at
-all: every major from 70–98 either never fetches this site's real assets
-(`main.css`, `bootstrap.bundle.min.js`) or does so only from a single narrow
-IP/country cluster (headless-browser monitoring tools, not real users). From
-99 up, genuine multi-country sessions loading real assets appear (confirmed
-at 106, 110, 116, 131) despite those majors being well over a year stale —
-Chrome users lag updates far more than Firefox users, so this floor is
-deliberately much lower than [min-firefox-major](#min-firefox-major).
+Floor set from `logs.db` (June–Sept 2026, Chrome 152 current) by counting
+distinct IPs that load the site's real assets (`main.css`,
+`bootstrap.bundle.min.js`) per Chrome major, then checking *who* they are.
+Majors 145–148 look organic at first glance (~300 asset-loading IPs) but
+are one bot fleet: the same Tencent/Huawei-cloud `/16`s (116.204, 1.92,
+113.44, 81.70, 43.138…) appear on all four majors, rotating UAs, plus
+GCP/AWS monitoring ranges on 148. The site's actual audience (FR/BE/CH/CA,
+~70 % of real sessions) is essentially absent below 149 in the last 30 days
+and shows up at 149 exactly (7 IPs), then 41 at 150, 95 at 151. Below 145
+the picture is the same as it always was: no asset loads, or a single
+narrow IP/country cluster.
+
+Cost/benefit at 149: blocks ~92 % of non-crawler "Chrome ≥ 99" requests
+(~30 k/month — mostly the `Chrome/120` and `Chrome/148` fleets) for zero
+observed real-audience sessions in the last month. Real collateral found
+over three months and handled via
+[chrome-floor-exemptions](#chrome-floor-exemptions): Samsung Internet and
+Feeder. Not worth exempting: Opera on 147/148 (5 FR IPs, but Opera tracks
+Chromium within 1–2 majors so those were fresh at the time), one Electron
+app on `Chrome/124`.
+
+This floor is ~3 majors behind current and **needs raising periodically**:
+the fleet will eventually move its UAs up, and every Chrome release
+(monthly, or faster) widens the gap. Re-run the per-major asset-loading-IP
+query before each bump.
+
+### chrome-floor-exemptions
+UAs skipped by [min-chrome-major](#min-chrome-major) (checked as one regex,
+same reason as [blocked-bot-regex](#blocked-bot-regex)):
+- `compatible;` — self-identifying crawlers: every Bingbot variant in
+  `logs.db` (7 UA shapes, ~6.9 k requests) carries it and reports
+  `Chrome/116`; Googlebot, YouBot, meta-webindexer, Google-InspectionTool
+  likewise. Crawlers that are unwanted are blocked by name in
+  [blocked-bot-regex](#blocked-bot-regex) regardless.
+- `samsungbrowser/` — Samsung Internet ships a Chromium several majors
+  behind Chrome (`SamsungBrowser/30` → `Chrome/143`, `/28` → `130`,
+  `/27` → `125`); a handful of real FR/BE/NL users over three months.
+- `feeder.co;` — Feeder, an RSS service, polls `/feed.xml` with a hardcoded
+  `Chrome/106` desktop UA (~1.2 k requests from 10 IPs, active daily).
+  Blocking it would silently drop its subscribers.
 
 ### min-firefox-major
 Firefox auto-updates, so a stale major version is a scraper with a

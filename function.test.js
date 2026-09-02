@@ -95,8 +95,16 @@ describe("404 response for bad actors", () => {
       "Chrome/80 (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
     ],
     [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "Chrome/148 (just below MIN_CHROME_MAJOR — rotating-UA cloud fleet in logs.db, no real audience)",
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Chrome/120 (below MIN_CHROME_MAJOR — the largest bot fleet in logs.db)",
+    ],
+    [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
-      "Chrome/98, one below the floor",
+      "Chrome/98 (pre-UA-reduction full version, far below the floor)",
     ],
     [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.70 Safari/537.36",
@@ -112,16 +120,15 @@ describe("404 response for bad actors", () => {
   // alone: real Chrome freezes its UA to major.0.0.0, and logs.db showed
   // exactly this template as the two most common real UAs in production
   // traffic (see CLAUDE.md: never block Chrome solely on the .0.0.0
-  // minor/patch version). MIN_CHROME_MAJOR below is a separate, much lower
-  // floor than Firefox's — Chrome users lag updates far more, and logs.db
-  // confirms genuine multi-country sessions loading real site assets on
-  // majors as old as 99, just none below it.
+  // minor/patch version). MIN_CHROME_MAJOR is a separate, evidence-backed
+  // floor on the version number (see README.md#min-chrome-major).
   const realChromeAgents = [
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36", "Chrome/148 macOS"],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120 macOS"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36", "Chrome/121 Windows"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36", "Chrome/99, exactly at the floor"],
-    ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36", "Chrome/139 Linux aarch64"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 macOS"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36", "Chrome/150 Windows"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36", "Chrome/149, exactly at the floor"],
+    ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36", "Chrome/151 Linux aarch64"],
+    ["Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36", "Samsung Internet 30 (lagging Chromium, exempted from the floor)"],
+    ["Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36", "Samsung Internet 27 (lagging Chromium, exempted from the floor)"],
   ];
 
   it.each(realChromeAgents)("passes through '%s' (%s)", (userAgent) => {
@@ -752,7 +759,7 @@ describe("pass-through", () => {
   it("passes through a real current Chrome on Linux x86_64 (aarch64 desktop Chrome would be unusual but is no longer specially blocked)", () => {
     const event = makeEvent({
       uri: "/",
-      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
     });
     expect(handler(event)).toEqual(event.request);
   });

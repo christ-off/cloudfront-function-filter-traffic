@@ -84,7 +84,9 @@ function isFullVersionChromeUA(ua) {
 }
 
 // rationale: README.md#min-chrome-major
-const MIN_CHROME_MAJOR = 99;
+const MIN_CHROME_MAJOR = 149;
+// rationale: README.md#chrome-floor-exemptions
+const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;/;
 
 // rationale: README.md#min-firefox-major
 const MIN_FIREFOX_MAJOR = 139;
@@ -98,6 +100,7 @@ function isBelowMinMajor(ua, versionRegex, minMajor) {
 }
 
 function isSuspiciousChromeUA(ua) {
+    if (chromeFloorExemptRegex.test(ua)) return false;
     return isBelowMinMajor(ua, /chrome\/(\d+)\./, MIN_CHROME_MAJOR);
 }
 
