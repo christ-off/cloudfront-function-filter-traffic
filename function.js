@@ -91,7 +91,7 @@ const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;/;
 // rationale: README.md#min-firefox-major
 const MIN_FIREFOX_MAJOR = 139;
 // rationale: README.md#firefox-esr-115-exemption
-const FIREFOX_ESR_115_MAJOR = 115;
+const firefoxFloorExemptRegex = /firefox\/115\./;
 
 function isBelowMinMajor(ua, versionRegex, minMajor) {
     const match = ua.match(versionRegex);
@@ -100,16 +100,11 @@ function isBelowMinMajor(ua, versionRegex, minMajor) {
 }
 
 function isSuspiciousChromeUA(ua) {
-    if (chromeFloorExemptRegex.test(ua)) return false;
-    return isBelowMinMajor(ua, /chrome\/(\d+)\./, MIN_CHROME_MAJOR);
+    return isBelowMinMajor(ua, /chrome\/(\d+)\./, MIN_CHROME_MAJOR) && !chromeFloorExemptRegex.test(ua);
 }
 
 function isSuspiciousFirefoxUA(ua) {
-    const match = ua.match(/firefox\/(\d+)\./);
-    if (!match) return false;
-    const major = parseInt(match[1], 10);
-    if (major === FIREFOX_ESR_115_MAJOR) return false;
-    return major < MIN_FIREFOX_MAJOR;
+    return isBelowMinMajor(ua, /firefox\/(\d+)\./, MIN_FIREFOX_MAJOR) && !firefoxFloorExemptRegex.test(ua);
 }
 
 // rationale: README.md#blocked-bot-regex
