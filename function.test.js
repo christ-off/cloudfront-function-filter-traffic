@@ -15,6 +15,10 @@ function expectNotFound(result) {
   expect(result.body).toBe("Not Found");
 }
 
+function expectNotBlocked(result) {
+  expect(result.statusCode).not.toBe(404);
+}
+
 // =====================================================
 // /.well-known/traffic-advice — Chrome Private Prefetch Proxy
 // =====================================================
@@ -35,8 +39,7 @@ describe("PHP file blocking", () => {
   });
 
     it("does not block a path that merely contains 'php' as a substring", () => {
-      const event = makeEvent({ uri: "/php-info" });
-      expect(handler(event)).toEqual(event.request);
+      expectNotBlocked(handler(makeEvent({ uri: "/php-info" })));
     });
 
   it("returns 404 for a .php5 file", () => {
@@ -180,16 +183,16 @@ describe("bad folder blocking", () => {
   });
 
   it("does not block a path that merely shares a prefix with 'login' or 'uploads'", () => {
-    expect(handler(makeEvent({ uri: "/loginpage" }))).toEqual(makeEvent({ uri: "/loginpage" }).request);
-    expect(handler(makeEvent({ uri: "/uploads2/x" }))).toEqual(makeEvent({ uri: "/uploads2/x" }).request);
+    expectNotBlocked(handler(makeEvent({ uri: "/loginpage" })));
+    expectNotBlocked(handler(makeEvent({ uri: "/uploads2/x" })));
   });
 
   it("does not block a path that merely shares a prefix with 'mail' or 'rc'", () => {
-    expect(handler(makeEvent({ uri: "/mailing-list" }))).toEqual(makeEvent({ uri: "/mailing-list" }).request);
-    expect(handler(makeEvent({ uri: "/rcfiles/x" }))).toEqual(makeEvent({ uri: "/rcfiles/x" }).request);
+    expectNotBlocked(handler(makeEvent({ uri: "/mailing-list" })));
+    expectNotBlocked(handler(makeEvent({ uri: "/rcfiles/x" })));
   });
 
-  it("does not block an ACME HTTP-01 domain-validation challenge under /.well-known/", () => {
+  it("does not block or redirect an ACME HTTP-01 domain-validation challenge under /.well-known/", () => {
     const event = makeEvent({ uri: "/.well-known/acme-challenge/some-token" });
     expect(handler(event)).toEqual(event.request);
   });
@@ -652,6 +655,61 @@ describe("ads.txt and llms.txt follow normal UA blocking", () => {
 });
 
 // =====================================================
+// Trailing-slash redirect (301) for directory-style URIs
+// =====================================================
+describe("trailing-slash redirect", () => {
+  it("redirects a directory-style path with no trailing slash", () => {
+    const result = handler(makeEvent({ uri: "/about" }));
+    expect(result.statusCode).toBe(301);
+    expect(result.statusDescription).toBe("Moved Permanently");
+    expect(result.headers.location.value).toBe("/about/");
+  });
+
+  it("redirects a nested directory-style path with no trailing slash", () => {
+    const result = handler(makeEvent({ uri: "/articles/my-post" }));
+    expect(result.headers.location.value).toBe("/articles/my-post/");
+  });
+
+  it("does not redirect a path that already has a trailing slash", () => {
+    const event = makeEvent({ uri: "/about/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not redirect the root path", () => {
+    const event = makeEvent({ uri: "/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it.each([
+    "/logo.png",
+    "/photos/vacation.jpg",
+    "/styles/main.css",
+    "/scripts/app.js",
+    "/fonts/icon.woff2",
+    "/data/report.pdf",
+  ])("does not redirect an asset path %s", (uri) => {
+    const event = makeEvent({ uri });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not redirect a path with a dot in an earlier segment but not the final one", () => {
+    const result = handler(makeEvent({ uri: "/v1.2/about" }));
+    expect(result.statusCode).toBe(301);
+    expect(result.headers.location.value).toBe("/v1.2/about/");
+  });
+
+  it("blocks a bad actor before ever considering the trailing-slash redirect", () => {
+    const result = handler(makeEvent({ uri: "/wp-admin", userAgent: "Mozilla/5.0" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("blocks a bad user-agent before ever considering the trailing-slash redirect", () => {
+    const result = handler(makeEvent({ uri: "/about", userAgent: "Scrapy/2.0" }));
+    expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
@@ -665,8 +723,8 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("returns the request object unchanged for a path with no trailing slash", () => {
-    const event = makeEvent({ uri: "/about" });
+  it("returns the request object unchanged for a file path with no trailing slash", () => {
+    const event = makeEvent({ uri: "/about.html" });
     expect(handler(event)).toEqual(event.request);
   });
 

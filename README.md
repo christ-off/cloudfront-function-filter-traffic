@@ -31,7 +31,13 @@ Requests matching 60+ known bot/scraper user-agent patterns return `404` on ever
 
 **Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
-### 6. Pass-through
+### 6. Trailing-slash redirect (301)
+A request for a directory-style path with no trailing slash (e.g. `/about`) gets a real `301` to the same path with `/` appended (e.g. `/about/`), instead of the origin's `302`. This runs **after** all bot/security filtering above, so a bad actor never reaches it. It's skipped for:
+- Paths that already end in `/` (including `/`)
+- Asset-looking paths — anything whose final path segment contains a `.` (`.jpg`, `.css`, `.js`, `.pdf`, etc.)
+- `/.well-known/...` paths (e.g. ACME HTTP-01 challenge tokens), which must be served at their exact URI
+
+### 7. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -193,6 +199,31 @@ the user's request.
 
 `mapthenetbot/` (`mapthenet.org`) is blocked at the user's request.
 
+### trailing-slash-redirect
+The S3 origin returns a `302` for a directory-style request with no trailing
+slash; a search engine or client following that redirect chain sees a
+temporary redirect where a permanent one is correct, and duplicate-content
+crawlers may index both the slash and non-slash URL separately. This check
+runs last, after every bot/security check, so a bad actor's request is
+blocked (404) before it can trigger a redirect, and the check itself is pure
+string inspection of `uri` — no need to touch `uriLower` or `ua`.
+
+"Asset-looking" is approximated as *the final path segment contains a dot* —
+cheaper than a file-extension allowlist and correct for every real static
+asset (`.jpg`, `.css`, `.js`, `.woff2`, `.pdf`, ...), since browsers never
+percent-encode a literal `.` (it's an RFC 3986 unreserved character). A dot
+earlier in the path (e.g. `/v1.2/about`) doesn't suppress the redirect —
+only a dot in the last segment does.
+
+`/.well-known/` is exempted by prefix: those paths (ACME HTTP-01 challenge
+tokens, `security.txt`, etc.) are flat resource files served at an exact URI
+per RFC 8615, never directories, and redirecting the CA's validation request
+away from the exact challenge path it expects is a needless failure mode to
+introduce.
+
+No query string is ever appended — this site never links to a directory-style
+page with one, so there's nothing to preserve.
+
 ---
 
 ## Why a CloudFront Function (not Lambda@Edge)?
@@ -276,7 +307,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 222 tests:
+`function.test.js` covers all behaviours with 241 tests:
 
 | Suite | What is tested |
 |---|---|
@@ -288,6 +319,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
 | Percent-encoded URI handling | URI decoding before pattern matching |
 | ads.txt and llms.txt | Follow normal UA blocking rules (no special bypass) |
+| Trailing-slash redirect | 301 for directory-style paths; assets, `/`, `/.well-known/`, and blocked bad actors are unaffected |
 | Pass-through | Normal requests forwarded unchanged |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.

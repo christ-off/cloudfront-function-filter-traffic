@@ -35,6 +35,11 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    // rationale: README.md#trailing-slash-redirect
+    if (needsTrailingSlashRedirect(request.uri)) {
+        return createTrailingSlashRedirectResponse(request.uri);
+    }
+
     // Pass through
     return request;
 }
@@ -112,6 +117,21 @@ const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-off
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
+}
+
+// rationale: README.md#trailing-slash-redirect
+function needsTrailingSlashRedirect(uri) {
+    if (uri.charAt(uri.length - 1) === '/') return false;
+    if (uri.indexOf('/.well-known/') === 0) return false;
+    return uri.lastIndexOf('.') <= uri.lastIndexOf('/');
+}
+
+function createTrailingSlashRedirectResponse(uri) {
+    return {
+        statusCode: 301,
+        statusDescription: 'Moved Permanently',
+        headers: {location: {value: uri + '/'}}
+    };
 }
 
 function createNotFoundResponse() {
