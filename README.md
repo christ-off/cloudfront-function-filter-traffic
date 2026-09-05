@@ -184,6 +184,10 @@ blocked at the user's request.
 `hubspot crawler` (HubSpot's own crawler, `hubspot.com`) is blocked at the
 user's request.
 
+`yandex` (all Yandex bots — YandexBot, YandexNews, YandexImages, etc.,
+`yandex.com`) is blocked at the user's request; the bare substring catches
+every Yandex bot variant rather than listing each one.
+
 ---
 
 ## Why a CloudFront Function (not Lambda@Edge)?
