@@ -188,6 +188,9 @@ user's request.
 `yandex.com`) is blocked at the user's request; the bare substring catches
 every Yandex bot variant rather than listing each one.
 
+`domain-harvester/` (`github.com/esc-city/domain-harvester`) is blocked at
+the user's request.
+
 ---
 
 ## Why a CloudFront Function (not Lambda@Edge)?
