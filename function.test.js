@@ -797,6 +797,14 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("passes through NewsBlur (newsblur.com) with its embedded UA token", () => {
+    const event = makeEvent({
+      uri: "/feed.xml",
+      userAgent: "NewsBlur Feed Fetcher - 1 subscriber - https://www.newsblur.com/site/7441742/post-tenebras-lire-articles-complets (Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("allows real Bingbot through", () => {
     const event = makeEvent({
       uri: "/",

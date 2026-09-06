@@ -151,6 +151,11 @@ same reason as [blocked-bot-regex](#blocked-bot-regex)):
 - `feeder.co;` — Feeder, an RSS service, polls `/feed.xml` with a hardcoded
   `Chrome/106` desktop UA (~1.2 k requests from 10 IPs, active daily).
   Blocking it would silently drop its subscribers.
+- `newsblur.com` — NewsBlur's Feed Fetcher and Page Fetcher self-identify
+  with `NewsBlur ... - https://www.newsblur.com/site/... (Mozilla/5.0 ...
+  Chrome/147.0.0.0 ... Edg/147.0.0.0)`; the domain in the prefix is the
+  identifying token, the parenthetical is a hardcoded browser-like UA that
+  will drift stale over time same as Feeder's.
 
 ### min-firefox-major
 Firefox auto-updates, so a stale major version is a scraper with a

@@ -91,7 +91,7 @@ function isFullVersionChromeUA(ua) {
 // rationale: README.md#min-chrome-major
 const MIN_CHROME_MAJOR = 149;
 // rationale: README.md#chrome-floor-exemptions
-const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;/;
+const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;|newsblur\.com/;
 
 // rationale: README.md#min-firefox-major
 const MIN_FIREFOX_MAJOR = 139;
