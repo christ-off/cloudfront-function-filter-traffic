@@ -73,6 +73,15 @@ legitimately-served site data — so only known credential-scan filenames
 (`secrets.json`, `config.json`, `service-account.json`, etc.) are matched
 there.
 
+`actuator` is in the folder-prefix group — Spring Boot's Actuator endpoints
+(`/actuator/configprops`, `/actuator/env`, etc.) are only ever probed by
+scanners against this static site, never served legitimately.
+
+`swp` (vim swap file) and a bare trailing `~` (generic editor backup, e.g.
+`wp-config.php~`) are both classic backup-file scan suffixes appended after
+a real filename/extension, so they're matched separately from the `\.ext$`
+group rather than folded into it.
+
 ### truncated-chrome-ua
 A real browser always continues past `AppleWebKit/537.36` with
 `(KHTML, like Gecko) Chrome/... Safari/...`. A string that stops dead right

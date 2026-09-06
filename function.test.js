@@ -544,6 +544,14 @@ describe(".sql and .bak file blocking", () => {
   it("returns 404 for a .bak file", () => {
     expectNotFound(handler(makeEvent({ uri: "/config.bak" })));
   });
+
+  it("returns 404 for a .swp file", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-config.php.swp" })));
+  });
+
+  it("returns 404 for a trailing ~ editor backup", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-config.php~" })));
+  });
 });
 
 // =====================================================
@@ -631,6 +639,8 @@ describe("admin folder blocking", () => {
     ["/wp-admin/admin-ajax.php", "wp-admin"],
     ["/phpmyadmin/index.php", "phpmyadmin"],
     ["/pma/index.php", "pma"],
+    ["/actuator/configprops", "actuator"],
+    ["/actuator/env", "actuator"],
   ];
 
   it.each(cases)("returns 404 for %s (%s)", (uri) => {
