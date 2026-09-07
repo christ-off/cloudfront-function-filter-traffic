@@ -82,6 +82,20 @@ scanners against this static site, never served legitimately.
 a real filename/extension, so they're matched separately from the `\.ext$`
 group rather than folded into it.
 
+`@fs`, `@vite` and `@id` are Vite dev-server internal endpoints (`@fs` in
+particular serves arbitrary files off the host filesystem, e.g.
+`/@fs/home/ec2-user/.aws/credentials`) — this is a static site with no Vite
+dev server behind it, so any request for these paths is a scanner, full stop.
+
+### path-traversal
+A literal `..` anywhere in the (already-decoded) URI path is blocked
+unconditionally, rather than only matching specific traversal targets
+(`.env`, `.aws/credentials`, etc.). A static site never legitimately needs
+`..` in a path segment, and this also catches multi-encoded evasion attempts
+(e.g. `..%25252f..%25252f...`) — the literal `..` survives even when the
+attacker double/triple-encodes the surrounding slashes to dodge a single
+`decodeURIComponent` pass.
+
 ### truncated-chrome-ua
 A real browser always continues past `AppleWebKit/537.36` with
 `(KHTML, like Gecko) Chrome/... Safari/...`. A string that stops dead right
