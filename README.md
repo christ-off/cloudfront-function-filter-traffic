@@ -60,7 +60,7 @@ a correct, on-brand "you're not welcome here" rather than a generic miss.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
-then truncated/malformed/full-version Chrome UAs, then outdated Firefox UAs,
+then truncated/malformed Chrome UAs, then outdated Chrome/Firefox UAs,
 ordered most- to least-frequent per `logs.db` so common cases short-circuit
 before rarer, costlier checks run.
 
@@ -128,20 +128,6 @@ immediately before the `Chrome/` token, so a UA with `chrome/` but no
 `applewebkit` is a hand-built/incomplete UA, not a browser — catches
 malformed strings the exact-template regexes above don't cover (e.g.
 `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0`).
-
-### full-version-chrome-ua
-Chrome's User-Agent Reduction (fully rolled out by Chrome 113, 2023) froze
-the Chrome token to `major.0.0.0` for every platform — real Chrome 113+ never
-reports its actual build/patch number anymore, so a full version there (e.g.
-`Chrome/130.0.6723.70`) is a scraper/HTTP client using a stale, pre-freeze UA
-template. Two exclusions keep this from false-positiving:
-- below `CHROME_UA_FREEZE_MAJOR` (113), full versions were the real, expected
-  format (e.g. `Chrome/99.0.4844.51`); those majors are now caught by
-  [min-chrome-major](#min-chrome-major) anyway, but the guard still matters
-  for UAs that floor exempts.
-- a `compatible;` token means the UA is a self-identifying crawler (e.g.
-  Bingbot ships `Chrome/116.0.1938.76` as part of its documented template,
-  not a spoofed browser).
 
 ### min-chrome-major
 Floor set from `logs.db` (June–Sept 2026, Chrome 152 current) by counting

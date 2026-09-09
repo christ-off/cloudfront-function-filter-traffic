@@ -51,7 +51,6 @@ function isBadActor(uri, ua) {
         isSecurityScanUri(uri) ||
         isTruncatedChromeUA(ua) ||
         isMalformedChromeClaim(ua) ||
-        isFullVersionChromeUA(ua) ||
         isSuspiciousChromeUA(ua) ||
         isSuspiciousFirefoxUA(ua);
 }
@@ -88,18 +87,6 @@ function isTruncatedChromeUA(ua) {
 // rationale: README.md#malformed-chrome-claim
 function isMalformedChromeClaim(ua) {
     return ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1;
-}
-
-// rationale: README.md#full-version-chrome-ua
-const CHROME_UA_FREEZE_MAJOR = 113;
-const chromeVersionRegex = /chrome\/(\d+)\.(\d+\.\d+\.\d+)/;
-
-function isFullVersionChromeUA(ua) {
-    if (ua.indexOf('compatible;') !== -1) return false;
-    const match = ua.match(chromeVersionRegex);
-    if (!match) return false;
-    if (parseInt(match[1], 10) < CHROME_UA_FREEZE_MAJOR) return false;
-    return match[2] !== '0.0.0';
 }
 
 // rationale: README.md#min-chrome-major
