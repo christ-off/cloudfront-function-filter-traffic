@@ -175,6 +175,14 @@ same reason as [blocked-bot-regex](#blocked-bot-regex)):
   Chrome/147.0.0.0 ... Edg/147.0.0.0)`; the domain in the prefix is the
   identifying token, the parenthetical is a hardcoded browser-like UA that
   will drift stale over time same as Feeder's.
+- `chrome-lighthouse` — Google Lighthouse (and PageSpeed Insights, which
+  runs it) appends ` Chrome-Lighthouse` to whatever UA it's invoked with,
+  which is often an old hardcoded Chrome major. The token is public and
+  documented, not a secret, so this isn't security-by-obscurity — it's
+  safe to exempt because unwanted crawlers are still blocked by name in
+  [blocked-bot-regex](#blocked-bot-regex) regardless of what Chrome
+  version they claim, and a scraper wanting past the floor could just
+  claim a current Chrome major instead of bothering to fake this token.
 
 ### min-firefox-major
 Firefox auto-updates, so a stale major version is a scraper with a

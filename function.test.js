@@ -812,6 +812,14 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("passes through Chrome-Lighthouse with an old embedded Chrome major", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Chrome-Lighthouse",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("allows real Bingbot through", () => {
     const event = makeEvent({
       uri: "/",
