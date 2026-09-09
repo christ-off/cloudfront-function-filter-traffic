@@ -77,7 +77,6 @@ describe("404 response for bad actors", () => {
     ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0", "outdated Firefox 138 (below MIN_FIREFOX_MAJOR)"],
-    ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "Google Image Proxy's stale Firefox/11.0 UA"],
     [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       "truncated Windows UA missing KHTML/Chrome/Safari tail",
@@ -777,6 +776,14 @@ describe("pass-through", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (Windows NT 6.1; rv:115.0) Gecko/20100101 Firefox/115.0",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("passes through Google Image Proxy despite its stale Firefox/11.0 UA", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",
     });
     expect(handler(event)).toEqual(event.request);
   });
