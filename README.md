@@ -200,6 +200,15 @@ folded into the min-version floor, so it doesn't drag the floor down for
 everything else. Tor Browser also reports an ESR major (115 or higher), so
 privacy users on the current Tor ESR base remain unaffected either way.
 
+The same regex also exempts `googleimageproxy` (ggpht.com's GoogleImageProxy,
+e.g. `Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com
+GoogleImageProxy)`) — Google's proxy that fetches remote images for Gmail/
+Google services. It hardcodes an ancient Firefox/IE-era UA rather than a
+real browser's, but it's a legitimate fetcher identified by its own token, not
+a scraper impersonating a browser, so it's exempted the same way as the
+Chrome floor's named exemptions in
+[chrome-floor-exemptions](#chrome-floor-exemptions).
+
 ### blocked-bot-regex
 Plain substrings matched against the (already lowercased) User-Agent header,
 as ONE regex literal. Written out literally rather than built at runtime

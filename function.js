@@ -97,7 +97,7 @@ const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;|newsblu
 // rationale: README.md#min-firefox-major
 const MIN_FIREFOX_MAJOR = 139;
 // rationale: README.md#firefox-esr-115-exemption
-const firefoxFloorExemptRegex = /firefox\/115\./;
+const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy/;
 
 function isBelowMinMajor(ua, versionRegex, minMajor) {
     const match = ua.match(versionRegex);
