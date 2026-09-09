@@ -4,3 +4,4 @@
 /cloudfront-function-filter-traffic.iml
 .DS_Store
 /coverage/
+/.vitest/

@@ -15,7 +15,7 @@ Requests with no `User-Agent` header, an empty value, or whitespace-only value r
 Requests matching automated-scan patterns return `404`:
 - URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.config`, `.ya?ml`, `.toml`, `.conf`, `.key`, `.pem`, `.axd`, `.boto`, `.s3cfg`, `.npmrc`, `.htpasswd`, `.tfstate`
 - Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, etc.
-- Sensitive paths: `/.env`, `/.git`, `/.docker/`, known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
+- Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
 ### 3. Spoofed / malformed / stale Chrome UA blocking (404)
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
@@ -34,8 +34,7 @@ Requests matching 60+ known bot/scraper user-agent patterns return `404` on ever
 ### 6. Trailing-slash redirect (301)
 A request for a directory-style path with no trailing slash (e.g. `/about`) gets a real `301` to the same path with `/` appended (e.g. `/about/`), instead of the origin's `302`. This runs **after** all bot/security filtering above, so a bad actor never reaches it. It's skipped for:
 - Paths that already end in `/` (including `/`)
-- Asset-looking paths — anything whose final path segment contains a `.` (`.jpg`, `.css`, `.js`, `.pdf`, etc.)
-- `/.well-known/...` paths (e.g. ACME HTTP-01 challenge tokens), which must be served at their exact URI
+- Asset-looking paths — anything whose final path segment contains a `.` (`.jpg`, `.css`, `.js`, `.pdf`, etc.) — dotfile paths like `/.well-known/...` never reach this check, since they're already blocked by dotfile-path filtering above
 
 ### 7. Pass-through
 All other requests are forwarded to the origin unchanged.
@@ -60,18 +59,29 @@ sitemap / empty feed instead of a 404 for bad actors and blocked bots alike —
 a correct, on-brand "you're not welcome here" rather than a generic miss.
 
 ### bad-actor-check-order
-`isBadActor` runs security scans, then truncated/malformed/full-version
-Chrome UAs, then outdated Firefox UAs, ordered most- to least-frequent per
-`logs.db` so common cases short-circuit before rarer, costlier checks run.
+`isBadActor` runs path traversal, then dotfile paths, then security scans,
+then truncated/malformed/full-version Chrome UAs, then outdated Firefox UAs,
+ordered most- to least-frequent per `logs.db` so common cases short-circuit
+before rarer, costlier checks run.
+
+### dotfile-path
+Any path containing `/.` (a dotfile or dot-directory segment) is blocked
+unconditionally, no exceptions — this includes `/.well-known/...`: the site
+has no ACME HTTP-01 challenge (certs are provisioned another way) and serves
+nothing else under a dot-prefixed path, so there's nothing there worth
+excepting. A single generic rule covers `/.env`, `/.git`, `/.docker/`,
+`/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/`, and any other
+credential/config dotfile a scanner might probe for, without needing a
+per-filename entry.
 
 ### security-scan-regex
 Combined into a single precompiled regex: one pass over the URI covers
-extensions, folder prefixes, `/.env`, `/.git`, `/.docker` and known
-credential-scan filenames. The trailing `.json` group is **not** a blanket
-`.json$` rule — `/about/data/*.json` and `/pagefind/*.json` are real,
-legitimately-served site data — so only known credential-scan filenames
-(`secrets.json`, `config.json`, `service-account.json`, etc.) are matched
-there.
+extensions, folder prefixes, and known credential-scan filenames (dotfiles
+are handled separately by [dotfile-path](#dotfile-path)). The trailing
+`.json` group is **not** a blanket `.json$` rule — `/about/data/*.json` and
+`/pagefind/*.json` are real, legitimately-served site data — so only known
+credential-scan filenames (`secrets.json`, `config.json`,
+`service-account.json`, etc.) are matched there.
 
 `actuator` is in the folder-prefix group — Spring Boot's Actuator endpoints
 (`/actuator/configprops`, `/actuator/env`, etc.) are only ever probed by
@@ -251,12 +261,6 @@ percent-encode a literal `.` (it's an RFC 3986 unreserved character). A dot
 earlier in the path (e.g. `/v1.2/about`) doesn't suppress the redirect —
 only a dot in the last segment does.
 
-`/.well-known/` is exempted by prefix: those paths (ACME HTTP-01 challenge
-tokens, `security.txt`, etc.) are flat resource files served at an exact URI
-per RFC 8615, never directories, and redirecting the CA's validation request
-away from the exact challenge path it expects is a needless failure mode to
-introduce.
-
 No query string is ever appended — this site never links to a directory-style
 page with one, so there's nothing to preserve.
 
@@ -355,7 +359,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
 | Percent-encoded URI handling | URI decoding before pattern matching |
 | ads.txt and llms.txt | Follow normal UA blocking rules (no special bypass) |
-| Trailing-slash redirect | 301 for directory-style paths; assets, `/`, `/.well-known/`, and blocked bad actors are unaffected |
+| Trailing-slash redirect | 301 for directory-style paths; assets, `/`, and blocked bad actors (dotfile paths included) are unaffected |
 | Pass-through | Normal requests forwarded unchanged |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.

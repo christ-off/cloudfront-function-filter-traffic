@@ -20,9 +20,6 @@ function expectNotBlocked(result) {
 }
 
 // =====================================================
-// /.well-known/traffic-advice — Chrome Private Prefetch Proxy
-// =====================================================
-// =====================================================
 // Security scan blocking — PHP files → 404
 // =====================================================
 describe("PHP file blocking", () => {
@@ -192,11 +189,6 @@ describe("bad folder blocking", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/rcfiles/x" })));
   });
 
-  it("does not block or redirect an ACME HTTP-01 domain-validation challenge under /.well-known/", () => {
-    const event = makeEvent({ uri: "/.well-known/acme-challenge/some-token" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
   it("blocking is case-insensitive due to URI normalisation", () => {
     expectNotFound(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
   });
@@ -293,7 +285,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; OpenClaw-CN-Reach/1.0)", "OpenClaw-CN-Reach"],
     ["Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/bots)", "Discordbot"],
     ["Sharkey (like Discordbot)", "Sharkey"],
-    ["Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)", "Baiduspider"],
     ["Mozilla/5.0 (compatible; Reflectionbot/1.0; https://reflection.ai/bot)", "Reflectionbot"],
     ["Lightpanda/1.0 internal-testing-crawler", "Lightpanda"],
     ["Mozilla/5.0 (compatible; ForestEngine/1.0; +https://forestengine.net/)", "ForestEngine"],
@@ -512,27 +503,29 @@ describe("percent-encoded URI handling", () => {
 
 
 // =====================================================
-// Security scan blocking — .env and .git URIs → 404
+// Dotfile / dot-directory path blocking → 404
 // =====================================================
-describe(".env and .git URI blocking", () => {
-  it("returns 404 for /.env", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.env" })));
+describe("dotfile path blocking", () => {
+  const dotfileCases = [
+    "/.env",
+    "/.env.local",
+    "/config/.env",
+    "/.git/config",
+    "/.git",
+    "/.docker/config.json",
+    "/.netrc",
+    "/.yarnrc",
+    "/.aws/credentials",
+    "/.ssh/id_rsa",
+    "/.bash_history",
+  ];
+
+  it.each(dotfileCases)("returns 404 for %s", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 
-  it("returns 404 for /.env.local", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.env.local" })));
-  });
-
-  it("returns 404 for /config/.env inside a subdirectory", () => {
-    expectNotFound(handler(makeEvent({ uri: "/config/.env" })));
-  });
-
-  it("returns 404 for /.git/config", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.git/config" })));
-  });
-
-  it("returns 404 for /.git (bare)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.git" })));
+  it("returns 404 for /.well-known/ paths (no exceptions, no ACME challenge on this site)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/.well-known/security.txt" })));
   });
 });
 
