@@ -499,6 +499,10 @@ describe("percent-encoded URI handling", () => {
     const result = handler(makeEvent({ uri: "/%zz/path" }));
     expect(result.statusCode).toBe(404);
   });
+
+  it("returns 404 for a double-encoded dotfile path (%252F hiding the / from a single decode)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/admin%252F.env" })));
+  });
 });
 
 

@@ -51,7 +51,10 @@ identifier the code points at.
 
 ### uri-decoding
 Only ~3% of URIs contain a `%`-escape (per `logs.db`); the rest skip the
-`decodeURIComponent` call entirely.
+`decodeURIComponent` call entirely. Decoding loops (capped at 3 rounds) rather
+than running once, so a double-encoded probe like `/admin%252F.env` — which a
+single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
+dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
 `/robots.txt`, `/sitemap.xml` and `/feed.xml` get a real disallow-all / empty

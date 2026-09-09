@@ -11,7 +11,11 @@ function handler(event) {
     let uri = request.uri || '';
     if (uri.indexOf('%') !== -1) {
         try {
-            uri = decodeURIComponent(uri);
+            for (let i = 0; i < 3 && uri.indexOf('%') !== -1; i++) {
+                const decoded = decodeURIComponent(uri);
+                if (decoded === uri) break;
+                uri = decoded;
+            }
         } catch (_e) {
             return createNotFoundResponse();
         }
