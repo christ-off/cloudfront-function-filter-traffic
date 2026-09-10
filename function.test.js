@@ -296,6 +296,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 (compatible; AionBot/1.0)", "AionBot"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; TikTokSpider; ttspider-feedback@tiktok.com)", "TikTokSpider"],
     ["OpenTheBoxBot/1.0", "OpenTheBoxBot"],
+    ["Mozilla/5.0 (compatible; VeryHip/0.1; https://veryhip.com/bot.html)", "VeryHip"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {

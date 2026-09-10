@@ -258,6 +258,8 @@ user's request.
 
 `opentheboxbot/` is blocked at the user's request.
 
+`veryhip/` (`veryhip.com`) is blocked at the user's request.
+
 ### trailing-slash-redirect
 The S3 origin returns a `302` for a directory-style request with no trailing
 slash; a search engine or client following that redirect chain sees a
