@@ -264,6 +264,9 @@ user's request.
 self-identifying as an "authorized self-check" — the origin has no
 allowlist for it, so it's treated like any other unsolicited scanner.
 
+`censysinspect/` (Censys internet-scanning bot, `about.censys.io`) is
+blocked at the user's request.
+
 `petalbot` (Huawei's search crawler, `webmaster.petalsearch.com`) is no
 longer blocked: it honors the `robots.txt` disallow list, so it's allowed
 through like any other well-behaved crawler.
