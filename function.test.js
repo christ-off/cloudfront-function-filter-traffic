@@ -305,6 +305,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; VeryHip/0.1; https://veryhip.com/bot.html)", "VeryHip"],
     ["CMS-Security-Auditor/1.0 ( authorized self-check; contact: local-admin)", "CMS-Security-Auditor"],
     ["Mozilla/5.0 (compatible; CensysInspect/1.1; https://about.censys.io/)", "CensysInspect"],
+    ["Mozilla/5.0 (compatible; PublicWWWBot/1.0; https://publicwww.com/bot.html)", "PublicWWWBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
