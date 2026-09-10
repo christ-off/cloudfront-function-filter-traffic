@@ -186,6 +186,11 @@ same reason as [blocked-bot-regex](#blocked-bot-regex)):
   [blocked-bot-regex](#blocked-bot-regex) regardless of what Chrome
   version they claim, and a scraper wanting past the floor could just
   claim a current Chrome major instead of bothering to fake this token.
+- `claudebot/` — Anthropic's crawler (`claudebot@anthropic.com`) self-
+  identifies with a browser-shaped UA that embeds a hardcoded Chrome
+  version and no `compatible;` token, so it isn't caught by that
+  exemption; it obeys `robots.txt`, so it's exempted at the user's
+  request rather than blocked by the Chrome floor.
 
 ### min-firefox-major
 Firefox auto-updates, so a stale major version is a scraper with a

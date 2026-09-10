@@ -143,6 +143,14 @@ describe("404 response for bad actors", () => {
     });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("passes through ClaudeBot despite a below-floor hardcoded Chrome version (obeys robots.txt)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36; ClaudeBot/1.0; claudebot@anthropic.com)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
