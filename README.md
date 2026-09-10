@@ -260,6 +260,10 @@ user's request.
 
 `veryhip/` (`veryhip.com`) is blocked at the user's request.
 
+`cms-security-auditor/` is blocked at the user's request, despite
+self-identifying as an "authorized self-check" — the origin has no
+allowlist for it, so it's treated like any other unsolicited scanner.
+
 ### trailing-slash-redirect
 The S3 origin returns a `302` for a directory-style request with no trailing
 slash; a search engine or client following that redirect chain sees a
