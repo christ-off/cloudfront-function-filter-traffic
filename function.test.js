@@ -135,6 +135,14 @@ describe("404 response for bad actors", () => {
     const event = makeEvent({ uri: "/", userAgent });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("passes through PetalBot (obeys robots.txt, no longer blocked)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (compatible;PetalBot; https://webmaster.petalsearch.com/site/petalbot)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
@@ -229,8 +237,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BuiltWith/1.4; rb.gy/xprgqj) Chrome/124.0.0.0 Safari/537.36", "BuiltWith scraper"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ShapBot/0.1.0", "ShapBot scraper"],
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
-    ["Mozilla/5.0 (Linux; Android 7.0;) AppleWebKit/537.36 (HTML, like Gecko) Mobile Safari/537.36 (compatible; PetalBot; https://webmaster.petalsearch.com/site/petalbot)", "PetalBot full UA"],
-    ["Mozilla/5.0 (compatible;PetalBot; https://webmaster.petalsearch.com/site/petalbot)", "PetalBot compact UA"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
     ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],

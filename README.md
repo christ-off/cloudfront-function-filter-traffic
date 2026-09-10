@@ -29,7 +29,7 @@ Requests with a `Firefox/` major version below 139 return `404`. Exempted: major
 ### 5. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body), `/sitemap.xml` (a real `200` empty `<urlset>` body), and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
 
-**Blocked patterns include:** scrapers (Scrapy, PetalBot, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
+**Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
 ### 6. Trailing-slash redirect (301)
 A request for a directory-style path with no trailing slash (e.g. `/about`) gets a real `301` to the same path with `/` appended (e.g. `/about/`), instead of the origin's `302`. This runs **after** all bot/security filtering above, so a bad actor never reaches it. It's skipped for:
@@ -263,6 +263,10 @@ user's request.
 `cms-security-auditor/` is blocked at the user's request, despite
 self-identifying as an "authorized self-check" — the origin has no
 allowlist for it, so it's treated like any other unsolicited scanner.
+
+`petalbot` (Huawei's search crawler, `webmaster.petalsearch.com`) is no
+longer blocked: it honors the `robots.txt` disallow list, so it's allowed
+through like any other well-behaved crawler.
 
 ### trailing-slash-redirect
 The S3 origin returns a `302` for a directory-style request with no trailing
