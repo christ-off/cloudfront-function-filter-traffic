@@ -274,6 +274,11 @@ through like any other well-behaved crawler.
 `publicwwwbot/` (PublicWWW, `publicwww.com`, a source-code search engine
 crawler) is blocked at the user's request.
 
+`Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
+`linkwarden.app`, fetching link previews/archives on behalf of its users) must
+**not** be blocked — it's legitimate self-hosted server-side traffic, not a
+scraper.
+
 ### trailing-slash-redirect
 The S3 origin returns a `302` for a directory-style request with no trailing
 slash; a search engine or client following that redirect chain sees a
