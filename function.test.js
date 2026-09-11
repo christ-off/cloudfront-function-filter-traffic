@@ -171,6 +171,7 @@ describe("bad folder blocking", () => {
     ["/roundcube/", "roundcube"],
     ["/mail/", "mail"],
     ["/rc/", "rc"],
+    ["/api/v2/config", "api (security scan)"],
   ];
 
   it.each(cases)("returns 404 for %s (%s)", (uri) => {

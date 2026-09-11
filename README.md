@@ -14,7 +14,7 @@ Requests with no `User-Agent` header, an empty value, or whitespace-only value r
 ### 2. Security scan blocking (404)
 Requests matching automated-scan patterns return `404`:
 - URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.config`, `.ya?ml`, `.toml`, `.conf`, `.key`, `.pem`, `.axd`, `.boto`, `.s3cfg`, `.npmrc`, `.htpasswd`, `.tfstate`
-- Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, etc.
+- Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
 - Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
 ### 3. Spoofed / malformed / stale Chrome UA blocking (404)
@@ -89,6 +89,11 @@ credential-scan filenames (`secrets.json`, `config.json`,
 `actuator` is in the folder-prefix group — Spring Boot's Actuator endpoints
 (`/actuator/configprops`, `/actuator/env`, etc.) are only ever probed by
 scanners against this static site, never served legitimately.
+
+`api` is in the folder-prefix group — every `/api/*` path against this static
+site is a security scan (the origin is an S3 static website with no API
+backend). Probes like `/api/v2/config`, `/api/v1/users`, etc. are automated
+scanners looking for API endpoints that don't exist here.
 
 `swp` (vim swap file) and a bare trailing `~` (generic editor backup, e.g.
 `wp-config.php~`) are both classic backup-file scan suffixes appended after
