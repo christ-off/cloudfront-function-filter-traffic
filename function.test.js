@@ -307,6 +307,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["CMS-Security-Auditor/1.0 ( authorized self-check; contact: local-admin)", "CMS-Security-Auditor"],
     ["Mozilla/5.0 (compatible; CensysInspect/1.1; https://about.censys.io/)", "CensysInspect"],
     ["Mozilla/5.0 (compatible; PublicWWWBot/1.0; https://publicwww.com/bot.html)", "PublicWWWBot"],
+    ["wp2shell/2.0", "wp2shell scanner"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
