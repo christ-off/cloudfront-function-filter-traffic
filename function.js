@@ -56,6 +56,7 @@ function isBadActor(uri, ua) {
         isTruncatedChromeUA(ua) ||
         isMalformedChromeClaim(ua) ||
         isSuspiciousChromeUA(ua) ||
+        isSuspiciousEdgeUA(ua) ||
         isSuspiciousFirefoxUA(ua);
 }
 
@@ -98,6 +99,9 @@ const MIN_CHROME_MAJOR = 149;
 // rationale: README.md#chrome-floor-exemptions
 const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;|newsblur\.com|chrome-lighthouse/;
 
+// rationale: README.md#min-edge-major
+const MIN_EDGE_MAJOR = 150;
+
 // rationale: README.md#min-firefox-major
 const MIN_FIREFOX_MAJOR = 139;
 // rationale: README.md#firefox-esr-115-exemption
@@ -111,6 +115,10 @@ function isBelowMinMajor(ua, versionRegex, minMajor) {
 
 function isSuspiciousChromeUA(ua) {
     return isBelowMinMajor(ua, /chrome\/(\d+)\./, MIN_CHROME_MAJOR) && !chromeFloorExemptRegex.test(ua);
+}
+
+function isSuspiciousEdgeUA(ua) {
+    return isBelowMinMajor(ua, /edg\/(\d+)\./, MIN_EDGE_MAJOR) && !chromeFloorExemptRegex.test(ua);
 }
 
 function isSuspiciousFirefoxUA(ua) {

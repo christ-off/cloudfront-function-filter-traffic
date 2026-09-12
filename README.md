@@ -17,11 +17,12 @@ Requests matching automated-scan patterns return `404`:
 - Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
 - Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
-### 3. Spoofed / malformed / stale Chrome UA blocking (404)
+### 3. Spoofed / malformed / stale Chrome/Edge UA blocking (404)
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
 - A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
 - A `Chrome/` major version below 149 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
+- An `Edg/` (desktop Edge) major version below 150 — same stale-UA-fleet pattern as Chrome, checked independently since a scraper can fake either token. Same exemptions as the Chrome floor.
 
 ### 4. Outdated Firefox user-agent blocking (404)
 Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
@@ -63,7 +64,7 @@ a correct, on-brand "you're not welcome here" rather than a generic miss.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
-then truncated/malformed Chrome UAs, then outdated Chrome/Firefox UAs,
+then truncated/malformed Chrome UAs, then outdated Chrome/Edge/Firefox UAs,
 ordered most- to least-frequent per `logs.db` so common cases short-circuit
 before rarer, costlier checks run.
 
@@ -164,9 +165,22 @@ the fleet will eventually move its UAs up, and every Chrome release
 (monthly, or faster) widens the gap. Re-run the per-major asset-loading-IP
 query before each bump.
 
+### min-edge-major
+Desktop Edge (`Edg/`) is Chromium underneath, so it gets the same
+stale-fleet treatment as [min-chrome-major](#min-chrome-major), checked
+independently rather than folded into the Chrome floor — a scraper can hold
+one token fixed while bumping the other. Per the user's own `logs.db`
+analysis, real Edge sessions only appear from major 150 up; below that is
+the same rotating cloud-fleet pattern as sub-149 Chrome. Reuses
+[chrome-floor-exemptions](#chrome-floor-exemptions) rather than a separate
+list — NewsBlur's hardcoded fetcher UA (see below) carries both a stale
+`Chrome/147` and a stale `Edg/147`, so the same exemption has to cover both
+tokens or it breaks.
+
 ### chrome-floor-exemptions
-UAs skipped by [min-chrome-major](#min-chrome-major) (checked as one regex,
-same reason as [blocked-bot-regex](#blocked-bot-regex)):
+UAs skipped by [min-chrome-major](#min-chrome-major) and
+[min-edge-major](#min-edge-major) (checked as one regex, same reason as
+[blocked-bot-regex](#blocked-bot-regex)):
 - `compatible;` — self-identifying crawlers: every Bingbot variant in
   `logs.db` (7 UA shapes, ~6.9 k requests) carries it and reports
   `Chrome/116`; Googlebot, YouBot, meta-webindexer, Google-InspectionTool
