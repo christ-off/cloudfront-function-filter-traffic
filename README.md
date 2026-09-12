@@ -297,6 +297,13 @@ the user's request.
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
 scraper.
 
+`Synapse (bot; https://github.com/matrix-org/synapse)` must **not** be
+blocked — Synapse is an open-source Matrix homeserver fetching URL previews
+on behalf of its users, not a scraper. It isn't currently matched by
+[blocked-bot-regex](#blocked-bot-regex) (no generic `bot` substring is
+matched, only specific named tokens), noted here so it stays excluded if the
+regex is ever extended.
+
 ### trailing-slash-redirect
 The S3 origin returns a `302` for a directory-style request with no trailing
 slash; a search engine or client following that redirect chain sees a
