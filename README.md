@@ -239,10 +239,6 @@ blocked at the user's request.
 `hubspot crawler` (HubSpot's own crawler, `hubspot.com`) is blocked at the
 user's request.
 
-`yandex` (all Yandex bots — YandexBot, YandexNews, YandexImages, etc.,
-`yandex.com`) is blocked at the user's request; the bare substring catches
-every Yandex bot variant rather than listing each one.
-
 `domain-harvester/` (`github.com/esc-city/domain-harvester`) is blocked at
 the user's request.
 
