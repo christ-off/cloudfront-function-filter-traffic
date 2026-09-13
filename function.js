@@ -1,5 +1,6 @@
 function handler(event) {
     const request = event.request;
+    const viewerIp = (event.viewer && event.viewer.ip) || '';
 
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
@@ -26,7 +27,7 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // rationale: README.md#bad-actor-response-mapping
-    if (isBadActor(uriLower, ua) || isBlockedBot(ua)) {
+    if (isBadActor(uriLower, ua) || isBlockedBot(ua) || isBlockedIpRange(viewerIp)) {
         if (uriLower === '/robots.txt') {
             return createDisallowAllRobotsResponse();
         }
@@ -130,6 +131,13 @@ const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-off
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
+}
+
+// rationale: README.md#ip-range-blocking
+const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.)/;
+
+function isBlockedIpRange(ip) {
+    return blockedIpRangeRegex.test(ip);
 }
 
 // rationale: README.md#trailing-slash-redirect

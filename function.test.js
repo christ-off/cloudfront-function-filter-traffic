@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
   }
   Object.assign(headers, extraHeaders);
-  return { request: { uri, headers } };
+  const event = { request: { uri, headers } };
+  if (ip !== undefined) {
+    event.viewer = { ip };
+  }
+  return event;
 }
 
 function expectNotFound(result) {
@@ -357,6 +361,56 @@ describe("scrapper bot blocking by user-agent", () => {
   it.each(feedPaths)("still lets a normal browser through on %s", (uri) => {
     const event = makeEvent({ uri, userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
     expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// IP range blocking (Techoff SRV Limited)
+// =====================================================
+describe("IP range blocking", () => {
+  const blockedIps = [
+    ["45.148.10.0", "45.148.10.0/24 start"],
+    ["45.148.10.255", "45.148.10.0/24 end"],
+    ["93.123.109.42", "93.123.109.0/24"],
+    ["195.178.110.1", "195.178.110.0/24"],
+  ];
+
+  it.each(blockedIps)("blocks %s (%s)", (ip) => {
+    const result = handler(makeEvent({ ip }));
+    expect(result.statusCode).toBe(404);
+    expect(result.body).toBe("Not Found");
+  });
+
+  const allowedIps = [
+    ["45.148.11.0", "just past the 45.148.10.0/24 boundary"],
+    ["45.148.9.255", "just before the 45.148.10.0/24 boundary"],
+    ["93.123.108.255", "just before the 93.123.109.0/24 boundary"],
+    ["195.178.111.0", "just past the 195.178.110.0/24 boundary"],
+    ["8.8.8.8", "unrelated IP"],
+  ];
+
+  it.each(allowedIps)("does not block %s (%s)", (ip) => {
+    const event = makeEvent({ ip });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not block when no viewer IP is present on the event", () => {
+    const event = makeEvent({});
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("answers a blocked IP's /robots.txt with a 200 disallow-all", () => {
+    const result = handler(makeEvent({ uri: "/robots.txt", ip: "45.148.10.5" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+  });
+
+  it("blocks a blocked IP even with a normal browser UA", () => {
+    const result = handler(makeEvent({
+      ip: "93.123.109.7",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    }));
+    expect(result.statusCode).toBe(404);
   });
 });
 

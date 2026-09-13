@@ -27,17 +27,20 @@ Requests matching automated-scan patterns return `404`:
 ### 4. Outdated Firefox user-agent blocking (404)
 Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
 
-### 5. Bot / scraper blocking
+### 5. IP range blocking (404)
+Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same robots.txt/sitemap.xml/feed.xml exceptions as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`.
+
+### 6. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body), `/sitemap.xml` (a real `200` empty `<urlset>` body), and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
 
 **Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
-### 6. Trailing-slash redirect (301)
+### 7. Trailing-slash redirect (301)
 A request for a directory-style path with no trailing slash (e.g. `/about`) gets a real `301` to the same path with `/` appended (e.g. `/about/`), instead of the origin's `302`. This runs **after** all bot/security filtering above, so a bad actor never reaches it. It's skipped for:
 - Paths that already end in `/` (including `/`)
 - Asset-looking paths — anything whose final path segment contains a `.` (`.jpg`, `.css`, `.js`, `.pdf`, etc.) — dotfile paths like `/.well-known/...` never reach this check, since they're already blocked by dotfile-path filtering above
 
-### 7. Pass-through
+### 8. Pass-through
 All other requests are forwarded to the origin unchanged.
 
 ---
@@ -304,6 +307,29 @@ on behalf of its users, not a scraper. It isn't currently matched by
 matched, only specific named tokens), noted here so it stays excluded if the
 regex is ever extended.
 
+### ip-range-blocking
+`event.viewer.ip` (the client IP CloudFront Functions exposes on every viewer
+request/response) is matched against a blocklist of known-malicious network
+ranges via `blockedIpRangeRegex` — a plain string-prefix regex, same style as
+[blocked-bot-regex](#blocked-bot-regex), not integer/bitmask CIDR math. This
+only works because every current range is `/24` (octet-aligned): the regex
+alternatives are literal `first.second.third.` prefixes, so a match on
+`45.148.10.` covers exactly `45.148.10.0`–`45.148.10.255`. Folded into the
+same condition as [bad-actor-response-mapping](#bad-actor-response-mapping)
+so a blocked IP gets the same `/robots.txt`/`/sitemap.xml`/`/feed.xml`
+treatment as any other bad actor, regardless of what User-Agent it sends.
+
+Currently blocked: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`
+(Techoff SRV Limited), blocked at the user's request.
+
+If a future range isn't octet-aligned (e.g. a `/25` or `/22`), the
+string-prefix trick stops working and the check needs real integer/bitmask
+CIDR matching instead — don't force a non-aligned range into this regex.
+
+To add a range: append `|a\.b\.c\.` (escaping the dots) to
+`blockedIpRangeRegex` for a `/24`, or `|a\.b\.` for a `/16`, and add an IP
+sample to the `blockedIps` fixture in `function.test.js`.
+
 ### trailing-slash-redirect
 The S3 origin returns a `302` for a directory-style request with no trailing
 slash; a search engine or client following that redirect chain sees a
@@ -406,12 +432,13 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 241 tests:
+`function.test.js` covers all behaviours with 279 tests:
 
 | Suite | What is tested |
 |---|---|
 | PHP / bad folder / security scan blocking | File extensions, scanner folders, sensitive/credential paths, `/ip` |
 | Scrapper bot blocking by user-agent | 60+ bot/scraper patterns, matched case-insensitively |
+| IP range blocking | Known-malicious `/24` ranges blocked regardless of UA; boundary IPs just outside a range pass through |
 | robots.txt disallow-all for blocked bots | Blocked bots and bad actors get a 200 disallow-all body on `/robots.txt`; normal browsers pass through untouched |
 | sitemap.xml empty urlset for blocked bots | Blocked bots and bad actors get a 200 empty `<urlset>` body on `/sitemap.xml`; normal browsers pass through untouched |
 | feed.xml empty atom feed for blocked bots | Blocked bots and bad actors get a 200 empty `<feed>` body on `/feed.xml`; normal browsers pass through untouched |
