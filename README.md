@@ -302,6 +302,11 @@ the user's request.
 name token only, version number dropped, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
+`variableratio-publicassetresearch/` is blocked at the user's request.
+Matched on the `variableratio-publicassetresearch/` name token only, version
+number (`1.0`) dropped, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
