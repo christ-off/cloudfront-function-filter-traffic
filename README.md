@@ -295,7 +295,7 @@ crawler) is blocked at the user's request.
 `wp2shell` (a WordPress vulnerability scanner/exploit tool) is blocked at
 the user's request.
 
-`webatlabot` is blocked at the user's request.
+`webatlabot` (`https://webatla.com/bot`) is blocked at the user's request.
 
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
