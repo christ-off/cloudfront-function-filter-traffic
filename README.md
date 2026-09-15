@@ -234,6 +234,39 @@ a scraper impersonating a browser, so it's exempted the same way as the
 Chrome floor's named exemptions in
 [chrome-floor-exemptions](#chrome-floor-exemptions).
 
+### min-safari-major
+Floor set at the user's request rather than derived from `logs.db` (unlike
+[min-chrome-major](#min-chrome-major)/[min-edge-major](#min-edge-major),
+which are log-backed). Safari majors track the OS/App Store, not an
+auto-update cadence, so a hardcoded old major is a reasonable scraper signal
+the same way a stale Firefox major is (see
+[min-firefox-major](#min-firefox-major)) — Safari 18 shipped September 2024,
+so anything below it is over a year stale. Note Apple's version-numbering
+jump: Safari went from the 18.x line straight to 26 (aligned to the iOS/
+macOS release year), so "below 18" and "18 or above" is the entire floor —
+there's no 19–25 range to worry about.
+
+Matched on `version\/(\d+)\.`, not `safari\/`: the `Safari/` token in a
+Safari UA is a fixed WebKit build number (`605.1.15` desktop, `604.1`
+mobile) that doesn't track the browser release, so it can't be used as a
+version signal — see [safari-floor-exemptions](#safari-floor-exemptions) for
+why other WebKit-based browsers need excluding from this check.
+
+### safari-floor-exemptions
+UAs skipped by [min-safari-major](#min-safari-major):
+- `compatible;` — same self-identifying-crawler reasoning as
+  [chrome-floor-exemptions](#chrome-floor-exemptions).
+- `crios\/`, `fxios\/`, `opios\/` — Chrome/Firefox/Opera for iOS are
+  Apple-mandated to use WebKit (hence the `Safari/604.1` tail) but don't
+  carry a `Version/` token in their real UA, so these never actually match;
+  listed defensively in case a future variant adds one.
+- `edgios\/` — Edge for iOS *does* carry both `Version/` (WebKit's, stale
+  and unrelated to Edge's own release) and `EdgiOS/` (its real version), so
+  without this exemption a current Edge-for-iOS user gets floored by a
+  `Version/` number that was never meant to signal anything.
+- `duckduckgo`, `ucbrowser\/` — other WebKit-based iOS/Android browsers with
+  the same stale-`Version/`-token shape as Edge for iOS.
+
 ### blocked-bot-regex
 Plain substrings matched against the (already lowercased) User-Agent header,
 as ONE regex literal. Written out literally rather than built at runtime

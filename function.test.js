@@ -117,6 +117,14 @@ describe("404 response for bad actors", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
       "Edg/144 (below MIN_EDGE_MAJOR, stale-UA fleet per user's logs.db analysis)",
     ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+      "Safari/17.2 (below MIN_SAFARI_MAJOR)",
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "Mobile Safari/17.0 (below MIN_SAFARI_MAJOR)",
+    ],
   ];
 
   it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
@@ -142,6 +150,17 @@ describe("404 response for bad actors", () => {
   ];
 
   it.each(realChromeAgents)("passes through '%s' (%s)", (userAgent) => {
+    const event = makeEvent({ uri: "/", userAgent });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  const realSafariAgents = [
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15", "Safari/18.0, exactly at the floor"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Mobile Safari/26.0 (post-renumbering)"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 EdgiOS/117.0.2045.60 Mobile/15E148 Safari/604.1", "EdgiOS carries its own stale Version/ token, exempted from the Safari floor"],
+  ];
+
+  it.each(realSafariAgents)("passes through '%s' (%s)", (userAgent) => {
     const event = makeEvent({ uri: "/", userAgent });
     expect(handler(event)).toEqual(event.request);
   });

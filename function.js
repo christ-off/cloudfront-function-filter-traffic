@@ -58,7 +58,8 @@ function isBadActor(uri, ua) {
         isMalformedChromeClaim(ua) ||
         isSuspiciousChromeUA(ua) ||
         isSuspiciousEdgeUA(ua) ||
-        isSuspiciousFirefoxUA(ua);
+        isSuspiciousFirefoxUA(ua) ||
+        isSuspiciousSafariUA(ua);
 }
 
 // rationale: README.md#dotfile-path
@@ -108,6 +109,11 @@ const MIN_FIREFOX_MAJOR = 139;
 // rationale: README.md#firefox-esr-115-exemption
 const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy/;
 
+// rationale: README.md#min-safari-major
+const MIN_SAFARI_MAJOR = 18;
+// rationale: README.md#safari-floor-exemptions
+const safariFloorExemptRegex = /compatible;|crios\/|fxios\/|edgios\/|opios\/|duckduckgo|ucbrowser\//;
+
 function isBelowMinMajor(ua, versionRegex, minMajor) {
     const match = ua.match(versionRegex);
     if (!match) return false;
@@ -124,6 +130,12 @@ function isSuspiciousEdgeUA(ua) {
 
 function isSuspiciousFirefoxUA(ua) {
     return isBelowMinMajor(ua, /firefox\/(\d+)\./, MIN_FIREFOX_MAJOR) && !firefoxFloorExemptRegex.test(ua);
+}
+
+function isSuspiciousSafariUA(ua) {
+    return ua.indexOf('safari/') !== -1 &&
+        isBelowMinMajor(ua, /version\/(\d+)\./, MIN_SAFARI_MAJOR) &&
+        !safariFloorExemptRegex.test(ua);
 }
 
 // rationale: README.md#blocked-bot-regex
