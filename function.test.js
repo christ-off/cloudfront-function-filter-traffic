@@ -340,6 +340,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; WebAtlaBot/1.0)", "WebAtlaBot"],
     ["SSI-Nutch/1.23 (SSI broad web crawler; https://ssi.inc/; adi@ssi.inc)", "SSI-Nutch"],
     ["VariableRatio-PublicAssetResearch/1.0", "VariableRatio-PublicAssetResearch"],
+    ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider"],
+    ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
