@@ -356,6 +356,14 @@ Matched on the `baiduspider` name token only (no trailing `/`, since the
 `-render` variant has no slash before its version number), per the standard
 pattern in [blocked-bot-regex](#blocked-bot-regex).
 
+`HaloBot/1.0` is blocked at the user's request. Matched on the `halobot/`
+name token only, version number (`1.0`) dropped, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
+`Flowb0t-ContentEngine/1.0` is blocked at the user's request. Matched on the
+`flowb0t-contentengine/` name token only, version number (`1.0`) dropped, per
+the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
