@@ -99,6 +99,11 @@ site is a security scan (the origin is an S3 static website with no API
 backend). Probes like `/api/v2/config`, `/api/v1/users`, etc. are automated
 scanners looking for API endpoints that don't exist here.
 
+`read-document` is in the folder-prefix group — a new scan pattern first seen
+2026-09-17 (38 requests to `/read-document` in one day), presumably probing
+for a document-reading/SSRF-style endpoint that doesn't exist on this static
+site.
+
 `swp` (vim swap file) and a bare trailing `~` (generic editor backup, e.g.
 `wp-config.php~`) are both classic backup-file scan suffixes appended after
 a real filename/extension, so they're matched separately from the `\.ext$`
@@ -108,6 +113,11 @@ group rather than folded into it.
 particular serves arbitrary files off the host filesystem, e.g.
 `/@fs/home/ec2-user/.aws/credentials`) — this is a static site with no Vite
 dev server behind it, so any request for these paths is a scanner, full stop.
+
+Any path starting with `__vite` (e.g. `/__vite_rsc_findSourceMapURL/`,
+`/__vite_ping`) is matched as a bare prefix rather than a folder segment,
+since Vite's RSC-internal endpoints don't share the `@`-prefixed naming of
+`@fs`/`@vite`/`@id` above — same rationale: no Vite behind this site.
 
 ### path-traversal
 A literal `..` anywhere in the (already-decoded) URI path is blocked

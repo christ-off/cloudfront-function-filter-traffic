@@ -201,6 +201,13 @@ describe("bad folder blocking", () => {
     ["/mail/", "mail"],
     ["/rc/", "rc"],
     ["/api/v2/config", "api (security scan)"],
+    ["/read-document", "read-document (bare)"],
+    ["/read-document/", "read-document (trailing slash)"],
+    ["/@fs/home/ec2-user/.aws/credentials", "@fs"],
+    ["/@vite/client", "@vite"],
+    ["/@id/vite/env", "@id"],
+    ["/__vite_rsc_findSourceMapURL/", "__vite prefix"],
+    ["/__vite_ping", "__vite prefix (no trailing slash)"],
   ];
 
   it.each(cases)("returns 404 for %s (%s)", (uri) => {
