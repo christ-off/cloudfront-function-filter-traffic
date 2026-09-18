@@ -370,6 +370,12 @@ user's request. Matched on the `claritybot/` name token only, version number
 (`0.1`) dropped, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
+`undici` (the Node.js HTTP client) is blocked at the user's request — it does
+not fetch `robots.txt` and the traffic observed operates from DigitalOcean,
+LLC · Toronto, CA, a hosting provider rather than a residential/ISP network.
+Matched on the `undici` name token only, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
