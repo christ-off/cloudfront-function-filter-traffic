@@ -349,6 +349,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["VariableRatio-PublicAssetResearch/1.0", "VariableRatio-PublicAssetResearch"],
     ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider"],
     ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
+    ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
