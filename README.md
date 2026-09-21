@@ -376,6 +376,16 @@ LLC · Toronto, CA, a hosting provider rather than a residential/ISP network.
 Matched on the `undici` name token only, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
+`ExaSearchBot` (`Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)`, the
+Exa AI search crawler) is blocked at the user's request as scraper behaviour.
+Matched on the `exasearchbot/` name token only, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
+`jscrawler` (`Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)`) is
+blocked at the user's request as scraper behaviour. Matched on the
+`jscrawler/` name token only, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a

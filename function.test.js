@@ -351,6 +351,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
     ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
     ["undici", "undici"],
+    ["Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)", "jscrawler"],
+    ["Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)", "ExaSearchBot"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
