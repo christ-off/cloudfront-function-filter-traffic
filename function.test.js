@@ -118,12 +118,12 @@ describe("404 response for bad actors", () => {
       "Edg/144 (below MIN_EDGE_MAJOR, stale-UA fleet per user's logs.db analysis)",
     ],
     [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-      "Safari/17.2 (below MIN_SAFARI_MAJOR)",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+      "Safari/16.6 (below MIN_SAFARI_MAJOR)",
     ],
     [
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-      "Mobile Safari/17.0 (below MIN_SAFARI_MAJOR)",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+      "Mobile Safari/16.0 (below MIN_SAFARI_MAJOR)",
     ],
   ];
 
@@ -155,7 +155,7 @@ describe("404 response for bad actors", () => {
   });
 
   const realSafariAgents = [
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15", "Safari/18.0, exactly at the floor"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", "Safari/17.0, exactly at the floor"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Mobile Safari/26.0 (post-renumbering)"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 EdgiOS/117.0.2045.60 Mobile/15E148 Safari/604.1", "EdgiOS carries its own stale Version/ token, exempted from the Safari floor"],
   ];

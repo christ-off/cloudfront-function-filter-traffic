@@ -110,7 +110,7 @@ const MIN_FIREFOX_MAJOR = 139;
 const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy/;
 
 // rationale: README.md#min-safari-major
-const MIN_SAFARI_MAJOR = 18;
+const MIN_SAFARI_MAJOR = 17;
 // rationale: README.md#safari-floor-exemptions
 const safariFloorExemptRegex = /compatible;|crios\/|fxios\/|edgios\/|opios\/|duckduckgo|ucbrowser\//;
 

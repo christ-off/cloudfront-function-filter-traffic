@@ -250,11 +250,11 @@ Floor set at the user's request rather than derived from `logs.db` (unlike
 which are log-backed). Safari majors track the OS/App Store, not an
 auto-update cadence, so a hardcoded old major is a reasonable scraper signal
 the same way a stale Firefox major is (see
-[min-firefox-major](#min-firefox-major)) — Safari 18 shipped September 2024,
-so anything below it is over a year stale. Note Apple's version-numbering
-jump: Safari went from the 18.x line straight to 26 (aligned to the iOS/
-macOS release year), so "below 18" and "18 or above" is the entire floor —
-there's no 19–25 range to worry about.
+[min-firefox-major](#min-firefox-major)) — Safari 17 shipped September 2023,
+so anything below it is years stale. Floor lowered from 18 to 17 at the
+user's request. Note Apple's version-numbering jump: Safari went from the
+18.x line straight to 26 (aligned to the iOS/macOS release year), so there's
+no 19–25 range to worry about.
 
 Matched on `version\/(\d+)\.`, not `safari\/`: the `Safari/` token in a
 Safari UA is a fixed WebKit build number (`605.1.15` desktop, `604.1`
