@@ -8,6 +8,10 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
+### 0. URI allowlist (pass-through)
+A short list of exact paths (currently just `/backup.zip`) always pass through
+to the origin, checked before every other rule — nothing below can block them.
+
 ### 1. Missing user-agent blocking (404)
 Requests with no `User-Agent` header, an empty value, or whitespace-only value return `404`. This check runs first, before URI decoding, and cannot be bypassed.
 
@@ -54,6 +58,17 @@ sentence; the full reasoning (evidence, edge cases, why a pattern is shaped
 the way it is) lives here instead, to keep the deployed file under
 CloudFront's 10 KB function-size limit. Each heading below matches the
 identifier the code points at.
+
+### allowlisted-uris
+Requests for these exact URIs pass straight through to the origin, before
+even the missing-user-agent check — nothing below this point can block them,
+including the IP-range and bot-UA checks. Case-insensitive exact-path match.
+
+- `/backup.zip` — allowed at the user's request. Do not live-test this rule
+  against the deployed function (e.g. `aws cloudfront test-function`); verify
+  it with the unit tests only.
+
+To add a URI: append `|^\/your-path$` to `allowlistedUriRegex`.
 
 ### uri-decoding
 Only ~3% of URIs contain a `%`-escape (per `logs.db`); the rest skip the

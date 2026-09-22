@@ -24,6 +24,33 @@ function expectNotBlocked(result) {
 }
 
 // =====================================================
+// URI allowlist — passes through no matter what else would block it
+// =====================================================
+describe("URI allowlist", () => {
+  it("allows /backup.zip through with no user agent", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/backup.zip", userAgent: null })));
+  });
+
+  it("allows /backup.zip through for a blocked bot UA", () => {
+    expectNotBlocked(
+      handler(makeEvent({ uri: "/backup.zip", userAgent: "Scrapy/1.0" }))
+    );
+  });
+
+  it("allows /backup.zip through for a blocked IP range", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/backup.zip", ip: "45.148.10.5" })));
+  });
+
+  it("is case-insensitive", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/Backup.ZIP" })));
+  });
+
+  it("does not allowlist a similarly-named path", () => {
+    expectNotFound(handler(makeEvent({ uri: "/backup.zip.php" })));
+  });
+});
+
+// =====================================================
 // Security scan blocking — PHP files → 404
 // =====================================================
 describe("PHP file blocking", () => {

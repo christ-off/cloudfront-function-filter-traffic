@@ -2,6 +2,11 @@ function handler(event) {
     const request = event.request;
     const viewerIp = (event.viewer && event.viewer.ip) || '';
 
+    // rationale: README.md#allowlisted-uris
+    if (allowlistedUriRegex.test(request.uri || '')) {
+        return request;
+    }
+
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
@@ -48,6 +53,9 @@ function handler(event) {
     // Pass through
     return request;
 }
+
+// rationale: README.md#allowlisted-uris
+const allowlistedUriRegex = /^\/backup\.zip$/i;
 
 // rationale: README.md#bad-actor-check-order
 function isBadActor(uri, ua) {
