@@ -30,6 +30,8 @@ Requests with a `Firefox/` major version below 139 return `404`. Exempted: major
 ### 5. IP range blocking (404)
 Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same robots.txt/sitemap.xml/feed.xml exceptions as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`.
 
+**Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
+
 ### 6. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body), `/sitemap.xml` (a real `200` empty `<urlset>` body), and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
 
