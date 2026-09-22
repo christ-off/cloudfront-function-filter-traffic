@@ -394,6 +394,13 @@ blocked at the user's request — it documents no `robots.txt` policy. Matched o
 `serpex-index/` name token only, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
+`compatible; crawler)` (full UA: `Mozilla/5.0 (compatible; crawler)`) is blocked at
+the user's request. Its self-identifying name is the bare word "crawler", too
+generic to match alone — it appears inside other, legitimate bots' self-ID URLs
+(e.g. `ExaSearchBot`'s `https://crawler.exa.ai/`) — so the match is anchored to the
+full `compatible; crawler)` substring instead of the usual bare name-token pattern
+in [blocked-bot-regex](#blocked-bot-regex).
+
 `jscrawler` (`Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)`) is
 blocked at the user's request as scraper behaviour. Matched on the
 `jscrawler/` name token only, per the standard pattern in
