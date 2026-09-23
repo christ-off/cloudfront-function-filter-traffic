@@ -68,6 +68,10 @@ describe("scanner probe blocking", () => {
     expectNotFound(handler(makeEvent({ uri })));
   });
 
+  it.each(["/id_rsa", "/id_ed25519", "/id_rsa.pub", "/id_dsa"])("returns 404 for ssh key probe %s", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
+  });
+
   it.each(["/_next/static/x", "/_nuxt/x", "/_anything"])("returns 404 for underscore-prefixed %s", (uri) => {
     expectNotFound(handler(makeEvent({ uri })));
   });

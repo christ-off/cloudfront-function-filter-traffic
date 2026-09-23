@@ -110,7 +110,9 @@ credential-scan filenames (`secrets.json`, `config.json`,
 
 Any path starting with `/_` is blocked (`_ignition`, `_debugbar`, `_profiler`,
 `__debug__`, `__vite`, `_astro`…): this site serves nothing under an underscore
-prefix, so one bare prefix replaces per-framework entries.
+prefix, so one bare prefix replaces per-framework entries. `/id_` (`/id_rsa`,
+`/id_ed25519`, `.pub`…) is the same kind of bare prefix: scanners hunting for
+SSH private keys at the web root.
 
 Scanner probes by family, all matched as whole first segments (`(\/|$)`, so
 `/variables-explained/` is safe) except extensions: `.old`/`.env`/`.map`/

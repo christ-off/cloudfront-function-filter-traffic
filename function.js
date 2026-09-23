@@ -89,7 +89,7 @@ function isDotfilePath(uri) {
 }
 
 // rationale: README.md#security-scan-regex
-const securityScanRegex = /\.(php\d*|sql|bak|swp|phtml|config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|htpasswd|tfstate|old|env|map|webmanifest)$|~$|^\/(images?|img|wp-includes|wp-content|wp-json|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma|vendor|uploads|plugins|login|webmail|roundcube|mail|rc|actuator|api|read-document|@fs|@vite|@id|userfiles|telescope|horizon|storage|debug|console|server-status|server-info|manage|graphql|v1|health|proc|var|dockerfile)(\/|$)|^\/(secrets?|config|credentials?|service[-_]account|firebase-(?:adminsdk|service-account|config)|serviceaccountkey|settings|env|auth|app-config|appsettings|openapi|swagger|amplifyconfiguration)\.json$|^\/_/;
+const securityScanRegex = /\.(php\d*|sql|bak|swp|phtml|config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|htpasswd|tfstate|old|env|map|webmanifest)$|~$|^\/(images?|img|wp-includes|wp-content|wp-json|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma|vendor|uploads|plugins|login|webmail|roundcube|mail|rc|actuator|api|read-document|@fs|@vite|@id|userfiles|telescope|horizon|storage|debug|console|server-status|server-info|manage|graphql|v1|health|proc|var|dockerfile)(\/|$)|^\/(secrets?|config|credentials?|service[-_]account|firebase-(?:adminsdk|service-account|config)|serviceaccountkey|settings|env|auth|app-config|appsettings|openapi|swagger|amplifyconfiguration)\.json$|^\/(_|id_)/;
 
 function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
