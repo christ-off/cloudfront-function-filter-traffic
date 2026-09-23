@@ -416,6 +416,12 @@ generic to match alone — it appears inside other, legitimate bots' self-ID URL
 full `compatible; crawler)` substring instead of the usual bare name-token pattern
 in [blocked-bot-regex](#blocked-bot-regex).
 
+`colly` (`colly - https://github.com/gocolly/colly/v2`, the "Elegant scraper and
+crawler framework for Golang") is blocked at the user's request as scraper behaviour.
+Matched on the bare `colly` name token (its UA has no `name/version` form), per
+the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
 `jscrawler` (`Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)`) is
 blocked at the user's request as scraper behaviour. Matched on the
 `jscrawler/` name token only, per the standard pattern in

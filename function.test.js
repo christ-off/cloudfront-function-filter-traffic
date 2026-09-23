@@ -383,6 +383,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36; compatible; OAI-SearchBot/1.4; https://openai.com/searchbot", "OAI-SearchBot"],
     ["Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)", "serpex-index"],
     ["Mozilla/5.0 (compatible; crawler)", "generic crawler"],
+    ["colly - https://github.com/gocolly/colly/v2", "colly"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
