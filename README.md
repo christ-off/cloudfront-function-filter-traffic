@@ -50,6 +50,24 @@ Any path ending in `.js` returns `404` unless it is one of: `/javascript/recomme
 ### 9. Pass-through
 All other requests are forwarded to the origin unchanged. A directory-style path without a trailing slash (e.g. `/about`) is not rewritten: the origin replies with a `301` to `/about/`. That `301` indicates the path **exists**, whereas a missing path gets a `404`.
 
+## Compute utilization baseline
+
+Measured 2026-09-23 at commit `2bc8248` (`function.js` 9,298 bytes) with
+`aws cloudfront test-function` on the DEVELOPMENT stage, using `test-event.json`
+(UA `Mozilla/5.0 (compatible; test)`) and only `request.uri` changed. Scale 0–100
+(hard limit 100, above which CloudFront throttles):
+
+| URI | Result | Utilization |
+|---|---|---|
+| `/index.html` | pass-through | 15 |
+| `/about/x/y/z/page.html` | pass-through | 15 |
+| `/id_rsa` | blocked | 11 |
+| `/wp-config.old` | blocked | 10 |
+
+Re-measure after adding rules and compare against this table; pass-through is
+the worst case since it runs every check. Note: `ComputeUtilization` is coarse
+and can vary by a point or two between runs.
+
 ---
 
 ## Blocking rules — rationale
