@@ -398,12 +398,6 @@ Exa AI search crawler) is blocked at the user's request as scraper behaviour.
 Matched on the `exasearchbot/` name token only, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
-`OAI-SearchBot` (OpenAI's search crawler, UA
-`... Chrome/131.0.0.0 Safari/537.36; compatible; OAI-SearchBot/1.4; https://openai.com/searchbot`)
-is blocked at the user's request — it does not respect `robots.txt`. Matched on the
-`oai-searchbot/` name token only, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
 `serpex-index` (`Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)`) is
 blocked at the user's request — it documents no `robots.txt` policy. Matched on the
 `serpex-index/` name token only, per the standard pattern in
