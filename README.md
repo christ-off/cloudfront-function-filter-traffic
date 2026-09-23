@@ -41,7 +41,10 @@ Requests matching 60+ known bot/scraper user-agent patterns return `404` on ever
 
 **Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
-### 7. Pass-through
+### 7. JSON allowlist (404)
+Any path ending in `.json` returns `404` unless it is one of: `/about/data/blogs.json`, `/about/data/pages.json`, `/about/data/visitors.json`, `/human.json`, `/pagefind/pagefind-entry.json`. This runs last, after all bot/security filtering.
+
+### 8. Pass-through
 All other requests are forwarded to the origin unchanged. A directory-style path without a trailing slash (e.g. `/about`) is not rewritten: the origin replies with a `301` to `/about/`. That `301` indicates the path **exists**, whereas a missing path gets a `404`.
 
 ---
@@ -450,6 +453,17 @@ CIDR matching instead — don't force a non-aligned range into this regex.
 To add a range: append `|a\.b\.c\.` (escaping the dots) to
 `blockedIpRangeRegex` for a `/24`, or `|a\.b\.` for a `/16`, and add an IP
 sample to the `blockedIps` fixture in `function.test.js`.
+
+### json-allowlist
+Scanners probe for `.json` files (`/package.json`, `/composer.json`,
+`/config.json`, ...). Only the five real JSON files the site serves are
+allowed; every other `.json` path gets `404`. The check runs last, after the
+bad-actor/bot/IP checks, so a blocked bot gets its `404` from those rules
+first and only a legitimate-looking client can reach a real JSON file. It
+matches the decoded, lowercased `uriLower` exactly (no query string is part
+of `uri`).
+
+To allow another file, add it to `allowedJsonRegex` and the test fixture.
 
 ---
 

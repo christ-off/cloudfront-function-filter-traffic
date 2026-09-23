@@ -763,9 +763,8 @@ describe("credential and config file scanning", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("does not block /manifest.json", () => {
-    const event = makeEvent({ uri: "/manifest.json" });
-    expect(handler(event)).toEqual(event.request);
+  it("blocks /manifest.json (not in the json allowlist)", () => {
+    expect(handler(makeEvent({ uri: "/manifest.json" })).statusCode).toBe(404);
   });
 });
 
@@ -800,6 +799,37 @@ describe("ads.txt and llms.txt follow normal UA blocking", () => {
   it("blocks /llms.txt for a blocked user-agent", () => {
     const result = handler(makeEvent({ uri: "/llms.txt", userAgent: "CCBot/2.0" }));
     expect(result.statusCode).toBe(404);
+  });
+});
+
+// =====================================================
+// .json allowlist
+// =====================================================
+describe("json allowlist", () => {
+  it.each([
+    "/about/data/blogs.json",
+    "/human.json",
+    "/about/data/pages.json",
+    "/about/data/visitors.json",
+    "/pagefind/pagefind-entry.json",
+  ])("allows %s", (uri) => {
+    const event = makeEvent({ uri });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it.each([
+    "/package.json",
+    "/composer.json",
+    "/about/data/other.json",
+    "/x/human.json",
+    "/human.json.json",
+    "/%70ackage.json",
+  ])("blocks %s", (uri) => {
+    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  });
+
+  it("blocks a bad user-agent on an allowed json file", () => {
+    expect(handler(makeEvent({ uri: "/human.json", userAgent: "Scrapy/2.0" })).statusCode).toBe(404);
   });
 });
 

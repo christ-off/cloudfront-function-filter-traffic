@@ -45,9 +45,17 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    // rationale: README.md#json-allowlist
+    if (uriLower.slice(-5) === '.json' && !allowedJsonRegex.test(uriLower)) {
+        return createNotFoundResponse();
+    }
+
     // Pass through
     return request;
 }
+
+// rationale: README.md#json-allowlist
+const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|human|pagefind\/pagefind-entry)\.json$/;
 
 // rationale: README.md#allowlisted-uris
 const allowlistedUriRegex = /^\/backup\.zip$/i;
