@@ -44,7 +44,10 @@ Requests matching 60+ known bot/scraper user-agent patterns return `404` on ever
 ### 7. JSON allowlist (404)
 Any path ending in `.json` returns `404` unless it is one of: `/about/data/blogs.json`, `/about/data/pages.json`, `/about/data/visitors.json`, `/human.json`, `/pagefind/pagefind-entry.json`. This runs last, after all bot/security filtering.
 
-### 8. Pass-through
+### 8. JS allowlist (404)
+Any path ending in `.js` returns `404` unless it is one of: `/javascript/recommended-blogs.js`, `/javascript/chart.umd.min.js`, `/javascript/bootstrap.bundle.min.js`, `/pagefind/pagefind.js`, `/pagefind/pagefind-worker.js`, `/pagefind/pagefind-ui.js`. Runs last, like the JSON allowlist.
+
+### 9. Pass-through
 All other requests are forwarded to the origin unchanged. A directory-style path without a trailing slash (e.g. `/about`) is not rewritten: the origin replies with a `301` to `/about/`. That `301` indicates the path **exists**, whereas a missing path gets a `404`.
 
 ---
@@ -464,6 +467,15 @@ matches the decoded, lowercased `uriLower` exactly (no query string is part
 of `uri`).
 
 To allow another file, add it to `allowedJsonRegex` and the test fixture.
+
+### js-allowlist
+Same approach as [json-allowlist](#json-allowlist): scanners probe for
+`.js` files (`/app.js`, `/main.js`, `/config.js`, ...), so only the six real
+scripts the site serves are allowed and every other `.js` path gets `404`.
+Runs last, after the bad-actor/bot/IP checks. Matches the decoded, lowercased
+`uriLower` exactly; `.json` paths are handled by the JSON rule, not this one.
+
+To allow another file, add it to `allowedJsRegex` and the test fixture.
 
 ---
 

@@ -834,6 +834,39 @@ describe("json allowlist", () => {
 });
 
 // =====================================================
+// .js allowlist
+// =====================================================
+describe("js allowlist", () => {
+  it.each([
+    "/javascript/recommended-blogs.js",
+    "/javascript/chart.umd.min.js",
+    "/javascript/bootstrap.bundle.min.js",
+    "/pagefind/pagefind.js",
+    "/pagefind/pagefind-worker.js",
+    "/pagefind/pagefind-ui.js",
+  ])("allows %s", (uri) => {
+    const event = makeEvent({ uri });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it.each([
+    "/app.js",
+    "/main.js",
+    "/javascript/other.js",
+    "/x/pagefind/pagefind.js",
+    "/pagefind/pagefind.js.js",
+    "/%61pp.js",
+    "/JAVASCRIPT/../app.js",
+  ])("blocks %s", (uri) => {
+    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
+  });
+
+  it("blocks a bad user-agent on an allowed js file", () => {
+    expect(handler(makeEvent({ uri: "/pagefind/pagefind.js", userAgent: "Scrapy/2.0" })).statusCode).toBe(404);
+  });
+});
+
+// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {

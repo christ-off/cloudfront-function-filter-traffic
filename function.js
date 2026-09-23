@@ -50,6 +50,11 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
+    // rationale: README.md#js-allowlist
+    if (uriLower.slice(-3) === '.js' && !allowedJsRegex.test(uriLower)) {
+        return createNotFoundResponse();
+    }
+
     // Pass through
     return request;
 }
@@ -59,6 +64,9 @@ const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|human|pagefind
 
 // rationale: README.md#allowlisted-uris
 const allowlistedUriRegex = /^\/backup\.zip$/i;
+
+// rationale: README.md#js-allowlist
+const allowedJsRegex = /^\/(javascript\/(recommended-blogs|chart\.umd\.min|bootstrap\.bundle\.min)|pagefind\/pagefind(-worker|-ui)?)\.js$/;
 
 // rationale: README.md#bad-actor-check-order
 function isBadActor(uri, ua) {
