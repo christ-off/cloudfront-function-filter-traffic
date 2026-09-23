@@ -45,11 +45,6 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // rationale: README.md#trailing-slash-redirect
-    if (needsTrailingSlashRedirect(request.uri)) {
-        return createTrailingSlashRedirectResponse(request.uri);
-    }
-
     // Pass through
     return request;
 }
@@ -158,20 +153,6 @@ const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.)/;
 
 function isBlockedIpRange(ip) {
     return blockedIpRangeRegex.test(ip);
-}
-
-// rationale: README.md#trailing-slash-redirect
-function needsTrailingSlashRedirect(uri) {
-    if (uri.charAt(uri.length - 1) === '/') return false;
-    return uri.lastIndexOf('.') <= uri.lastIndexOf('/');
-}
-
-function createTrailingSlashRedirectResponse(uri) {
-    return {
-        statusCode: 301,
-        statusDescription: 'Moved Permanently',
-        headers: {location: {value: uri + '/'}}
-    };
 }
 
 function createNotFoundResponse() {

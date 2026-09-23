@@ -804,61 +804,6 @@ describe("ads.txt and llms.txt follow normal UA blocking", () => {
 });
 
 // =====================================================
-// Trailing-slash redirect (301) for directory-style URIs
-// =====================================================
-describe("trailing-slash redirect", () => {
-  it("redirects a directory-style path with no trailing slash", () => {
-    const result = handler(makeEvent({ uri: "/about" }));
-    expect(result.statusCode).toBe(301);
-    expect(result.statusDescription).toBe("Moved Permanently");
-    expect(result.headers.location.value).toBe("/about/");
-  });
-
-  it("redirects a nested directory-style path with no trailing slash", () => {
-    const result = handler(makeEvent({ uri: "/articles/my-post" }));
-    expect(result.headers.location.value).toBe("/articles/my-post/");
-  });
-
-  it("does not redirect a path that already has a trailing slash", () => {
-    const event = makeEvent({ uri: "/about/" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not redirect the root path", () => {
-    const event = makeEvent({ uri: "/" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it.each([
-    "/logo.png",
-    "/photos/vacation.jpg",
-    "/styles/main.css",
-    "/scripts/app.js",
-    "/fonts/icon.woff2",
-    "/data/report.pdf",
-  ])("does not redirect an asset path %s", (uri) => {
-    const event = makeEvent({ uri });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not redirect a path with a dot in an earlier segment but not the final one", () => {
-    const result = handler(makeEvent({ uri: "/v1.2/about" }));
-    expect(result.statusCode).toBe(301);
-    expect(result.headers.location.value).toBe("/v1.2/about/");
-  });
-
-  it("blocks a bad actor before ever considering the trailing-slash redirect", () => {
-    const result = handler(makeEvent({ uri: "/wp-admin", userAgent: "Mozilla/5.0" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("blocks a bad user-agent before ever considering the trailing-slash redirect", () => {
-    const result = handler(makeEvent({ uri: "/about", userAgent: "Scrapy/2.0" }));
-    expect(result.statusCode).toBe(404);
-  });
-});
-
-// =====================================================
 // Pass-through for normal traffic
 // =====================================================
 describe("pass-through", () => {
@@ -869,6 +814,11 @@ describe("pass-through", () => {
 
   it("returns the request object unchanged for the root path", () => {
     const event = makeEvent({ uri: "/" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("returns the request object unchanged for a directory-style path with no trailing slash", () => {
+    const event = makeEvent({ uri: "/about" });
     expect(handler(event)).toEqual(event.request);
   });
 
