@@ -416,24 +416,6 @@ Matched on the bare `colly` name token (its UA has no `name/version` form), per
 the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
-`grokbot/` is blocked at the user's request. The real GrokBot is not what hits us: the
-`Mozilla/5.0 (compatible; GrokBot/1.0; https://x.ai/)` UA is spoofed by a scraper seen
-repeatedly, so the block targets that traffic.
-
-`chatglm-spider/` is blocked at the user's request. Same situation: the
-`Mozilla/5.0 (compatible; ChatGLM-Spider/1.0; https://zhipuai.cn/)` UA is spoofed by a scraper.
-
-`xai-grok/` is blocked at the user's request. Same situation: the
-`Mozilla/5.0 (compatible; xAI-Grok/1.0; https://x.ai/)` UA is spoofed by a scraper.
-
-`pangubot/` is blocked at the user's request. Same situation: the
-`Mozilla/5.0 (compatible; PanguBot/1.0; https://www.huaweicloud.com/)` UA is spoofed by a scraper.
-
-`google-extended` is blocked at the user's request. Google-Extended is a robots.txt
-control token, not a real crawler UA, so any request carrying it
-(`Mozilla/5.0 (compatible; Google-Extended; http://www.google.com/bot.html)`) is spoofed.
-Matched on the bare name token (no `/version` in the UA).
-
 `jscrawler` (`Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)`) is
 blocked at the user's request as scraper behaviour. Matched on the
 `jscrawler/` name token only, per the standard pattern in

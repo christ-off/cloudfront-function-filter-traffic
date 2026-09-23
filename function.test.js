@@ -383,11 +383,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)", "serpex-index"],
     ["Mozilla/5.0 (compatible; crawler)", "generic crawler"],
     ["colly - https://github.com/gocolly/colly/v2", "colly"],
-    ["Mozilla/5.0 (compatible; GrokBot/1.0; https://x.ai/)", "GrokBot"],
-    ["Mozilla/5.0 (compatible; ChatGLM-Spider/1.0; https://zhipuai.cn/)", "ChatGLM-Spider"],
-    ["Mozilla/5.0 (compatible; xAI-Grok/1.0; https://x.ai/)", "xAI-Grok"],
-    ["Mozilla/5.0 (compatible; PanguBot/1.0; https://www.huaweicloud.com/)", "PanguBot"],
-    ["Mozilla/5.0 (compatible; Google-Extended; http://www.google.com/bot.html)", "Google-Extended"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
