@@ -17,8 +17,8 @@ Requests with no `User-Agent` header, an empty value, or whitespace-only value r
 
 ### 2. Security scan blocking (404)
 Requests matching automated-scan patterns return `404`:
-- URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.config`, `.ya?ml`, `.toml`, `.conf`, `.key`, `.pem`, `.axd`, `.boto`, `.s3cfg`, `.npmrc`, `.htpasswd`, `.tfstate`
-- Common scanner folders: `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
+- URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.config`, `.ya?ml`, `.toml`, `.conf`, `.key`, `.pem`, `.axd`, `.boto`, `.s3cfg`, `.npmrc`, `.htpasswd`, `.tfstate`, `.old`, `.env`, `.map`, `.webmanifest` (backup copies, env files, source maps; the static site has no PWA manifest and no `.map` files)
+- Common scanner folders: `/userfiles`, Laravel/Go/Apache debug endpoints (`/telescope`, `/horizon`, `/storage`, `/debug`, `/console`, `/server-status`, `/server-info`, `/manage`), `/graphql`, `/v1`, `/health`, `/proc`, `/var`, `/Dockerfile`, `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
 - Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
 ### 3. Spoofed / malformed / stale Chrome/Edge UA blocking (404)
@@ -108,6 +108,19 @@ are handled separately by [dotfile-path](#dotfile-path)). The trailing
 credential-scan filenames (`secrets.json`, `config.json`,
 `service-account.json`, etc.) are matched there.
 
+Any path starting with `/_` is blocked (`_ignition`, `_debugbar`, `_profiler`,
+`__debug__`, `__vite`, `_astro`…): this site serves nothing under an underscore
+prefix, so one bare prefix replaces per-framework entries.
+
+Scanner probes by family, all matched as whole first segments (`(\/|$)`, so
+`/variables-explained/` is safe) except extensions: `.old`/`.env`/`.map`/
+`.webmanifest` (backup copies like `wp-config.php.old`, `secrets.env`, source
+maps, a PWA manifest this site doesn't have); `userfiles` (upload dirs);
+`telescope`, `horizon`, `storage` (Laravel); `debug`, `console`,
+`server-status`, `server-info`, `manage` (Go/Apache/Java); `graphql`, `v1`,
+`health` (API probes); `proc`, `var`, `dockerfile` (container/host internals).
+The site is static and serves none of them.
+
 `actuator` is in the folder-prefix group — Spring Boot's Actuator endpoints
 (`/actuator/configprops`, `/actuator/env`, etc.) are only ever probed by
 scanners against this static site, never served legitimately.
@@ -131,11 +144,6 @@ group rather than folded into it.
 particular serves arbitrary files off the host filesystem, e.g.
 `/@fs/home/ec2-user/.aws/credentials`) — this is a static site with no Vite
 dev server behind it, so any request for these paths is a scanner, full stop.
-
-Any path starting with `__vite` (e.g. `/__vite_rsc_findSourceMapURL/`,
-`/__vite_ping`) is matched as a bare prefix rather than a folder segment,
-since Vite's RSC-internal endpoints don't share the `@`-prefixed naming of
-`@fs`/`@vite`/`@id` above — same rationale: no Vite behind this site.
 
 ### path-traversal
 A literal `..` anywhere in the (already-decoded) URI path is blocked

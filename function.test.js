@@ -51,6 +51,34 @@ describe("URI allowlist", () => {
 });
 
 // =====================================================
+// Scanner probes — backups, env, source maps, debug/admin endpoints
+// =====================================================
+describe("scanner probe blocking", () => {
+  it.each([
+    "/wp-config.old", "/wp-config.php.old", "/secrets.env", "/manifest.webmanifest",
+    "/pages/index.astro.mjs.map", "/_astro/pages/index.astro.mjs.map",
+    "/userfiles/", "/userfiles/x/", "/_ignition/health-check/", "/__debug__/",
+    "/_debugbar/open/", "/_profiler/latest/", "/telescope/requests/",
+    "/horizon/api/stats/", "/storage/logs/laravel.log", "/debug/vars/",
+    "/debug/pprof/", "/console/", "/server-status/", "/server-info/",
+    "/manage/env/", "/graphql/", "/graphql/console/", "/v1/graphql/",
+    "/v1/onboarding/config/", "/health/", "/proc/self/cmdline/",
+    "/var/run/secrets/kubernetes.io/serviceaccount/token/", "/Dockerfile/",
+  ])("returns 404 for %s", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
+  });
+
+  it.each(["/_next/static/x", "/_nuxt/x", "/_anything"])("returns 404 for underscore-prefixed %s", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
+  });
+
+  it("does not block similarly-prefixed legitimate paths", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/variables-explained/" })));
+    expectNotBlocked(handler(makeEvent({ uri: "/healthy-eating/" })));
+  });
+});
+
+// =====================================================
 // Security scan blocking — PHP files → 404
 // =====================================================
 describe("PHP file blocking", () => {
@@ -659,8 +687,15 @@ describe("dotfile path blocking", () => {
     "/.docker/config.json",
     "/.netrc",
     "/.yarnrc",
+    "/.aws/config",
     "/.aws/credentials",
     "/.ssh/id_rsa",
+    "/.ssh/authorized_keys",
+    "/.ssh/known_hosts",
+    "/.svn/entries",
+    "/.profile",
+    "/.zshrc",
+    "/.bashrc",
     "/.bash_history",
   ];
 
