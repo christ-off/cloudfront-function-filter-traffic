@@ -213,6 +213,11 @@ describe("404 response for bad actors", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("passes through Misskey/Sharkey federation UA", () => {
+    const event = makeEvent({ uri: "/", userAgent: "Misskey/2025.4.7 (https://sharkey.vhack.eu/)" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   const realSafariAgents = [
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", "Safari/17.0, exactly at the floor"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Mobile Safari/26.0 (post-renumbering)"],
