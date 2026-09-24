@@ -18,7 +18,7 @@ function.js runs in CloudFront Functions, NOT Node.js. ES5.1 base with partial E
 
 Vitest passing ≠ CloudFront deployable. Before using any non-ES5.1 feature, fetch the runtime-2.0 docs page FRESH and grep for the exact feature name.
 
-After pushing to main, check GitHub Actions deploy succeeded AND function runs without "invalid or could not run" errors (e.g. `aws cloudfront test-function`).
+After pushing to main, do NOT check the GitHub Actions deploy or run `aws cloudfront test-function`: the pre-push hook message "CloudFront function validated on cloudfront-js-2.0 — OK to push" is sufficient.
 
 # Blocking patterns
 Do not block Chrome requests solely because UA contains `.0.0.0` minor/patch version — real Chrome browsers report only major version to reduce fingerprinting.
