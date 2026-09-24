@@ -433,8 +433,8 @@ describe("scrapper bot blocking by user-agent", () => {
   });
 
   // /rss.xml gets no special treatment: blocked bots are simply denied there
-  // like anywhere else (the decoy responses were removed). /sitemap.xml and
-  // /feed.xml are the exceptions — see their dedicated describe blocks below.
+  // like anywhere else (the decoy responses were removed). /feed.xml is the
+  // exception — see its dedicated describe block below.
   const feedPaths = ["/rss.xml"];
 
   it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
@@ -549,38 +549,11 @@ describe("robots.txt disallow-all for blocked bots", () => {
 });
 
 // =====================================================
-// Empty sitemap.xml for blocked bots
+// sitemap.xml gets no special treatment
 // =====================================================
-describe("sitemap.xml empty urlset for blocked bots", () => {
-  it("answers a blocked bot's /sitemap.xml with a 200 empty urlset", () => {
-    const result = handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/xml");
-    expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
-    expect(result.body).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
-    );
-  });
-
-  it("also answers a bad-actor UA's (not just a blocked bot's) /sitemap.xml with a 200 empty urlset", () => {
-    const result = handler(makeEvent({
-      uri: "/sitemap.xml",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
-    }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
-    );
-  });
-
-  it("is case-insensitive on the URI", () => {
-    const result = handler(makeEvent({ uri: "/SITEMAP.XML", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
-    expectNotFound(result);
+describe("sitemap.xml for blocked bots", () => {
+  it("answers a blocked bot's /sitemap.xml with a plain 404", () => {
+    expectNotFound(handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
   it("still lets a normal browser's /sitemap.xml through untouched", () => {

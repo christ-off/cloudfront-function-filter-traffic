@@ -32,12 +32,12 @@ Requests matching automated-scan patterns return `404`:
 Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
 
 ### 5. IP range blocking (404)
-Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same robots.txt/sitemap.xml/feed.xml exceptions as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`.
+Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same robots.txt/feed.xml exceptions as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`.
 
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
 ### 6. Bot / scraper blocking
-Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body), `/sitemap.xml` (a real `200` empty `<urlset>` body), and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
+Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — **except** `/robots.txt` (a real `200` disallow-all body) and `/feed.xml` (a real `200` empty Atom `<feed>` body), instead of a 404, so a blocked scraper checking any of these gets a correct answer. The same exception applies to any other bad actor (security-scan URI or spoofed/stale-browser UA) landing on those paths.
 
 **Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
@@ -97,8 +97,8 @@ single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
-`/robots.txt`, `/sitemap.xml` and `/feed.xml` get a real disallow-all / empty
-sitemap / empty feed instead of a 404 for bad actors and blocked bots alike —
+`/robots.txt` and `/feed.xml` get a real disallow-all / empty
+feed instead of a 404 for bad actors and blocked bots alike —
 a correct, on-brand "you're not welcome here" rather than a generic miss.
 
 ### bad-actor-check-order
@@ -471,7 +471,7 @@ only works because every current range is `/24` (octet-aligned): the regex
 alternatives are literal `first.second.third.` prefixes, so a match on
 `45.148.10.` covers exactly `45.148.10.0`–`45.148.10.255`. Folded into the
 same condition as [bad-actor-response-mapping](#bad-actor-response-mapping)
-so a blocked IP gets the same `/robots.txt`/`/sitemap.xml`/`/feed.xml`
+so a blocked IP gets the same `/robots.txt`/`/feed.xml`
 treatment as any other bad actor, regardless of what User-Agent it sends.
 
 Currently blocked: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`
@@ -596,7 +596,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Scrapper bot blocking by user-agent | 60+ bot/scraper patterns, matched case-insensitively |
 | IP range blocking | Known-malicious `/24` ranges blocked regardless of UA; boundary IPs just outside a range pass through |
 | robots.txt disallow-all for blocked bots | Blocked bots and bad actors get a 200 disallow-all body on `/robots.txt`; normal browsers pass through untouched |
-| sitemap.xml empty urlset for blocked bots | Blocked bots and bad actors get a 200 empty `<urlset>` body on `/sitemap.xml`; normal browsers pass through untouched |
+| sitemap.xml for blocked bots | Blocked bots get a plain 404 on `/sitemap.xml`; normal browsers pass through untouched |
 | feed.xml empty atom feed for blocked bots | Blocked bots and bad actors get a 200 empty `<feed>` body on `/feed.xml`; normal browsers pass through untouched |
 | Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
 | Percent-encoded URI handling | URI decoding before pattern matching |
