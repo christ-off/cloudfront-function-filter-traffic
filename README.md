@@ -371,6 +371,8 @@ user's request.
 
 `ironfountain-leads/` is blocked at the user's request.
 
+`what10bot/` (What10Bot, what10.com/bot) does not obey `robots.txt`.
+
 `veryhip/` (`veryhip.com`) is blocked at the user's request.
 
 `cms-security-auditor/` is blocked at the user's request, despite

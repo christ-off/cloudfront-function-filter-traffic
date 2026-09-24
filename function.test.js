@@ -409,6 +409,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["OpenTheBoxBot/1.0", "OpenTheBoxBot"],
     ["webapp-mapper/0.1 (public technical analysis)", "webapp-mapper"],
     ["IronFountain-Leads/1.0 ( https://www.ironfountain.com)", "IronFountain-Leads"],
+    ["What10Bot/2.0 ( https://what10.com/bot)", "What10Bot"],
     ["Mozilla/5.0 (compatible; VeryHip/0.1; https://veryhip.com/bot.html)", "VeryHip"],
     ["CMS-Security-Auditor/1.0 ( authorized self-check; contact: local-admin)", "CMS-Security-Auditor"],
     ["Mozilla/5.0 (compatible; CensysInspect/1.1; https://about.censys.io/)", "CensysInspect"],
