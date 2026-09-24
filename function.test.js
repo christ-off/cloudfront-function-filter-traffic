@@ -404,6 +404,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; TikTokSpider; ttspider-feedback@tiktok.com)", "TikTokSpider"],
     ["OpenTheBoxBot/1.0", "OpenTheBoxBot"],
     ["webapp-mapper/0.1 (public technical analysis)", "webapp-mapper"],
+    ["IronFountain-Leads/1.0 ( https://www.ironfountain.com)", "IronFountain-Leads"],
     ["Mozilla/5.0 (compatible; VeryHip/0.1; https://veryhip.com/bot.html)", "VeryHip"],
     ["CMS-Security-Auditor/1.0 ( authorized self-check; contact: local-admin)", "CMS-Security-Auditor"],
     ["Mozilla/5.0 (compatible; CensysInspect/1.1; https://about.censys.io/)", "CensysInspect"],
@@ -438,10 +439,9 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // /rss.xml gets no special treatment: blocked bots are simply denied there
-  // like anywhere else (the decoy responses were removed). /feed.xml is the
-  // exception — see its dedicated describe block below.
-  const feedPaths = ["/rss.xml"];
+  // Feed paths get no special treatment: blocked bots are simply denied there
+  // like anywhere else (the decoy responses were removed).
+  const feedPaths = ["/rss.xml", "/feed.xml"];
 
   it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
     const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
@@ -502,12 +502,6 @@ describe("IP range blocking", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("answers a blocked IP's /robots.txt with a 200 disallow-all", () => {
-    const result = handler(makeEvent({ uri: "/robots.txt", ip: "45.148.10.5" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
-  });
-
   it("blocks a blocked IP even with a normal browser UA", () => {
     const result = handler(makeEvent({
       ip: "93.123.109.7",
@@ -518,34 +512,15 @@ describe("IP range blocking", () => {
 });
 
 // =====================================================
-// /robots.txt for a blocked bot → real disallow-all, not a 404
+// /robots.txt gets no special treatment (origin serves a disallow-all + allowlist)
 // =====================================================
-describe("robots.txt disallow-all for blocked bots", () => {
-  it("answers a blocked bot's /robots.txt with a 200 disallow-all", () => {
-    const result = handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("text/plain");
-    expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
-    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+describe("robots.txt for blocked bots", () => {
+  it("404s a blocked bot's /robots.txt like any other path", () => {
+    expectNotFound(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("also answers a bad-actor UA's (not just a blocked bot's) /robots.txt with a 200 disallow-all", () => {
-    const result = handler(makeEvent({
-      uri: "/robots.txt",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
-    }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toBe("User-agent: *\nDisallow: /\n");
-  });
-
-  it("is case-insensitive on the URI", () => {
-    const result = handler(makeEvent({ uri: "/ROBOTS.TXT", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
-    expectNotFound(result);
+  it("404s a blocked IP's /robots.txt", () => {
+    expectNotFound(handler(makeEvent({ uri: "/robots.txt", ip: "45.148.10.5" })));
   });
 
   it("still lets a normal browser's /robots.txt through untouched", () => {
@@ -564,47 +539,6 @@ describe("sitemap.xml for blocked bots", () => {
 
   it("still lets a normal browser's /sitemap.xml through untouched", () => {
     const event = makeEvent({ uri: "/sitemap.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
-// Empty feed.xml for blocked bots
-// =====================================================
-describe("feed.xml empty atom feed for blocked bots", () => {
-  it("answers a blocked bot's /feed.xml with a 200 empty atom feed", () => {
-    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/atom+xml");
-    expect(result.headers["cache-control"].value).toBe("public, max-age=86400");
-    expect(result.body).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
-    );
-  });
-
-  it("also answers a bad-actor UA's (not just a blocked bot's) /feed.xml with a 200 empty atom feed", () => {
-    const result = handler(makeEvent({
-      uri: "/feed.xml",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
-    }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
-    );
-  });
-
-  it("is case-insensitive on the URI", () => {
-    const result = handler(makeEvent({ uri: "/FEED.XML", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-  });
-
-  it("does not affect other bad-actor rules (e.g. security-scan URIs)", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
-    expectNotFound(result);
-  });
-
-  it("still lets a normal browser's /feed.xml through untouched", () => {
-    const event = makeEvent({ uri: "/feed.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
     expect(handler(event)).toEqual(event.request);
   });
 });
