@@ -54,7 +54,7 @@ function handler(event) {
 const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|human|pagefind\/pagefind-entry)\.json$/;
 
 // rationale: README.md#allowlisted-uris
-const allowlistedUriRegex = /^\/backup\.zip$/i;
+const allowlistedUriRegex = /^\/(backup\.zip|robots\.txt|ads\.txt)$/i;
 
 // rationale: README.md#js-allowlist
 const allowedJsRegex = /^\/(javascript\/(recommended-blogs|chart\.umd\.min|bootstrap\.bundle\.min)|pagefind\/pagefind(-worker|-ui)?)\.js$/;

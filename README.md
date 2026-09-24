@@ -9,7 +9,7 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 ## What the function does
 
 ### 0. URI allowlist (pass-through)
-A short list of exact paths (currently just `/backup.zip`) always pass through
+A short list of exact paths (currently `/backup.zip`, `/robots.txt`, `/ads.txt`) always pass through
 to the origin, checked before every other rule — nothing below can block them.
 
 ### 1. Missing user-agent blocking (404)
@@ -87,7 +87,9 @@ including the IP-range and bot-UA checks. Case-insensitive exact-path match.
   against the deployed function (e.g. `aws cloudfront test-function`); verify
   it with the unit tests only.
 
-To add a URI: append `|^\/your-path$` to `allowlistedUriRegex`.
+- `/robots.txt`, `/ads.txt` — always served, even to blocked UAs/IPs.
+
+To add a URI: add `|your-path` (escape `.`) inside the group of `allowlistedUriRegex`.
 
 ### uri-decoding
 Only ~3% of URIs contain a `%`-escape (per `logs.db`); the rest skip the
@@ -97,9 +99,9 @@ single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
-Bad actors and blocked bots get a plain 404 on every path. `/robots.txt` is
-not faked: the origin's robots.txt already disallows everything and allowlists
-specific bots. `/feed.xml` is not faked either: an empty feed had no effect.
+Bad actors and blocked bots get a plain 404 on every path except the
+`allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
+disallows everything and allowlists specific bots. `/feed.xml` is not faked either: an empty feed had no effect.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
@@ -600,11 +602,11 @@ npm run test:watch # watch mode (re-runs on file save)
 | PHP / bad folder / security scan blocking | File extensions, scanner folders, sensitive/credential paths, `/ip` |
 | Scrapper bot blocking by user-agent | 60+ bot/scraper patterns, matched case-insensitively |
 | IP range blocking | Known-malicious `/24` ranges blocked regardless of UA; boundary IPs just outside a range pass through |
-| robots.txt for blocked bots | Blocked bots and bad actors get a plain 404 on `/robots.txt`; normal browsers pass through untouched |
+| robots.txt for blocked bots | Allowlisted: always passes through, even for blocked bots and bad actors |
 | sitemap.xml for blocked bots | Blocked bots get a plain 404 on `/sitemap.xml`; normal browsers pass through untouched |
 | Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
 | Percent-encoded URI handling | URI decoding before pattern matching |
-| ads.txt and llms.txt | Follow normal UA blocking rules (no special bypass) |
+| ads.txt and llms.txt | `/ads.txt` is allowlisted; `/llms.txt` follows normal UA blocking |
 | Pass-through | Normal requests forwarded unchanged |
 
 Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.

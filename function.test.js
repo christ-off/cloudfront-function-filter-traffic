@@ -41,6 +41,10 @@ describe("URI allowlist", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/backup.zip", ip: "45.148.10.5" })));
   });
 
+  it.each(["/robots.txt", "/ads.txt"])("allows %s through for blocked UA and IP", (uri) => {
+    expectNotBlocked(handler(makeEvent({ uri, userAgent: "Scrapy/1.0", ip: "45.148.10.5" })));
+  });
+
   it("is case-insensitive", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/Backup.ZIP" })));
   });
@@ -515,15 +519,15 @@ describe("IP range blocking", () => {
 });
 
 // =====================================================
-// /robots.txt gets no special treatment (origin serves a disallow-all + allowlist)
+// /robots.txt is allowlisted (always passes through, even for blocked bots/IPs)
 // =====================================================
 describe("robots.txt for blocked bots", () => {
-  it("404s a blocked bot's /robots.txt like any other path", () => {
-    expectNotFound(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
+  it("lets a blocked bot's /robots.txt through", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("404s a blocked IP's /robots.txt", () => {
-    expectNotFound(handler(makeEvent({ uri: "/robots.txt", ip: "45.148.10.5" })));
+  it("lets a blocked IP's /robots.txt through", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", ip: "45.148.10.5" })));
   });
 
   it("still lets a normal browser's /robots.txt through untouched", () => {
@@ -745,10 +749,9 @@ describe("admin folder blocking", () => {
 // =====================================================
 // ads.txt / llms.txt with blocked user-agents
 // =====================================================
-describe("ads.txt and llms.txt follow normal UA blocking", () => {
-  it("blocks /ads.txt for a blocked user-agent", () => {
-    const result = handler(makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" }));
-    expect(result.statusCode).toBe(404);
+describe("ads.txt allowlisted; llms.txt follows normal UA blocking", () => {
+  it("lets /ads.txt through for a blocked user-agent", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" })));
   });
 
   it("blocks /llms.txt for a blocked user-agent", () => {
