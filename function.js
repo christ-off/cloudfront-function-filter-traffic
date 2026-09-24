@@ -156,7 +156,7 @@ function isBlockedBot(normalizedUserAgent) {
 }
 
 // rationale: README.md#ip-range-blocking
-const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.)/;
+const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.|213\.177\.179\.|62\.60\.131\.|213\.209\.159\.)/;
 
 function isBlockedIpRange(ip) {
     return blockedIpRangeRegex.test(ip);

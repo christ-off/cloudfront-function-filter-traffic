@@ -32,7 +32,7 @@ Requests matching automated-scan patterns return `404`:
 Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
 
 ### 5. IP range blocking (404)
-Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`.
+Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.177.179.0/24`, `62.60.131.0/24`, `213.209.159.0/24`.
 
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
@@ -479,7 +479,8 @@ so a blocked IP is treated like any other bad actor, regardless of what
 User-Agent it sends.
 
 Currently blocked: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`
-(Techoff SRV Limited), blocked at the user's request.
+(Techoff SRV Limited); `213.177.179.0/24`, `62.60.131.0/24`, `213.209.159.0/24`
+(Feo Prest SRL, AS208137, Aachen DE). Blocked at the user's request.
 
 If a future range isn't octet-aligned (e.g. a `/25` or `/22`), the
 string-prefix trick stops working and the check needs real integer/bitmask
