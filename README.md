@@ -365,6 +365,8 @@ user's request.
 
 `opentheboxbot/` is blocked at the user's request.
 
+`webapp-mapper/` is blocked at the user's request.
+
 `veryhip/` (`veryhip.com`) is blocked at the user's request.
 
 `cms-security-auditor/` is blocked at the user's request, despite
