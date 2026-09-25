@@ -107,10 +107,13 @@ a 404: a blocked source polls it every minute and ignores `max-age`. The 410 is
 an experiment to make well-behaved pollers unsubscribe; drop it if the request
 rate doesn't fall.
 
-**Experiment:** every "404" above (`createNotFoundResponse`) actually answers
-`404` or `410 Gone` at random (50/50, `Math.random()`), to see whether a 410
-makes persistent scrapers give up. Revert to a constant 404 if the request rate
-doesn't fall.
+**Experiment (started 2026-09-25):** the goal is to see whether scrapers react
+to a `410 Gone` (unlike a 404, it means "permanently removed", so well-behaved
+clients should stop retrying). Every "404" above (`createNotFoundResponse`)
+therefore answers `404` or `410` at random (50/50, `Math.random()`), and
+`/feed.xml` answers a `410` or an empty `200` feed. Compare request rates per
+user-agent/IP in `logs.db` before and after. If nothing changes, revert to a
+constant 404 and drop the `createGoneResponse` branches.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
