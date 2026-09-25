@@ -101,7 +101,11 @@ dotfile/prefix checks — still ends up fully decoded before matching.
 ### bad-actor-response-mapping
 Bad actors and blocked bots get a plain 404 on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
-disallows everything and allowlists specific bots. `/feed.xml` is not faked either: an empty feed had no effect.
+disallows everything and allowlists specific bots. `/feed.xml` gets, at random
+(50/50, `Math.random()`), a `200` empty Atom `<feed>` or a `410 Gone` instead of
+a 404: a blocked source polls it every minute and ignores `max-age`. The 410 is
+an experiment to make well-behaved pollers unsubscribe; drop it if the request
+rate doesn't fall.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,

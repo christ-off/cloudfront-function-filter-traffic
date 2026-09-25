@@ -33,6 +33,10 @@ function handler(event) {
 
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedBot(ua) || isBlockedIpRange(viewerIp)) {
+        // rationale: README.md#bad-actor-response-mapping
+        if (uriLower === '/feed.xml') {
+            return Math.random() < 0.5 ? createEmptyFeedResponse() : createGoneResponse();
+        }
         return createNotFoundResponse();
     }
 
@@ -168,6 +172,27 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
+    };
+}
+
+function createGoneResponse() {
+    return {
+        statusCode: 410,
+        statusDescription: 'Gone',
+        headers: {"content-type": {value: "text/plain"}},
+        body: 'Gone'
+    };
+}
+
+function createEmptyFeedResponse() {
+    return {
+        statusCode: 200,
+        statusDescription: 'OK',
+        headers: {
+            "content-type": {value: "application/atom+xml"},
+            "cache-control": {value: "public, max-age=604800"}
+        },
+        body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
     };
 }
 

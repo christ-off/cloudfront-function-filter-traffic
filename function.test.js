@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { handler } from "./function.js";
 
 function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
@@ -444,9 +444,8 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
-  // Feed paths get no special treatment: blocked bots are simply denied there
-  // like anywhere else (the decoy responses were removed).
-  const feedPaths = ["/rss.xml", "/feed.xml"];
+  // /rss.xml gets no special treatment; /feed.xml has its own describe block below.
+  const feedPaths = ["/rss.xml"];
 
   it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
     const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
@@ -535,6 +534,46 @@ describe("robots.txt for blocked bots", () => {
 
   it("still lets a normal browser's /robots.txt through untouched", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
+// =====================================================
+// Empty feed.xml for blocked bots
+// =====================================================
+describe("feed.xml empty atom feed / 410 for blocked bots", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("answers a blocked bot's /feed.xml with a 410 half of the time", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.9);
+    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toBe("Gone");
+  });
+
+  const emptyFeed = '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n';
+
+  it("answers a blocked bot's /feed.xml with a 200 empty atom feed", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.1);
+    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"].value).toBe("application/atom+xml");
+    expect(result.body).toBe(emptyFeed);
+  });
+
+  it("answers a blocked IP's /FEED.XML case-insensitively", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.1);
+    const result = handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe(emptyFeed);
+  });
+
+  it("does not affect other bad-actor rules", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" })));
+  });
+
+  it("still lets a normal browser's /feed.xml through untouched", () => {
+    const event = makeEvent({ uri: "/feed.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
     expect(handler(event)).toEqual(event.request);
   });
 });
