@@ -559,19 +559,12 @@ describe("random 404 / 410 experiment", () => {
   });
 });
 
-describe("feed.xml empty atom feed / 410 for blocked bots", () => {
-
-  it("answers a blocked bot's /feed.xml with a 410 half of the time", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.9);
-    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(410);
-    expect(result.body).toBe("Gone");
-  });
+describe("feed.xml empty atom feed for blocked bots", () => {
 
   const emptyFeed = '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n';
 
-  it("answers a blocked bot's /feed.xml with a 200 empty atom feed", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.1);
+  it("answers a blocked bot's /feed.xml with a 200 empty atom feed, never a 410", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.9);
     const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("application/atom+xml");

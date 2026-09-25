@@ -35,7 +35,7 @@ function handler(event) {
     if (isBadActor(uriLower, ua) || isBlockedBot(ua) || isBlockedIpRange(viewerIp)) {
         // rationale: README.md#bad-actor-response-mapping
         if (uriLower === '/feed.xml') {
-            return Math.random() < 0.5 ? createEmptyFeedResponse() : createGoneResponse();
+            return createEmptyFeedResponse();
         }
         return createNotFoundResponse();
     }

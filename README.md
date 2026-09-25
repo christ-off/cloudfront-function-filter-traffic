@@ -101,17 +101,15 @@ dotfile/prefix checks — still ends up fully decoded before matching.
 ### bad-actor-response-mapping
 Bad actors and blocked bots get a plain 404 on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
-disallows everything and allowlists specific bots. `/feed.xml` gets, at random
-(50/50, `Math.random()`), a `200` empty Atom `<feed>` or a `410 Gone` instead of
-a 404: a blocked source polls it every minute and ignores `max-age`. The 410 is
-an experiment to make well-behaved pollers unsubscribe; drop it if the request
-rate doesn't fall.
+disallows everything and allowlists specific bots. `/feed.xml` always gets a `200`
+empty Atom `<feed>` instead of a 404/410: a blocked source polls it every minute
+and ignores `max-age`, and an empty feed is preferable to an error.
 
 **Experiment (started 2026-09-25):** the goal is to see whether scrapers react
 to a `410 Gone` (unlike a 404, it means "permanently removed", so well-behaved
 clients should stop retrying). Every "404" above (`createNotFoundResponse`)
-therefore answers `404` or `410` at random (50/50, `Math.random()`), and
-`/feed.xml` answers a `410` or an empty `200` feed. Compare request rates per
+therefore answers `404` or `410` at random (50/50, `Math.random()`); `/feed.xml`
+is excluded and always answers an empty `200` feed. Compare request rates per
 user-agent/IP in `logs.db` before and after. If nothing changes, revert to a
 constant 404 and drop the `createGoneResponse` branches.
 
