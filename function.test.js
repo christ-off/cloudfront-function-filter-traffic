@@ -559,23 +559,24 @@ describe("random 404 / 410 experiment", () => {
   });
 });
 
-describe("feed.xml empty atom feed for blocked bots", () => {
+describe("feed.xml fake atom feed for blocked bots", () => {
 
-  const emptyFeed = '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n';
+  const bait = '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
+    '<link rel="alternate" type="application/zip" href="/backup.zip"/>';
 
-  it("answers a blocked bot's /feed.xml with a 200 empty atom feed, never a 410", () => {
+  it("answers a blocked bot's /feed.xml with a 200 atom feed baiting /backup.zip, never a 410", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.9);
     const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("application/atom+xml");
-    expect(result.body).toBe(emptyFeed);
+    expect(result.body).toContain(bait);
   });
 
   it("answers a blocked IP's /FEED.XML case-insensitively", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.1);
     const result = handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" }));
     expect(result.statusCode).toBe(200);
-    expect(result.body).toBe(emptyFeed);
+    expect(result.body).toContain(bait);
   });
 
   it("does not affect other bad-actor rules", () => {

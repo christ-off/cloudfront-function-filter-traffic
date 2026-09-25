@@ -35,7 +35,7 @@ function handler(event) {
     if (isBadActor(uriLower, ua) || isBlockedBot(ua) || isBlockedIpRange(viewerIp)) {
         // rationale: README.md#bad-actor-response-mapping
         if (uriLower === '/feed.xml') {
-            return createEmptyFeedResponse();
+            return createFakeFeedResponse();
         }
         return createNotFoundResponse();
     }
@@ -188,7 +188,7 @@ function createGoneResponse() {
     };
 }
 
-function createEmptyFeedResponse() {
+function createFakeFeedResponse() {
     return {
         statusCode: 200,
         statusDescription: 'OK',
@@ -196,7 +196,13 @@ function createEmptyFeedResponse() {
             "content-type": {value: "application/atom+xml"},
             "cache-control": {value: "public, max-age=604800"}
         },
-        body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"></feed>\n'
+        body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">' +
+            '<title>Site backup</title><id>tag:feed,2026-01-01:backup</id><updated>2026-01-01T00:00:00Z</updated>' +
+            '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
+            '<link rel="alternate" type="application/zip" href="/backup.zip"/>' +
+            '<updated>2026-01-01T00:00:00Z</updated><author><name>admin</name></author>' +
+            '<summary>Full site backup including database dump and configuration files.</summary></entry>' +
+            '</feed>\n'
     };
 }
 
