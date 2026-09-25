@@ -107,6 +107,11 @@ a 404: a blocked source polls it every minute and ignores `max-age`. The 410 is
 an experiment to make well-behaved pollers unsubscribe; drop it if the request
 rate doesn't fall.
 
+**Experiment:** every "404" above (`createNotFoundResponse`) actually answers
+`404` or `410 Gone` at random (50/50, `Math.random()`), to see whether a 410
+makes persistent scrapers give up. Revert to a constant 404 if the request rate
+doesn't fall.
+
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
 then truncated/malformed Chrome UAs, then outdated Chrome/Edge/Firefox UAs,

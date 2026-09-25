@@ -1,5 +1,9 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { handler } from "./function.js";
+
+// createNotFoundResponse randomly answers 404 or 410; pin it to 404 by default.
+beforeEach(() => { vi.spyOn(Math, "random").mockReturnValue(0.1); });
+afterEach(() => { vi.restoreAllMocks(); });
 
 function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
   const headers = {};
@@ -541,8 +545,21 @@ describe("robots.txt for blocked bots", () => {
 // =====================================================
 // Empty feed.xml for blocked bots
 // =====================================================
+describe("random 404 / 410 experiment", () => {
+  it("answers 404 when the coin flip is low", () => {
+    const result = handler(makeEvent({ uri: "/wp-login.php" }));
+    expect(result.statusCode).toBe(404);
+  });
+
+  it("answers 410 when the coin flip is high", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.9);
+    const result = handler(makeEvent({ uri: "/wp-login.php" }));
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toBe("Gone");
+  });
+});
+
 describe("feed.xml empty atom feed / 410 for blocked bots", () => {
-  afterEach(() => vi.restoreAllMocks());
 
   it("answers a blocked bot's /feed.xml with a 410 half of the time", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.9);
