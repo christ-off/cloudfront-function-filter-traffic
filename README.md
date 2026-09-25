@@ -385,6 +385,8 @@ user's request.
 
 `what10bot/` (What10Bot, what10.com/bot) does not obey `robots.txt`.
 
+`konqueror/` (`Mozilla/5.0 (compatible; Konqueror/3; Linux)`): a KDE browser UA no real visitor sends anymore; only scrapers spoof it.
+
 `veryhip/` (`veryhip.com`) is blocked at the user's request.
 
 `cms-security-auditor/` is blocked at the user's request, despite
