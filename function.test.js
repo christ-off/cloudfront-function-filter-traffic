@@ -563,9 +563,9 @@ describe("random 404 / 410 experiment", () => {
 describe("feed.xml fake atom feed for blocked bots", () => {
 
   const bait = '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
-    '<link rel="alternate" type="application/zip" href="/backup.zip"/>';
+    '<link rel="alternate" type="application/zip" href="https://post-tenebras-lire.net/backup.zip"/>';
 
-  it("answers a blocked bot's /feed.xml with a 200 atom feed baiting /backup.zip, never a 410", () => {
+  it("answers a blocked bot's /feed.xml with a 200 atom feed baiting https://post-tenebras-lire.net/backup.zip, never a 410", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.9);
     const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);

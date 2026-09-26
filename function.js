@@ -199,7 +199,7 @@ function createFakeFeedResponse() {
         body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">' +
             '<title>Site backup</title><id>tag:feed,2026-01-01:backup</id><updated>2026-01-01T00:00:00Z</updated>' +
             '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
-            '<link rel="alternate" type="application/zip" href="/backup.zip"/>' +
+            '<link rel="alternate" type="application/zip" href="https://post-tenebras-lire.net/backup.zip"/>' +
             '<updated>2026-01-01T00:00:00Z</updated><author><name>admin</name></author>' +
             '<summary>Full site backup including database dump and configuration files.</summary></entry>' +
             '</feed>\n'
