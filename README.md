@@ -102,18 +102,10 @@ dotfile/prefix checks — still ends up fully decoded before matching.
 Bad actors and blocked bots get a plain 404 on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
 disallows everything and allowlists specific bots. `/feed.xml` always gets a `200`
-fake Atom `<feed>` instead of a 404/410: a blocked source polls it every minute
+fake Atom `<feed>` instead of a 404: a blocked source polls it every minute
 and ignores `max-age`, and a feed is preferable to an error. It holds one bait
 entry linking `/backup.zip` (honeypot: any later request for it, in `logs.db`,
 comes from a client that parsed the feed).
-
-**Experiment (started 2026-09-25):** the goal is to see whether scrapers react
-to a `410 Gone` (unlike a 404, it means "permanently removed", so well-behaved
-clients should stop retrying). Every "404" above (`createNotFoundResponse`)
-therefore answers `404` or `410` at random (50/50, `Math.random()`); `/feed.xml`
-is excluded and always answers the fake `200` feed. Compare request rates per
-user-agent/IP in `logs.db` before and after. If nothing changes, revert to a
-constant 404 and drop the `createGoneResponse` branches.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,

@@ -1,9 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
-
-// createNotFoundResponse randomly answers 404 or 410; pin it to 404 by default.
-beforeEach(() => { vi.spyOn(Math, "random").mockReturnValue(0.1); });
-afterEach(() => { vi.restoreAllMocks(); });
 
 function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
   const headers = {};
@@ -546,27 +542,12 @@ describe("robots.txt for blocked bots", () => {
 // =====================================================
 // Empty feed.xml for blocked bots
 // =====================================================
-describe("random 404 / 410 experiment", () => {
-  it("answers 404 when the coin flip is low", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("answers 410 when the coin flip is high", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.9);
-    const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expect(result.statusCode).toBe(410);
-    expect(result.body).toBe("Gone");
-  });
-});
-
 describe("feed.xml fake atom feed for blocked bots", () => {
 
   const bait = '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
     '<link rel="alternate" type="application/zip" href="https://post-tenebras-lire.net/backup.zip"/>';
 
-  it("answers a blocked bot's /feed.xml with a 200 atom feed baiting https://post-tenebras-lire.net/backup.zip, never a 410", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.9);
+  it("answers a blocked bot's /feed.xml with a 200 atom feed baiting https://post-tenebras-lire.net/backup.zip", () => {
     const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("application/atom+xml");
@@ -574,7 +555,6 @@ describe("feed.xml fake atom feed for blocked bots", () => {
   });
 
   it("answers a blocked IP's /FEED.XML case-insensitively", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.1);
     const result = handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" }));
     expect(result.statusCode).toBe(200);
     expect(result.body).toContain(bait);

@@ -168,23 +168,11 @@ function isBlockedIpRange(ip) {
 
 // rationale: README.md#bad-actor-response-mapping
 function createNotFoundResponse() {
-    if (Math.random() < 0.5) {
-        return {
-            statusCode: 404,
-            statusDescription: 'Not Found',
-            headers: {"content-type": {value: "text/plain"}},
-            body: 'Not Found'
-        };
-    }
-    return createGoneResponse();
-}
-
-function createGoneResponse() {
     return {
-        statusCode: 410,
-        statusDescription: 'Gone',
+        statusCode: 404,
+        statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
-        body: 'Gone'
+        body: 'Not Found'
     };
 }
 
