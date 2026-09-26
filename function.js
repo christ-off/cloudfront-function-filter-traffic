@@ -31,6 +31,11 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
+    // rationale: README.md#gone-pages
+    if (gonePageRegex.test(uriLower)) {
+        return createGoneResponse();
+    }
+
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedBot(ua) || isBlockedIpRange(viewerIp)) {
         // rationale: README.md#bad-actor-response-mapping
@@ -159,6 +164,9 @@ function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
 }
 
+// rationale: README.md#gone-pages
+const gonePageRegex = /^\/(les-annales-du-disque-monde-le-régiment-monstrueux|les_remèdes_du_docteur_irabu_hideo_okuda|nos_premières_fois_nicolas_teyssandier|les-machines-fantômes-olivier-paquet|le-maître-et-marguerite_mikhaïl-boulgakov|les_mémoires_d_un_chat_hiro_arikawa|la-cité-du-futur-robert-charles-wilson|dans-l-oeil-du-démon_junichirô-tanizaki|le_grand_roman_des-maths_mickaël_launay|dernières-nouvelles-de-sapiens-silvana-condemi|andromède_voyager_tome_3_stephanne_desienne|le-jugement-de-jéhovah-james-morrow|mais_qui_a_attrapé_le_bison_de_higgs_david_louapre|le_japon_moderne_et_l_éthique_samouraï|carnaval_ray-celestin|l_univers_à_portée_de_main_christophe_galfard|2012-08-28-review-le-japon-vu-de-l|2013-04-12-les-chronolithes-robert-charles-wilson|2014-01-18-histoire-suisse-jean-jacques-bouquet)\/?$/;
+
 // rationale: README.md#ip-range-blocking
 const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.|213\.177\.179\.|62\.60\.131\.|213\.209\.159\.|45\.138\.12\.|185\.218\.86\.)/;
 
@@ -176,6 +184,15 @@ function createNotFoundResponse() {
     };
 }
 
+function createGoneResponse() {
+    return {
+        statusCode: 410,
+        statusDescription: 'Gone',
+        headers: {"content-type": {value: "text/plain"}},
+        body: 'Gone'
+    };
+}
+
 function createFakeFeedResponse() {
     return {
         statusCode: 200,
@@ -185,12 +202,7 @@ function createFakeFeedResponse() {
             "cache-control": {value: "public, max-age=604800"}
         },
         body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">' +
-            '<title>Site backup</title><id>tag:feed,2026-01-01:backup</id><updated>2026-01-01T00:00:00Z</updated>' +
-            '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
-            '<link rel="alternate" type="application/zip" href="https://post-tenebras-lire.net/backup.zip"/>' +
-            '<updated>2026-01-01T00:00:00Z</updated><author><name>admin</name></author>' +
-            '<summary>Full site backup including database dump and configuration files.</summary></entry>' +
-            '</feed>\n'
+            '<title>Feed</title><id>tag:feed,2026-01-01:feed</id><updated>2026-01-01T00:00:00Z</updated></feed>\n'
     };
 }
 

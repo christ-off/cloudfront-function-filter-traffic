@@ -544,20 +544,19 @@ describe("robots.txt for blocked bots", () => {
 // =====================================================
 describe("feed.xml fake atom feed for blocked bots", () => {
 
-  const bait = '<entry><title>Full site backup</title><id>tag:feed,2026-01-01:backup.zip</id>' +
-    '<link rel="alternate" type="application/zip" href="https://post-tenebras-lire.net/backup.zip"/>';
-
-  it("answers a blocked bot's /feed.xml with a 200 atom feed baiting https://post-tenebras-lire.net/backup.zip", () => {
+  it("answers a blocked bot's /feed.xml with a empty 200 atom feed", () => {
     const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
     expect(result.statusCode).toBe(200);
     expect(result.headers["content-type"].value).toBe("application/atom+xml");
-    expect(result.body).toContain(bait);
+    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(result.body).not.toContain('<entry>');
   });
 
   it("answers a blocked IP's /FEED.XML case-insensitively", () => {
     const result = handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" }));
     expect(result.statusCode).toBe(200);
-    expect(result.body).toContain(bait);
+    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(result.body).not.toContain('<entry>');
   });
 
   it("does not affect other bad-actor rules", () => {
@@ -1008,3 +1007,31 @@ describe("pass-through", () => {
   });
 });
 
+
+// =====================================================
+// Removed pages answer 410 Gone
+// =====================================================
+describe("410 for removed pages", () => {
+  it("answers 410 for a removed page, with or without trailing slash", () => {
+    for (const uri of ["/Carnaval_Ray-Celestin/", "/Carnaval_Ray-Celestin", "/carnaval_ray-celestin/"]) {
+      const result = handler(makeEvent({ uri }));
+      expect(result.statusCode).toBe(410);
+      expect(result.body).toBe("Gone");
+    }
+  });
+
+  it("matches accented and percent-encoded paths", () => {
+    for (const uri of ["/Le-Maître-et-Marguerite_Mikhaïl-Boulgakov/", "/Le-Ma%C3%AEtre-et-Marguerite_Mikha%C3%AFl-Boulgakov/"]) {
+      expect(handler(makeEvent({ uri })).statusCode).toBe(410);
+    }
+  });
+
+  it("answers 410 for dated removed posts", () => {
+    expect(handler(makeEvent({ uri: "/2012-08-28-review-le-japon-vu-de-l/" })).statusCode).toBe(410);
+  });
+
+  it("does not match unrelated paths", () => {
+    expect(handler(makeEvent({ uri: "/2012-08-29-something-else/" })).statusCode).not.toBe(410);
+    expect(handler(makeEvent({ uri: "/blog/carnaval_ray-celestin/" })).statusCode).not.toBe(410);
+  });
+});

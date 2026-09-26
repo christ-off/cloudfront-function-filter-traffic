@@ -12,6 +12,9 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 A short list of exact paths (currently `/backup.zip`, `/robots.txt`, `/ads.txt`) always pass through
 to the origin, checked before every other rule — nothing below can block them.
 
+### 0b. Removed pages (410)
+A fixed list of removed page slugs (`gonePageRegex`) answers `410 Gone` instead of the origin's S3 404.
+
 ### 1. Missing user-agent blocking (404)
 Requests with no `User-Agent` header, an empty value, or whitespace-only value return `404`. This check runs first, before URI decoding, and cannot be bypassed.
 
@@ -102,10 +105,14 @@ dotfile/prefix checks — still ends up fully decoded before matching.
 Bad actors and blocked bots get a plain 404 on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
 disallows everything and allowlists specific bots. `/feed.xml` always gets a `200`
-fake Atom `<feed>` instead of a 404: a blocked source polls it every minute
-and ignores `max-age`, and a feed is preferable to an error. It holds one bait
-entry linking `/backup.zip` (honeypot: any later request for it, in `logs.db`,
-comes from a client that parsed the feed).
+empty fake Atom `<feed>` instead of a 404: a blocked source polls it every minute
+and ignores `max-age`, and a feed is preferable to an error.
+
+### gone-pages
+19 pages were removed from the site; a `410 Gone` tells crawlers they are permanently
+gone, where S3 would answer a plain 404. `gonePageRegex` matches the lowercased, decoded
+URI by its full slug, with an optional trailing slash. It runs before the bad-actor checks, so
+real visitors get the 410 too.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
