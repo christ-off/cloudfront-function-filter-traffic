@@ -15,6 +15,14 @@ to the origin, checked before every other rule — nothing below can block them.
 ### 0b. Removed pages (410)
 A fixed list of removed page slugs (`gonePageRegex`) answers `410 Gone` instead of the origin's S3 404.
 
+### 0c. Trailing slash (410)
+When a request would return `404` and the URI ends with `/`, the function
+returns `410 Gone` instead. Directory-style paths with a trailing slash do not
+exist on this static site — the origin would normally 301 to the canonical
+filename — so a 410 tells indexers and scrapers the content is permanently
+gone, not temporarily unavailable. This applies to all 404 paths: missing
+user-agent, security scans, bad actors, blocked bots, JSON/JS allowlist.
+
 ### 1. Missing user-agent blocking (404)
 Requests with no `User-Agent` header, an empty value, or whitespace-only value return `404`. This check runs first, before URI decoding, and cannot be bypassed.
 
@@ -107,6 +115,16 @@ Bad actors and blocked bots get a plain 404 on every path except the
 disallows everything and allowlists specific bots. `/feed.xml` always gets a `200`
 empty fake Atom `<feed>` instead of a 404: a blocked source polls it every minute
 and ignores `max-age`, and a feed is preferable to an error.
+
+### trailing-slash-410
+When a request would return `404 Not Found` and the URI ends with `/`
+(excluding the bare root path `/`), `createNotFoundResponse` returns `410 Gone`
+instead. The check uses the raw `request.uri` (passed as argument) and tests
+the last character with `uri.length > 1 && uri.slice(-1) === '/'`. This applies
+uniformly across all 404 paths: missing user-agent, URI decode failure,
+security scans, bad actors, blocked bots, and JSON/JS allowlist rejections. A
+410 tells indexers and scrapers that the trailing-slash variant is permanently
+gone rather than temporarily unavailable, discouraging repeated probes.
 
 ### gone-pages
 19 pages were removed from the site; a `410 Gone` tells crawlers they are permanently

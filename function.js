@@ -10,7 +10,7 @@ function handler(event) {
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createNotFoundResponse();
+        return createNotFoundResponse(request.uri);
     }
 
     // rationale: README.md#uri-decoding
@@ -23,7 +23,7 @@ function handler(event) {
                 uri = decoded;
             }
         } catch (_e) {
-            return createNotFoundResponse();
+            return createNotFoundResponse(uri);
         }
     }
 
@@ -42,17 +42,17 @@ function handler(event) {
         if (uriLower === '/feed.xml') {
             return createFakeFeedResponse();
         }
-        return createNotFoundResponse();
+        return createNotFoundResponse(uri);
     }
 
     // rationale: README.md#json-allowlist
     if (uriLower.slice(-5) === '.json' && !allowedJsonRegex.test(uriLower)) {
-        return createNotFoundResponse();
+        return createNotFoundResponse(uri);
     }
 
     // rationale: README.md#js-allowlist
     if (uriLower.slice(-3) === '.js' && !allowedJsRegex.test(uriLower)) {
-        return createNotFoundResponse();
+        return createNotFoundResponse(uri);
     }
 
     // Pass through
@@ -175,7 +175,11 @@ function isBlockedIpRange(ip) {
 }
 
 // rationale: README.md#bad-actor-response-mapping
-function createNotFoundResponse() {
+function createNotFoundResponse(uri) {
+    // rationale: README.md#trailing-slash-410
+    if (uri && uri.length > 1 && uri.slice(-1) === '/') {
+        return createGoneResponse();
+    }
     return {
         statusCode: 404,
         statusDescription: 'Not Found',

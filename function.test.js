@@ -19,6 +19,11 @@ function expectNotFound(result) {
   expect(result.body).toBe("Not Found");
 }
 
+function expectGone(result) {
+  expect(result.statusCode).toBe(410);
+  expect(result.body).toBe("Gone");
+}
+
 function expectNotBlocked(result) {
   expect(result.statusCode).not.toBe(404);
 }
@@ -61,15 +66,21 @@ describe("scanner probe blocking", () => {
   it.each([
     "/wp-config.old", "/wp-config.php.old", "/secrets.env", "/manifest.webmanifest",
     "/pages/index.astro.mjs.map", "/_astro/pages/index.astro.mjs.map",
-    "/userfiles/", "/userfiles/x/", "/_ignition/health-check/", "/__debug__/",
-    "/_debugbar/open/", "/_profiler/latest/", "/telescope/requests/",
-    "/horizon/api/stats/", "/storage/logs/laravel.log", "/debug/vars/",
-    "/debug/pprof/", "/console/", "/server-status/", "/server-info/",
-    "/manage/env/", "/graphql/", "/graphql/console/", "/v1/graphql/",
-    "/v1/onboarding/config/", "/health/", "/proc/self/cmdline/",
-    "/var/run/secrets/kubernetes.io/serviceaccount/token/", "/Dockerfile/",
+    "/storage/logs/laravel.log",
   ])("returns 404 for %s", (uri) => {
     expectNotFound(handler(makeEvent({ uri })));
+  });
+
+  it.each([
+    "/userfiles/", "/userfiles/x/", "/_ignition/health-check/", "/__debug__/",
+    "/_debugbar/open/", "/_profiler/latest/", "/telescope/requests/",
+    "/horizon/api/stats/", "/debug/vars/", "/debug/pprof/", "/console/",
+    "/server-status/", "/server-info/", "/manage/env/", "/graphql/",
+    "/graphql/console/", "/v1/graphql/", "/v1/onboarding/config/", "/health/",
+    "/proc/self/cmdline/",
+    "/var/run/secrets/kubernetes.io/serviceaccount/token/", "/Dockerfile/",
+  ])("returns 410 for %s (trailing slash)", (uri) => {
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it.each(["/id_rsa", "/id_ed25519", "/id_rsa.pub", "/id_dsa"])("returns 404 for ssh key probe %s", (uri) => {
@@ -246,7 +257,7 @@ describe("404 response for bad actors", () => {
 // Security scan blocking — bad folder prefixes → 404
 // =====================================================
 describe("bad folder blocking", () => {
-  const cases = [
+  const cases404 = [
     ["/images/logo.png", "images"],
     ["/image/logo.png", "image (singular)"],
     ["/img/logo.png", "img"],
@@ -263,20 +274,27 @@ describe("bad folder blocking", () => {
     ["/uploads/shell.php", "uploads"],
     ["/plugins/malicious.php", "plugins"],
     ["/login", "login (bare)"],
+    ["/api/v2/config", "api (security scan)"],
+    ["/@fs/home/ec2-user/.aws/credentials", "@fs"],
+    ["/@vite/client", "@vite"],
+    ["/__vite_ping", "__vite prefix (no trailing slash)"],
+  ];
+
+  const cases410 = [
     ["/login/", "login (trailing slash)"],
     ["/webmail/", "webmail"],
     ["/roundcube/", "roundcube"],
     ["/mail/", "mail"],
     ["/rc/", "rc"],
-    ["/api/v2/config", "api (security scan)"],
-    ["/@fs/home/ec2-user/.aws/credentials", "@fs"],
-    ["/@vite/client", "@vite"],
-    ["/__vite_rsc_findSourceMapURL/", "__vite prefix"],
-    ["/__vite_ping", "__vite prefix (no trailing slash)"],
+    ["/__vite_rsc_findSourceMapURL/", "__vite prefix (trailing slash)"],
   ];
 
-  it.each(cases)("returns 404 for %s (%s)", (uri) => {
+  it.each(cases404)("returns 404 for %s (%s)", (uri) => {
     expectNotFound(handler(makeEvent({ uri })));
+  });
+
+  it.each(cases410)("returns 410 for %s (%s, trailing slash)", (uri) => {
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it("returns 404 for a bad folder path with no trailing content (bare folder)", () => {
@@ -659,16 +677,25 @@ describe(".sql and .bak file blocking", () => {
 });
 
 // =====================================================
-// Security scan blocking — WordPress content/API probing → 404
+// Security scan blocking — WordPress content/API probing → 404/410
 // =====================================================
 describe("wp-content and wp-json blocking", () => {
-  it("returns 404 for /wp-content/ paths", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads/" })));
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
+  it("returns 404 for /wp-content/ paths (no trailing slash)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads" })));
+    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore" })));
   });
 
-  it("returns 404 for /wp-json/ paths", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-json/" })));
+  it("returns 410 for /wp-content/ paths with trailing slash", () => {
+    expectGone(handler(makeEvent({ uri: "/wp-content/uploads/" })));
+    expectGone(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
+  });
+
+  it("returns 404 for /wp-json/ (no trailing slash)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-json" })));
+  });
+
+  it("returns 410 for /wp-json/ (trailing slash)", () => {
+    expectGone(handler(makeEvent({ uri: "/wp-json/" })));
   });
 });
 
@@ -1002,7 +1029,10 @@ describe("410 for removed pages", () => {
   });
 
   it("does not match unrelated paths", () => {
-    expect(handler(makeEvent({ uri: "/2012-08-29-something-else/" })).statusCode).not.toBe(410);
-    expect(handler(makeEvent({ uri: "/blog/carnaval_ray-celestin/" })).statusCode).not.toBe(410);
+    // /2012-08-29-something-else/ is not a gone page (pass-through to origin)
+    const result1 = handler(makeEvent({ uri: "/2012-08-29-something-else/" }));
+    expect(result1.statusCode).toBeUndefined();
+    // /blog/carnaval_ray-celestin/ is not a gone page slug (blocked by scanner regex, trailing slash → 410)
+    expect(handler(makeEvent({ uri: "/blog/carnaval_ray-celestin/" })).statusCode).toBe(410);
   });
 });
