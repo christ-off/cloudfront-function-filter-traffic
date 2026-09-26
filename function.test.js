@@ -406,6 +406,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 (compatible; AionBot/1.0)", "AionBot"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; TikTokSpider; ttspider-feedback@tiktok.com)", "TikTokSpider"],
     ["OpenTheBoxBot/1.0", "OpenTheBoxBot"],
+    ["Brightbot 1.0", "Brightbot"],
     ["webapp-mapper/0.1 (public technical analysis)", "webapp-mapper"],
     ["IronFountain-Leads/1.0 ( https://www.ironfountain.com)", "IronFountain-Leads"],
     ["What10Bot/2.0 ( https://what10.com/bot)", "What10Bot"],
