@@ -393,6 +393,8 @@ user's request.
 
 `brightbot` (UA is `Brightbot 1.0`, no `/`) is blocked at the user's request.
 
+`rust-scrape/` is blocked at the user's request.
+
 `webapp-mapper/` is blocked at the user's request.
 
 `ironfountain-leads/` is blocked at the user's request.
