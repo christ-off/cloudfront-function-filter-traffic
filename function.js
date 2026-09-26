@@ -89,7 +89,7 @@ function isDotfilePath(uri) {
 }
 
 // rationale: README.md#security-scan-regex
-const securityScanRegex = /\.(php\d*|sql|bak|swp|phtml|config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|htpasswd|tfstate|old|env|map|webmanifest)$|~$|^\/(images?|img|wp-includes|wp-content|wp-json|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|pma|vendor|uploads|plugins|login|webmail|roundcube|mail|rc|actuator|api|read-document|@fs|@vite|@id|userfiles|telescope|horizon|storage|debug|console|server-status|server-info|manage|graphql|v1|health|proc|var|dockerfile)(\/|$)|^\/(secrets?|config|credentials?|service[-_]account|firebase-(?:adminsdk|service-account|config)|serviceaccountkey|settings|env|auth|app-config|appsettings|openapi|swagger|amplifyconfiguration)\.json$|^\/(_|id_)/;
+const securityScanRegex = /\.(php\d*|sql|bak|swp|phtml|config|ya?ml|toml|conf|key|pem|axd|boto|s3cfg|htpasswd|tfstate|old|env|map|webmanifest)$|~$|^\/(images?|img|wp-includes|wp-content|wp-json|static|wp|wordpress|old|new|blog|backup|cgi-bin|admin|administrator|wp-admin|phpmyadmin|vendor|uploads|plugins|login|webmail|roundcube|mail|rc|actuator|api|@fs|@vite|userfiles|telescope|horizon|storage|debug|console|server-status|server-info|manage|graphql|v1|health|proc|var|dockerfile)(\/|$)|^\/(secrets?|config|credentials?|service[-_]account|firebase-(?:adminsdk|service-account|config)|serviceaccountkey|settings|env|auth|app-config|appsettings|openapi|swagger|amplifyconfiguration)\.json$|^\/(_|id_)/;
 
 function isSecurityScanUri(uri) {
     return uri === '/ip' || securityScanRegex.test(uri);
@@ -131,7 +131,7 @@ const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy/;
 // rationale: README.md#min-safari-major
 const MIN_SAFARI_MAJOR = 17;
 // rationale: README.md#safari-floor-exemptions
-const safariFloorExemptRegex = /compatible;|crios\/|fxios\/|edgios\/|opios\/|duckduckgo|ucbrowser\//;
+const safariFloorExemptRegex = /compatible;|crios\/|fxios\/|edgios\/|duckduckgo|ucbrowser\//;
 
 function isBelowMinMajor(ua, versionRegex, minMajor) {
     const match = ua.match(versionRegex);
@@ -158,7 +158,7 @@ function isSuspiciousSafariUA(ua) {
 }
 
 // rationale: README.md#blocked-bot-regex
-const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|trident|amazonbot\/|amzn-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|lanai|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0|webtrackrcrawler|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|ptst\/|wellesley\/1\.0|pathscan\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|greedyhand\/|yasearchbrowser|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|cmssurvey\/|wpbot\/|googlebot-image|rankpulsebot\/|siteanalysisbot\/|webscraperbot|seamus the search engine|dataforseobot|yaapp_android|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|feedfetcher-google|domain-intel\/|screaming frog seo spider|openclaw|discordbot\/|sharkey \(like|reflectionbot\/|lightpanda\/|forestengine\/|seojuice-searchbot\/|coccocbot|hubspot crawler|domain-harvester\/|mapthenetbot\/|expansel-monitor\/|fogbot\/|newsletterformresearchbot\/|srchs-research-bot\/|aionbot\/|tiktokspider|opentheboxbot\/|veryhip\/|cms-security-auditor\/|censysinspect\/|publicwwwbot\/|wp2shell|webatlabot|ssi-nutch\/|variableratio-publicassetresearch\/|baiduspider|halobot\/|flowb0t-contentengine\/|claritybot\/|undici|jscrawler\/|exasearchbot\/|serpex-index\/|compatible; crawler\)|webapp-mapper\/|ironfountain-leads\/|what10bot\/|konqueror\/|colly/;
+const blockedBotRegex = /linkupbot\/|sleepbot|mozilla\/4\.0 \(compatible; ms-office; msoffice 16\)|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|trident|amazonbot\/|amzn-searchbot\/|reyilbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|analyseseonet\/|scrapy|crios|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/1\.0|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|fxios|navcrawl\/|shap-user|wellknownbot|siteauditbot\/|wellesley\/1\.0|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|wpbot\/|googlebot-image|dataforseobot|imagebot\/|perplexitybot\/|gptbot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|feedfetcher-google|domain-intel\/|screaming frog seo spider|openclaw|discordbot\/|sharkey \(like|reflectionbot\/|lightpanda\/|forestengine\/|seojuice-searchbot\/|coccocbot|hubspot crawler|domain-harvester\/|mapthenetbot\/|expansel-monitor\/|fogbot\/|newsletterformresearchbot\/|srchs-research-bot\/|aionbot\/|tiktokspider|opentheboxbot\/|veryhip\/|cms-security-auditor\/|censysinspect\/|publicwwwbot\/|wp2shell|webatlabot|ssi-nutch\/|variableratio-publicassetresearch\/|baiduspider|halobot\/|flowb0t-contentengine\/|claritybot\/|undici|exasearchbot\/|serpex-index\/|compatible; crawler\)|webapp-mapper\/|ironfountain-leads\/|what10bot\/|konqueror\//;
 
 function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
@@ -168,7 +168,7 @@ function isBlockedBot(normalizedUserAgent) {
 const gonePageRegex = /^\/(les-annales-du-disque-monde-le-régiment-monstrueux|les_remèdes_du_docteur_irabu_hideo_okuda|nos_premières_fois_nicolas_teyssandier|les-machines-fantômes-olivier-paquet|le-maître-et-marguerite_mikhaïl-boulgakov|les_mémoires_d_un_chat_hiro_arikawa|la-cité-du-futur-robert-charles-wilson|dans-l-oeil-du-démon_junichirô-tanizaki|le_grand_roman_des-maths_mickaël_launay|dernières-nouvelles-de-sapiens-silvana-condemi|andromède_voyager_tome_3_stephanne_desienne|le-jugement-de-jéhovah-james-morrow|mais_qui_a_attrapé_le_bison_de_higgs_david_louapre|le_japon_moderne_et_l_éthique_samouraï|carnaval_ray-celestin|l_univers_à_portée_de_main_christophe_galfard|2012-08-28-review-le-japon-vu-de-l|2013-04-12-les-chronolithes-robert-charles-wilson|2014-01-18-histoire-suisse-jean-jacques-bouquet)\/?$/;
 
 // rationale: README.md#ip-range-blocking
-const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.|213\.177\.179\.|62\.60\.131\.|213\.209\.159\.|45\.138\.12\.|185\.218\.86\.)/;
+const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.|213\.209\.159\.|45\.138\.12\.|185\.218\.86\.)/;
 
 function isBlockedIpRange(ip) {
     return blockedIpRangeRegex.test(ip);

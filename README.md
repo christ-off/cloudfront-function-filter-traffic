@@ -35,7 +35,7 @@ Requests matching automated-scan patterns return `404`:
 Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
 
 ### 5. IP range blocking (404)
-Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.177.179.0/24`, `62.60.131.0/24`, `213.209.159.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
+Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
 
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
@@ -163,17 +163,12 @@ site is a security scan (the origin is an S3 static website with no API
 backend). Probes like `/api/v2/config`, `/api/v1/users`, etc. are automated
 scanners looking for API endpoints that don't exist here.
 
-`read-document` is in the folder-prefix group — a new scan pattern first seen
-2026-09-17 (38 requests to `/read-document` in one day), presumably probing
-for a document-reading/SSRF-style endpoint that doesn't exist on this static
-site.
-
 `swp` (vim swap file) and a bare trailing `~` (generic editor backup, e.g.
 `wp-config.php~`) are both classic backup-file scan suffixes appended after
 a real filename/extension, so they're matched separately from the `\.ext$`
 group rather than folded into it.
 
-`@fs`, `@vite` and `@id` are Vite dev-server internal endpoints (`@fs` in
+`@fs` and `@vite` are Vite dev-server internal endpoints (`@fs` in
 particular serves arbitrary files off the host filesystem, e.g.
 `/@fs/home/ec2-user/.aws/credentials`) — this is a static site with no Vite
 dev server behind it, so any request for these paths is a scanner, full stop.
@@ -325,7 +320,7 @@ why other WebKit-based browsers need excluding from this check.
 UAs skipped by [min-safari-major](#min-safari-major):
 - `compatible;` — same self-identifying-crawler reasoning as
   [chrome-floor-exemptions](#chrome-floor-exemptions).
-- `crios\/`, `fxios\/`, `opios\/` — Chrome/Firefox/Opera for iOS are
+- `crios\/`, `fxios\/` — Chrome/Firefox for iOS are
   Apple-mandated to use WebKit (hence the `Safari/604.1` tail) but don't
   carry a `Version/` token in their real UA, so these never actually match;
   listed defensively in case a future variant adds one.
@@ -460,17 +455,6 @@ generic to match alone — it appears inside other, legitimate bots' self-ID URL
 full `compatible; crawler)` substring instead of the usual bare name-token pattern
 in [blocked-bot-regex](#blocked-bot-regex).
 
-`colly` (`colly - https://github.com/gocolly/colly/v2`, the "Elegant scraper and
-crawler framework for Golang") is blocked at the user's request as scraper behaviour.
-Matched on the bare `colly` name token (its UA has no `name/version` form), per
-the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`jscrawler` (`Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)`) is
-blocked at the user's request as scraper behaviour. Matched on the
-`jscrawler/` name token only, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
@@ -496,7 +480,7 @@ so a blocked IP is treated like any other bad actor, regardless of what
 User-Agent it sends.
 
 Currently blocked: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`
-(Techoff SRV Limited); `213.177.179.0/24`, `62.60.131.0/24`, `213.209.159.0/24`
+(Techoff SRV Limited); `213.209.159.0/24`
 (Feo Prest SRL, AS208137, Aachen DE); `45.138.12.0/24`, `185.218.86.0/24`
 (TC Datacenter Limited, AS218785, Warsaw PL). Blocked at the user's request.
 

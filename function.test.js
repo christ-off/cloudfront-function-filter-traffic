@@ -269,11 +269,8 @@ describe("bad folder blocking", () => {
     ["/mail/", "mail"],
     ["/rc/", "rc"],
     ["/api/v2/config", "api (security scan)"],
-    ["/read-document", "read-document (bare)"],
-    ["/read-document/", "read-document (trailing slash)"],
     ["/@fs/home/ec2-user/.aws/credentials", "@fs"],
     ["/@vite/client", "@vite"],
-    ["/@id/vite/env", "@id"],
     ["/__vite_rsc_findSourceMapURL/", "__vite prefix"],
     ["/__vite_ping", "__vite prefix (no trailing slash)"],
   ];
@@ -318,26 +315,16 @@ describe("bad folder blocking", () => {
 describe("scrapper bot blocking by user-agent", () => {
   const blockedAgents = [
     ["Mozilla/5.0 (compatible; Amzn-SearchBot/1.0; https://developer.amazon.com/support/amazonbot)", "Amzn-SearchBot"],
-    [
-      "Mozilla/5.0 (Linux; Android 7.1.1; MI MAX 2 Build/NMF26F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36 YaApp_Android/10.61 YaSearchBrowser/10.61",
-      "YaApp_Android full UA",
-    ],
     ["Mozilla/5.0 (compatible; LoadedBot/1.0; https://loaded.ai/bot)", "LoadedBot (ignores robots.txt)"],
-    ["YaApp_Android/10.61", "YaApp_Android token"],
-    ["YaSearchBrowser/10.61", "YaSearchBrowser token"],
-    ["Seamus The Search Engine/1.0", "Seamus the search engine"],
     ["DataForSEOBot/1.0", "DataForSEO bot"],
     ["ev-crawler/1.0", "ev-crawler"],
-    ["Mozilla/5.0 ptst/1.0", "ptst scraper token"],
     ["Mozilla/5.0 (compatible; xAI-SearchBot/1.0; https://x.ai)", "xAI-SearchBot token"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1", "Chrome for iOS (CriOS)"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/120.0 Mobile/15E148 Safari/604.1", "Firefox for iOS (FxiOS)"],
     ["Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko", "Internet Explorer (Trident)"],
     ["Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.18", "Opera legacy (Presto)"],
-    ["WebScraperBot/0.1 (domain-check)", "WebScraperBot domain-check"],
     ["pimeyes-downloader-api/0.1", "PiMeyes downloader API"],
     ["SleepBot/1.0 (http://sleepbot.com/)", "SleepBot scraper"],
-    ["Mozilla/5.0 (compatible; WebTrackrCrawler/1.0; https://affsignal.com/bot)", "WebTrackrCrawler (affsignal)"],
     ["got (https://github.com/sindresorhus/got)", "got HTTP client"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BuiltWith/1.4; rb.gy/xprgqj) Chrome/124.0.0.0 Safari/537.36", "BuiltWith scraper"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ShapBot/0.1.0", "ShapBot scraper"],
@@ -345,28 +332,22 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
     ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],
-    ["greedyhand/0.1", "GreedyHand scraper"],
-    ["greedyhand/1.0", "GreedyHand scraper (any version)"],
     ["Mozilla/5.0 (compatible; StackyEnrich/1.0)", "StackyEnrich"],
     ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
     ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Lanai)", "Lanai bot"],
     ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
     ["python-httpx/0.28.1", "Python httpx"],
     ["python-requests/2.32.5", "Python requests"],
     ["Python/3.14 aiohttp/3.14.1", "Python aiohttp"],
     ["Mozilla/4.0 (compatible; ms-office; MSOffice 16)", "MS Office SaaS"],
-    ["CMSSurvey/1.0; https://addedlovely.com/crawler", "CMSSurvey"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ReyilBot/0.1", "ReyilBot"],
     ["Wellesley/1.0 bot", "Wellesley"],
     ["Welley/1.0 bot", "Welley/1.0 bot"],
     ["Welley/1.0", "Welley/1.0 (no bot suffix)"],
-    ["RankPulseBot/0.1 ( https://github.com/rankpulse/rankpulse)", "RankPulseBot"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
     ["Googlebot-Image/1.0", "Googlebot-Image"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
-    ["Mozilla/5.0 (compatible; pathscan/1.0)", "pathscan"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
     ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
     ["Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.4a) Gecko/20030401", "PPC Mach-O"],
@@ -423,20 +404,13 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
     ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
     ["undici", "undici"],
-    ["Mozilla/5.0 (compatible; jscrawler/0.1; https://github.com/)", "jscrawler"],
     ["Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)", "ExaSearchBot"],
     ["Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)", "serpex-index"],
     ["Mozilla/5.0 (compatible; crawler)", "generic crawler"],
-    ["colly - https://github.com/gocolly/colly/v2", "colly"],
   ];
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
     const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("scrapper bot matching is case-insensitive (YaApp)", () => {
-    const result = handler(makeEvent({ userAgent: "YAAPP_ANDROID/10.61" }));
     expect(result.statusCode).toBe(404);
   });
 
@@ -481,8 +455,6 @@ describe("IP range blocking", () => {
     ["45.148.10.255", "45.148.10.0/24 end"],
     ["93.123.109.42", "93.123.109.0/24"],
     ["195.178.110.1", "195.178.110.0/24"],
-    ["213.177.179.7", "213.177.179.0/24"],
-    ["62.60.131.7", "62.60.131.0/24"],
     ["213.209.159.7", "213.209.159.0/24"],
     ["45.138.12.7", "45.138.12.0/24"],
     ["185.218.86.7", "185.218.86.0/24"],
@@ -769,7 +741,6 @@ describe("admin folder blocking", () => {
     ["/administrator/index.php", "administrator"],
     ["/wp-admin/admin-ajax.php", "wp-admin"],
     ["/phpmyadmin/index.php", "phpmyadmin"],
-    ["/pma/index.php", "pma"],
     ["/actuator/configprops", "actuator"],
     ["/actuator/env", "actuator"],
   ];
