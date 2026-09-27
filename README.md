@@ -127,7 +127,7 @@ security scans, bad actors, blocked bots, and JSON/JS allowlist rejections. A
 gone rather than temporarily unavailable, discouraging repeated probes.
 
 ### gone-pages
-19 pages were removed from the site; a `410 Gone` tells crawlers they are permanently
+20 pages were removed from the site; a `410 Gone` tells crawlers they are permanently
 gone, where S3 would answer a plain 404. `gonePageRegex` matches the lowercased, decoded
 URI by its full slug, with an optional trailing slash. It runs before the bad-actor checks, so
 real visitors get the 410 too.
