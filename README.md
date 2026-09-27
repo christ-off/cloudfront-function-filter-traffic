@@ -477,6 +477,11 @@ generic to match alone — it appears inside other, legitimate bots' self-ID URL
 full `compatible; crawler)` substring instead of the usual bare name-token pattern
 in [blocked-bot-regex](#blocked-bot-regex).
 
+`crawl-engine/0.1 (https://abuse.creasource.dev/; abuse-report@creasource.dev)`
+is blocked at the user's request — it does not respect `robots.txt`. Matched
+on the `crawl-engine/` name token only, version number (`0.1`) dropped, per
+the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
