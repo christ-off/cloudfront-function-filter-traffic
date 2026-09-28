@@ -487,6 +487,11 @@ is blocked. Matched on the `keenablebot/` name token only, version number
 (`1.0`) dropped, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
+`WordPress/6.4.3` (the generic self-hosted-WordPress UA sent by pingbacks/
+XML-RPC requests, version varies per site) is blocked at the user's request.
+Matched on the `wordpress/` name token only, version number (`6.4.3`)
+dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a

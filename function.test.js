@@ -349,6 +349,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["rust-scrape/0.1.0", "rust-scrape"],
     ["crawl-engine/0.1 ( https://abuse.creasource.dev/; abuse-report@creasource.dev)", "crawl-engine"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; KeenableBot/1.0; https://keenable.ai/)", "KeenableBot"],
+    ["WordPress/6.4.3", "WordPress"],
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
