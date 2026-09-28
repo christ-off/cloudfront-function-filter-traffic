@@ -482,6 +482,11 @@ is blocked at the user's request — it does not respect `robots.txt`. Matched
 on the `crawl-engine/` name token only, version number (`0.1`) dropped, per
 the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
 
+`KeenableBot/1.0` (`https://keenable.ai/`) does not respect `robots.txt` and
+is blocked. Matched on the `keenablebot/` name token only, version number
+(`1.0`) dropped, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
