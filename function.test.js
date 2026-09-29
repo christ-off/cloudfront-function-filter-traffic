@@ -1035,6 +1035,10 @@ describe("410 for removed pages", () => {
     expect(handler(makeEvent({ uri: "/Ha%25C3%25AFku_%25C3%2589ric_Calatraba/" })).statusCode).toBe(410);
   });
 
+  it("matches a double-percent-encoded accented path (Québec)", () => {
+    expect(handler(makeEvent({ uri: "/L_histoire_du_Qu%25C3%25A9bec_en_30_secondes_Jean-Pierre_Charland/" })).statusCode).toBe(410);
+  });
+
   it("answers 410 for dated removed posts", () => {
     expect(handler(makeEvent({ uri: "/2012-08-28-review-le-japon-vu-de-l/" })).statusCode).toBe(410);
   });
