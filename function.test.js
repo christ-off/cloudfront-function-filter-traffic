@@ -19,11 +19,6 @@ function expectNotFound(result) {
   expect(result.body).toBe("Not Found");
 }
 
-function expectGone(result) {
-  expect(result.statusCode).toBe(410);
-  expect(result.body).toBe("Gone");
-}
-
 function expectNotBlocked(result) {
   expect(result.statusCode).not.toBe(404);
 }
@@ -79,8 +74,8 @@ describe("scanner probe blocking", () => {
     "/graphql/console/", "/v1/graphql/", "/v1/onboarding/config/", "/health/",
     "/proc/self/cmdline/",
     "/var/run/secrets/kubernetes.io/serviceaccount/token/", "/Dockerfile/",
-  ])("returns 410 for %s (trailing slash)", (uri) => {
-    expectGone(handler(makeEvent({ uri })));
+  ])("returns 404 for %s (trailing slash)", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 
   it.each(["/id_rsa", "/id_ed25519", "/id_rsa.pub", "/id_dsa"])("returns 404 for ssh key probe %s", (uri) => {
@@ -280,7 +275,7 @@ describe("bad folder blocking", () => {
     ["/__vite_ping", "__vite prefix (no trailing slash)"],
   ];
 
-  const cases410 = [
+  const casesTrailingSlash = [
     ["/login/", "login (trailing slash)"],
     ["/webmail/", "webmail"],
     ["/roundcube/", "roundcube"],
@@ -293,8 +288,8 @@ describe("bad folder blocking", () => {
     expectNotFound(handler(makeEvent({ uri })));
   });
 
-  it.each(cases410)("returns 410 for %s (%s, trailing slash)", (uri) => {
-    expectGone(handler(makeEvent({ uri })));
+  it.each(casesTrailingSlash)("returns 404 for %s (%s, trailing slash)", (uri) => {
+    expectNotFound(handler(makeEvent({ uri })));
   });
 
   it("returns 404 for a bad folder path with no trailing content (bare folder)", () => {
@@ -685,7 +680,7 @@ describe(".sql and .bak file blocking", () => {
 });
 
 // =====================================================
-// Security scan blocking — WordPress content/API probing → 404/410
+// Security scan blocking — WordPress content/API probing → 404
 // =====================================================
 describe("wp-content and wp-json blocking", () => {
   it("returns 404 for /wp-content/ paths (no trailing slash)", () => {
@@ -693,17 +688,17 @@ describe("wp-content and wp-json blocking", () => {
     expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore" })));
   });
 
-  it("returns 410 for /wp-content/ paths with trailing slash", () => {
-    expectGone(handler(makeEvent({ uri: "/wp-content/uploads/" })));
-    expectGone(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
+  it("returns 404 for /wp-content/ paths with trailing slash", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads/" })));
+    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
   });
 
   it("returns 404 for /wp-json/ (no trailing slash)", () => {
     expectNotFound(handler(makeEvent({ uri: "/wp-json" })));
   });
 
-  it("returns 410 for /wp-json/ (trailing slash)", () => {
-    expectGone(handler(makeEvent({ uri: "/wp-json/" })));
+  it("returns 404 for /wp-json/ (trailing slash)", () => {
+    expectNotFound(handler(makeEvent({ uri: "/wp-json/" })));
   });
 });
 
@@ -1014,41 +1009,3 @@ describe("pass-through", () => {
 });
 
 
-// =====================================================
-// Removed pages answer 410 Gone
-// =====================================================
-describe("410 for removed pages", () => {
-  it("answers 410 for a removed page, with or without trailing slash", () => {
-    for (const uri of ["/Carnaval_Ray-Celestin/", "/Carnaval_Ray-Celestin", "/carnaval_ray-celestin/"]) {
-      const result = handler(makeEvent({ uri }));
-      expect(result.statusCode).toBe(410);
-      expect(result.body).toBe("Gone");
-    }
-  });
-
-  it("matches accented and percent-encoded paths", () => {
-    for (const uri of ["/Le-Maître-et-Marguerite_Mikhaïl-Boulgakov/", "/Le-Ma%C3%AEtre-et-Marguerite_Mikha%C3%AFl-Boulgakov/"]) {
-      expect(handler(makeEvent({ uri })).statusCode).toBe(410);
-    }
-  });
-
-  it("matches a double-percent-encoded path", () => {
-    expect(handler(makeEvent({ uri: "/Ha%25C3%25AFku_%25C3%2589ric_Calatraba/" })).statusCode).toBe(410);
-  });
-
-  it("matches a double-percent-encoded accented path (Québec)", () => {
-    expect(handler(makeEvent({ uri: "/L_histoire_du_Qu%25C3%25A9bec_en_30_secondes_Jean-Pierre_Charland/" })).statusCode).toBe(410);
-  });
-
-  it("answers 410 for dated removed posts", () => {
-    expect(handler(makeEvent({ uri: "/2012-08-28-review-le-japon-vu-de-l/" })).statusCode).toBe(410);
-  });
-
-  it("does not match unrelated paths", () => {
-    // /2012-08-29-something-else/ is not a gone page (pass-through to origin)
-    const result1 = handler(makeEvent({ uri: "/2012-08-29-something-else/" }));
-    expect(result1.statusCode).toBeUndefined();
-    // /blog/carnaval_ray-celestin/ is not a gone page slug (blocked by scanner regex, trailing slash → 410)
-    expect(handler(makeEvent({ uri: "/blog/carnaval_ray-celestin/" })).statusCode).toBe(410);
-  });
-});

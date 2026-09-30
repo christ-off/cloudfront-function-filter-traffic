@@ -10,7 +10,7 @@ function handler(event) {
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createNotFoundResponse(request.uri);
+        return createNotFoundResponse();
     }
 
     // rationale: README.md#uri-decoding
@@ -23,7 +23,7 @@ function handler(event) {
                 uri = decoded;
             }
         } catch (_e) {
-            return createNotFoundResponse(uri);
+            return createNotFoundResponse();
         }
     }
 
@@ -31,28 +31,23 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // rationale: README.md#gone-pages
-    if (gonePageRegex.test(uriLower)) {
-        return createGoneResponse();
-    }
-
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedBot(ua) || isBlockedIpRange(viewerIp)) {
         // rationale: README.md#bad-actor-response-mapping
         if (uriLower === '/feed.xml') {
             return createFakeFeedResponse();
         }
-        return createNotFoundResponse(uri);
+        return createNotFoundResponse();
     }
 
     // rationale: README.md#json-allowlist
     if (uriLower.slice(-5) === '.json' && !allowedJsonRegex.test(uriLower)) {
-        return createNotFoundResponse(uri);
+        return createNotFoundResponse();
     }
 
     // rationale: README.md#js-allowlist
     if (uriLower.slice(-3) === '.js' && !allowedJsRegex.test(uriLower)) {
-        return createNotFoundResponse(uri);
+        return createNotFoundResponse();
     }
 
     // Pass through
@@ -164,9 +159,6 @@ function isBlockedBot(normalizedUserAgent) {
     return blockedBotRegex.test(normalizedUserAgent);
 }
 
-// rationale: README.md#gone-pages
-const gonePageRegex = /^\/(les-annales-du-disque-monde-le-régiment-monstrueux|les_remèdes_du_docteur_irabu_hideo_okuda|nos_premières_fois_nicolas_teyssandier|les-machines-fantômes-olivier-paquet|le-maître-et-marguerite_mikhaïl-boulgakov|les_mémoires_d_un_chat_hiro_arikawa|la-cité-du-futur-robert-charles-wilson|dans-l-oeil-du-démon_junichirô-tanizaki|le_grand_roman_des-maths_mickaël_launay|dernières-nouvelles-de-sapiens-silvana-condemi|andromède_voyager_tome_3_stephanne_desienne|le-jugement-de-jéhovah-james-morrow|mais_qui_a_attrapé_le_bison_de_higgs_david_louapre|le_japon_moderne_et_l_éthique_samouraï|carnaval_ray-celestin|l_univers_à_portée_de_main_christophe_galfard|2012-08-28-review-le-japon-vu-de-l|2013-04-12-les-chronolithes-robert-charles-wilson|2014-01-18-histoire-suisse-jean-jacques-bouquet|haïku_éric_calatraba|l_histoire_du_québec_en_30_secondes_jean-pierre_charland)\/?$/;
-
 // rationale: README.md#ip-range-blocking
 const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.|213\.209\.159\.|213\.177\.179\.|62\.60\.131\.|45\.138\.12\.|185\.218\.86\.)/;
 
@@ -175,25 +167,12 @@ function isBlockedIpRange(ip) {
 }
 
 // rationale: README.md#bad-actor-response-mapping
-function createNotFoundResponse(uri) {
-    // rationale: README.md#trailing-slash-410
-    if (uri && uri.length > 1 && uri.slice(-1) === '/') {
-        return createGoneResponse();
-    }
+function createNotFoundResponse() {
     return {
         statusCode: 404,
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
-    };
-}
-
-function createGoneResponse() {
-    return {
-        statusCode: 410,
-        statusDescription: 'Gone',
-        headers: {"content-type": {value: "text/plain"}},
-        body: 'Gone'
     };
 }
 
