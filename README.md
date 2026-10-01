@@ -470,6 +470,8 @@ no legitimate need to curl the site. Matched on the `curl/` name token only,
 version number (`8.6.0`) dropped, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
+`tphotobot/` is blocked at the user's request.
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
