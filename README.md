@@ -25,7 +25,7 @@ Requests matching automated-scan patterns return `404`:
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
 - A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
-- A `Chrome/` major version below 136 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
+- A `Chrome/` major version below 146 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
 - An `Edg/` (desktop Edge) major version below 152 — same stale-UA-fleet pattern as Chrome, checked independently since a scraper can fake either token. Same exemptions as the Chrome floor.
 
 ### 4. Outdated Firefox user-agent blocking (404)
@@ -221,6 +221,8 @@ app on `Chrome/124`.
 **Update:** floor lowered from 149 to 136 at the user's request — real humans
 are on those versions and the 145–148 scraper fleet has stopped using those
 UAs. The figures above describe the earlier 149 analysis.
+
+**Update:** floor raised from 136 to 146 at the user's request.
 
 This floor is ~3 majors behind current and **needs raising periodically**:
 the fleet will eventually move its UAs up, and every Chrome release
@@ -479,6 +481,8 @@ version number (`8.6.0`) dropped, per the standard pattern in
 `WebsiteResearch/1.0` is blocked at the user's request. Matched on the
 `websiteresearch/` name token only, version dropped, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
+
+`SurdotlyBot/1.0` (`sur.ly/bot.html`) is blocked: it ignores robots.txt despite claiming to obey it. Matched on the `surdotlybot/` name token only, version dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
 
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must

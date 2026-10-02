@@ -167,8 +167,8 @@ describe("404 response for bad actors", () => {
       "Chrome/80 (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
     ],
     [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-      "Chrome/135 (just below MIN_CHROME_MAJOR — rotating-UA cloud fleet in logs.db, no real audience)",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+      "Chrome/145 (just below MIN_CHROME_MAJOR — rotating-UA cloud fleet in logs.db, no real audience)",
     ],
     [
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -213,7 +213,7 @@ describe("404 response for bad actors", () => {
   const realChromeAgents = [
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 macOS"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36", "Chrome/150 Windows"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36", "Chrome/136, exactly at the floor"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36", "Chrome/146, exactly at the floor"],
     ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36", "Chrome/151 Linux aarch64"],
     ["Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36", "Samsung Internet 30 (lagging Chromium, exempted from the floor)"],
     ["Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36", "Samsung Internet 27 (lagging Chromium, exempted from the floor)"],
@@ -352,6 +352,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["curl/8.6.0", "curl"],
     ["tphotobot/0.1 (+http://crawler.estidraft.com/)", "tphotobot"],
     ["Mozilla/5.0 (compatible; WebsiteResearch/1.0)", "WebsiteResearch"],
+    ["Mozilla/5.0 (compatible; SurdotlyBot/1.0; http://sur.ly/bot.html)", "SurdotlyBot"],
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
@@ -977,7 +978,7 @@ describe("pass-through", () => {
   it("passes through Chrome-Lighthouse with an old embedded Chrome major", () => {
     const event = makeEvent({
       uri: "/",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Chrome-Lighthouse",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Chrome-Lighthouse",
     });
     expect(handler(event)).toEqual(event.request);
   });
