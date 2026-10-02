@@ -472,6 +472,10 @@ version number (`8.6.0`) dropped, per the standard pattern in
 
 `tphotobot/` is blocked at the user's request.
 
+`WebsiteResearch/1.0` is blocked at the user's request. Matched on the
+`websiteresearch/` name token only, version dropped, per the standard pattern in
+[blocked-bot-regex](#blocked-bot-regex).
+
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
 **not** be blocked — it's legitimate self-hosted server-side traffic, not a
