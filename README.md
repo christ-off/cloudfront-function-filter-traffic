@@ -25,11 +25,11 @@ Requests matching automated-scan patterns return `404`:
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
 - A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
-- A `Chrome/` major version below 149 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
-- An `Edg/` (desktop Edge) major version below 150 — same stale-UA-fleet pattern as Chrome, checked independently since a scraper can fake either token. Same exemptions as the Chrome floor.
+- A `Chrome/` major version below 136 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
+- An `Edg/` (desktop Edge) major version below 152 — same stale-UA-fleet pattern as Chrome, checked independently since a scraper can fake either token. Same exemptions as the Chrome floor.
 
 ### 4. Outdated Firefox user-agent blocking (404)
-Requests with a `Firefox/` major version below 139 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
+Requests with a `Firefox/` major version below 140 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
 
 ### 5. IP range blocking (404)
 Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
@@ -218,6 +218,10 @@ Feeder. Not worth exempting: Opera on 147/148 (5 FR IPs, but Opera tracks
 Chromium within 1–2 majors so those were fresh at the time), one Electron
 app on `Chrome/124`.
 
+**Update:** floor lowered from 149 to 136 at the user's request — real humans
+are on those versions and the 145–148 scraper fleet has stopped using those
+UAs. The figures above describe the earlier 149 analysis.
+
 This floor is ~3 majors behind current and **needs raising periodically**:
 the fleet will eventually move its UAs up, and every Chrome release
 (monthly, or faster) widens the gap. Re-run the per-major asset-loading-IP
@@ -228,7 +232,7 @@ Desktop Edge (`Edg/`) is Chromium underneath, so it gets the same
 stale-fleet treatment as [min-chrome-major](#min-chrome-major), checked
 independently rather than folded into the Chrome floor — a scraper can hold
 one token fixed while bumping the other. Per the user's own `logs.db`
-analysis, real Edge sessions only appear from major 150 up; below that is
+analysis, real Edge sessions only appear from major 150 up (floor since raised to 152); below that is
 the same rotating cloud-fleet pattern as sub-149 Chrome. Reuses
 [chrome-floor-exemptions](#chrome-floor-exemptions) rather than a separate
 list — NewsBlur's hardcoded fetcher UA (see below) carries both a stale
@@ -266,7 +270,7 @@ UAs skipped by [min-chrome-major](#min-chrome-major) and
 
 ### min-firefox-major
 Firefox auto-updates, so a stale major version is a scraper with a
-hardcoded UA, not a real user. 139 shipped in June 2025 and is below every
+hardcoded UA, not a real user. 139 shipped in June 2025 and 140 is the current ESR floor, below every
 Firefox release still in general support (current ESR is 140+); the one
 still-maintained release below it is carved out separately, see
 [firefox-esr-115-exemption](#firefox-esr-115-exemption).

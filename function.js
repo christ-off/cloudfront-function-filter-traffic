@@ -111,15 +111,15 @@ function isMalformedChromeClaim(ua) {
 }
 
 // rationale: README.md#min-chrome-major
-const MIN_CHROME_MAJOR = 149;
+const MIN_CHROME_MAJOR = 136;
 // rationale: README.md#chrome-floor-exemptions
 const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;|newsblur\.com|chrome-lighthouse/;
 
 // rationale: README.md#min-edge-major
-const MIN_EDGE_MAJOR = 150;
+const MIN_EDGE_MAJOR = 152;
 
 // rationale: README.md#min-firefox-major
-const MIN_FIREFOX_MAJOR = 139;
+const MIN_FIREFOX_MAJOR = 140;
 // rationale: README.md#firefox-esr-115-exemption
 const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy/;
 
