@@ -1019,3 +1019,31 @@ describe("pass-through", () => {
 });
 
 
+
+// =====================================================
+// Cover referer check
+// =====================================================
+describe("Cover referer check", () => {
+  const ref = (v) => ({ referer: { value: v } });
+  const site = "https://post-tenebras-lire.net/blog/x/";
+
+  for (const uri of ["/assets/posts/a.webp", "/assets/posts_640/a.webp"]) {
+    it(`allows ${uri} with site referer`, () => {
+      expectNotBlocked(handler(makeEvent({ uri, extraHeaders: ref(site) })));
+    });
+    it(`blocks ${uri} without referer`, () => {
+      expectNotFound(handler(makeEvent({ uri })));
+    });
+    it(`blocks ${uri} with foreign referer`, () => {
+      expectNotFound(
+        handler(makeEvent({ uri, extraHeaders: ref("https://evil.example/?https://post-tenebras-lire.net/") }))
+      );
+    });
+  }
+
+  it("does not filter other assets", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/assets/svgs/ecrit-par-un-humain.svg" })));
+    expectNotBlocked(handler(makeEvent({ uri: "/assets/posts_other/no_drm.avif" })));
+    expectNotBlocked(handler(makeEvent({ uri: "/assets/posts/a.avif" })));
+  });
+});

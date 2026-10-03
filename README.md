@@ -47,7 +47,10 @@ Any path ending in `.json` returns `404` unless it is one of: `/about/data/blogs
 ### 8. JS allowlist (404)
 Any path ending in `.js` returns `404` unless it is one of: `/javascript/recommended-blogs.js`, `/javascript/chart.umd.min.js`, `/javascript/bootstrap.bundle.min.js`, `/pagefind/pagefind.js`, `/pagefind/pagefind-worker.js`, `/pagefind/pagefind-ui.js`. Runs last, like the JSON allowlist.
 
-### 9. Pass-through
+### 9. Cover referer check (404)
+`.webp` files under `/assets/posts/` and `/assets/posts_640/` (post covers) return `404` unless the `Referer` header starts with `https://post-tenebras-lire.net/`. Other assets (`/assets/svgs/`, `/assets/posts_other/`, ...) are not filtered. Runs last.
+
+### 10. Pass-through
 All other requests are forwarded to the origin unchanged. A directory-style path without a trailing slash (e.g. `/about`) is not rewritten: the origin replies with a `301` to `/about/`. That `301` indicates the path **exists**, whereas a missing path gets a `404`.
 
 ## Compute utilization baseline
@@ -544,6 +547,14 @@ Runs last, after the bad-actor/bot/IP checks. Matches the decoded, lowercased
 `uriLower` exactly; `.json` paths are handled by the JSON rule, not this one.
 
 To allow another file, add it to `allowedJsRegex` and the test fixture.
+
+### cover-referer
+Post covers (`.webp` in `/assets/posts/` and `/assets/posts_640/`) are only
+meant to be embedded by the site itself, so hotlinked or direct requests
+(missing or foreign `Referer`) get `404`. `coverUriRegex` matches the decoded,
+lowercased `uriLower`; the referer is compared case-insensitively against
+`COVER_REFERER_PREFIX`. The `Referer` is client-supplied, so this only stops
+casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
 
 ---
 
