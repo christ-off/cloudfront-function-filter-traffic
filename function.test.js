@@ -443,6 +443,13 @@ describe("scrapper bot blocking by user-agent", () => {
     expect(result.statusCode).toBe(404);
   });
 
+  it("lets FeedFetcher-Google fetch /feed.xml but blocks it elsewhere", () => {
+    const userAgent = "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)";
+    const event = makeEvent({ uri: "/feed.xml", userAgent });
+    expect(handler(event)).toEqual(event.request);
+    expect(handler(makeEvent({ uri: "/other", userAgent })).statusCode).toBe(404);
+  });
+
   it("scrapper bot matching is case-insensitive (BuiltWith)", () => {
     const result = handler(makeEvent({ userAgent: "BuiltWith/1.4" }));
     expect(result.statusCode).toBe(404);
