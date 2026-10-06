@@ -563,18 +563,6 @@ casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
 
 ---
 
-## Bots under observation
-
-### humanjson-survey
-`humanjson-survey/0.3 ( https://github.com/wasabipesto-bot/humanjson; maps the human.json vouch graph; honours robots.txt)`
-and `humanjson-survey/0.2 (personal research crawler of the human.json vouch graph; honours robots.txt)`
-are **not blocked yet**: still under observation, no decision taken.
-
-They crawl `/human.json` files to build a graph of human-made websites that vouch for one another
-as being human-made. Such a graph could be abused (e.g. to target or impersonate vouched sites).
-If blocked, match on the `humanjson-survey/` name token only, version dropped, per the standard
-pattern in [blocked-bot-regex](#blocked-bot-regex).
-
 ## Why a CloudFront Function (not Lambda@Edge)?
 
 CloudFront Functions run at **every edge location** with sub-millisecond startup and are ~6× cheaper than Lambda@Edge. They are the right tool for stateless, CPU-light request manipulation that requires no network I/O, no large runtimes, and no response body streaming. This filter fits that profile exactly: pure string matching, no external calls.
