@@ -250,6 +250,14 @@ describe("404 response for bad actors", () => {
     });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it.each([
+    "Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)",
+    "Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)",
+  ])("passes through Baiduspider (allowed to index): %s", (userAgent) => {
+    const event = makeEvent({ uri: "/", userAgent });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
@@ -425,8 +433,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; WebAtlaBot/1.0)", "WebAtlaBot"],
     ["SSI-Nutch/1.23 (SSI broad web crawler; https://ssi.inc/; adi@ssi.inc)", "SSI-Nutch"],
     ["VariableRatio-PublicAssetResearch/1.0", "VariableRatio-PublicAssetResearch"],
-    ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider"],
-    ["Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
     ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
     ["undici", "undici"],
     ["Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)", "ExaSearchBot"],
