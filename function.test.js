@@ -274,6 +274,14 @@ describe("404 response for bad actors", () => {
     });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("passes through GPTBot (allowed to index)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.3; https://openai.com/gptbot)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
@@ -411,7 +419,6 @@ describe("scrapper bot blocking by user-agent", () => {
       "ImageBot/1.0 (compatible; research crawler; https://github.com/rom1504/img2dataset; opt-out: abuse.notification.dcomp12b@gmail.com;",
       "ImageBot/img2dataset scraper",
     ],
-    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.3; https://openai.com/gptbot)", "GPTBot"],
     ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
     ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "GoogleOther"],
     ["koofie.net/1.0 ( https://koofie.net/bot)", "koofie.net bot"],
