@@ -282,6 +282,14 @@ describe("404 response for bad actors", () => {
     });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("passes through Amazonbot (allowed to index)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
