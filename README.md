@@ -486,9 +486,8 @@ version number (`8.6.0`) dropped, per the standard pattern in
 `/feed.xml` only and blocked everywhere else. It is handled in `isBlockedBot` rather than in
 [blocked-bot-regex](#blocked-bot-regex), so it is not in the regex.
 
-`SummalyBot/x.y.z` (Misskey's link-preview fetcher, run by many instances) is blocked at the
-user's request. Matched on the `summalybot/` name token only, version dropped, per the standard
-pattern in [blocked-bot-regex](#blocked-bot-regex).
+`SummalyBot/x.y.z` (Misskey's link-preview fetcher, run by many instances) must **not** be
+blocked — it is used by fediverse tools to render link previews.
 
 `Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
 `linkwarden.app`, fetching link previews/archives on behalf of its users) must
