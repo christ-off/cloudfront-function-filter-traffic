@@ -13,18 +13,9 @@ function handler(event) {
         return createNotFoundResponse();
     }
 
-    // rationale: README.md#uri-decoding
-    let uri = request.uri || '';
-    if (uri.indexOf('%') !== -1) {
-        try {
-            for (let i = 0; i < 3 && uri.indexOf('%') !== -1; i++) {
-                const decoded = decodeURIComponent(uri);
-                if (decoded === uri) break;
-                uri = decoded;
-            }
-        } catch (_e) {
-            return createNotFoundResponse();
-        }
+    const uri = decodeUri(request.uri || '');
+    if (uri === null) {
+        return createNotFoundResponse();
     }
 
     // Lowercased copy for case-insensitive pattern matching (UA, file extensions, etc.)
@@ -33,34 +24,42 @@ function handler(event) {
 
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedBot(ua, uriLower) || isBlockedIpRange(viewerIp)) {
-        // rationale: README.md#bad-actor-response-mapping
-        if (uriLower === '/feed.xml') {
-            return createFakeFeedResponse();
-        }
+        return uriLower === '/feed.xml' ? createFakeFeedResponse() : createNotFoundResponse();
+    }
+
+    if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, ua, request.headers.referer)) {
         return createNotFoundResponse();
     }
 
-    // rationale: README.md#json-allowlist
-    if (uriLower.slice(-5) === '.json' && !allowedJsonRegex.test(uriLower)) {
-        return createNotFoundResponse();
-    }
-
-    // rationale: README.md#js-allowlist
-    if (uriLower.slice(-3) === '.js' && !allowedJsRegex.test(uriLower)) {
-        return createNotFoundResponse();
-    }
-
-    // rationale: README.md#cover-referer
-    if (coverUriRegex.test(uriLower)) {
-        const referer = request.headers.referer;
-        if (ua.indexOf(COVER_DENIED_UA) !== -1 ||
-            !referer || !referer.value || referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0) {
-            return createNotFoundResponse();
-        }
-    }
-
-    // Pass through
     return request;
+}
+
+// rationale: README.md#uri-decoding
+function decodeUri(uri) {
+    try {
+        for (let i = 0; i < 3 && uri.indexOf('%') !== -1; i++) {
+            const decoded = decodeURIComponent(uri);
+            if (decoded === uri) break;
+            uri = decoded;
+        }
+    } catch (_e) {
+        return null;
+    }
+    return uri;
+}
+
+// rationale: README.md#json-allowlist
+// rationale: README.md#js-allowlist
+function isDisallowedAsset(uri) {
+    return (uri.slice(-5) === '.json' && !allowedJsonRegex.test(uri)) ||
+        (uri.slice(-3) === '.js' && !allowedJsRegex.test(uri));
+}
+
+// rationale: README.md#cover-referer
+function isCoverDenied(uri, ua, referer) {
+    return coverUriRegex.test(uri) &&
+        (ua.indexOf(COVER_DENIED_UA) !== -1 ||
+            !referer || !referer.value || referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0);
 }
 
 // rationale: README.md#cover-referer
