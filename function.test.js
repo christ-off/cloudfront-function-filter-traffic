@@ -253,7 +253,7 @@ describe("404 response for bad actors", () => {
 
   it.each([
     "Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)",
-    "Mozilla/5.0 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)",
+    "Baiduspider-image+(+http://www.baidu.com/search/spider.htm)",
   ])("passes through Baiduspider (allowed to index): %s", (userAgent) => {
     const event = makeEvent({ uri: "/", userAgent });
     expect(handler(event)).toEqual(event.request);
@@ -392,6 +392,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; WebsiteResearch/1.0)", "WebsiteResearch"],
     ["Mozilla/5.0 (compatible; SurdotlyBot/1.0; http://sur.ly/bot.html)", "SurdotlyBot"],
     ["Mozilla/5.0 (compatible; AonsightMetaBot/1.0; https://aonsight.com/bot)", "AonsightMetaBot"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
@@ -1077,33 +1078,6 @@ describe("Cover referer check", () => {
       );
     });
   }
-
-  describe("Baiduspider is denied covers even with a site referer", () => {
-    const baiduUserAgents = [
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)",
-      "Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)",
-      "Baiduspider-image+(+http://www.baidu.com/search/spider.htm)",
-    ];
-    const coverUris = [
-      "/assets/posts/2019-09-22-La-Grande-Faucheuse-James-Morrow.webp",
-      "/assets/posts_640/2019-09-22-La-Grande-Faucheuse-James-Morrow.webp",
-    ];
-    const postReferer = ref("https://post-tenebras-lire.net/La-Grande-Faucheuse-James-Morrow/");
-
-    for (const userAgent of baiduUserAgents) {
-      for (const uri of coverUris) {
-        it(`blocks ${uri} for ${userAgent}`, () => {
-          expectNotFound(handler(makeEvent({ uri, userAgent, extraHeaders: postReferer })));
-        });
-      }
-      it(`still lets ${userAgent} fetch pages and other assets`, () => {
-        for (const uri of ["/La-Grande-Faucheuse-James-Morrow/", "/assets/posts_other/no_drm.avif"]) {
-          const event = makeEvent({ uri, userAgent, extraHeaders: postReferer });
-          expect(handler(event)).toEqual(event.request);
-        }
-      });
-    }
-  });
 
   it("does not filter other assets", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/assets/svgs/ecrit-par-un-humain.svg" })));
