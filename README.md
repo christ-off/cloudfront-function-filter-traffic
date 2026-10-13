@@ -48,7 +48,7 @@ Any path ending in `.json` returns `404` unless it is one of: `/about/data/blogs
 Any path ending in `.js` returns `404` unless it is one of: `/javascript/recommended-blogs.js`, `/javascript/chart.umd.min.js`, `/javascript/bootstrap.bundle.min.js`, `/pagefind/pagefind.js`, `/pagefind/pagefind-worker.js`, `/pagefind/pagefind-ui.js`. Runs last, like the JSON allowlist.
 
 ### 9. Cover referer check (404)
-`.webp` files under `/assets/posts/` and `/assets/posts_640/` (post covers) return `404` unless the `Referer` header starts with `https://post-tenebras-lire.net/`. Other assets (`/assets/svgs/`, `/assets/posts_other/`, ...) are not filtered. Runs last.
+`.webp` files under `/assets/posts/` and `/assets/posts_640/` (post covers) return `404` unless the `Referer` header starts with `https://post-tenebras-lire.net/`. Baiduspider gets `404` on these covers even with a valid `Referer`. Other assets (`/assets/svgs/`, `/assets/posts_other/`, ...) are not filtered. Runs last.
 
 ### 10. Pass-through
 All other requests are forwarded to the origin unchanged. A directory-style path without a trailing slash (e.g. `/about`) is not rewritten: the origin replies with a `301` to `/about/`. That `301` indicates the path **exists**, whereas a missing path gets a `404`.
@@ -558,6 +558,16 @@ lowercased `uriLower`; the referer is compared case-insensitively against
 `COVER_REFERER_PREFIX`. The `Referer` is client-supplied, so this only stops
 casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
 
+### cover-denied-ua
+Baiduspider (seen as `Baiduspider-render/2.0`) fetches a post, parses it and
+then downloads the covers with the post URL as `Referer`, so it sails through
+[cover-referer](#cover-referer); it also ignores `robots.txt`. Any UA
+containing `COVER_DENIED_UA` (`baiduspider`, which also covers
+`baiduspider-render` and `baiduspider-image`) is therefore refused covers
+regardless of `Referer`. The check lives inside the `coverUriRegex` branch
+rather than in `blockedBotRegex` because Baiduspider is still allowed to
+crawl and index the pages themselves — only the covers are off limits.
+
 ---
 
 ## Why a CloudFront Function (not Lambda@Edge)?
@@ -641,7 +651,7 @@ npm run test:watch # watch mode (re-runs on file save)
 
 ### Test structure
 
-`function.test.js` covers all behaviours with 279 tests:
+`function.test.js` covers all behaviours with 379 tests:
 
 | Suite | What is tested |
 |---|---|

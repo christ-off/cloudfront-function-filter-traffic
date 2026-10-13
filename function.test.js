@@ -1078,6 +1078,33 @@ describe("Cover referer check", () => {
     });
   }
 
+  describe("Baiduspider is denied covers even with a site referer", () => {
+    const baiduUserAgents = [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)",
+      "Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)",
+      "Baiduspider-image+(+http://www.baidu.com/search/spider.htm)",
+    ];
+    const coverUris = [
+      "/assets/posts/2019-09-22-La-Grande-Faucheuse-James-Morrow.webp",
+      "/assets/posts_640/2019-09-22-La-Grande-Faucheuse-James-Morrow.webp",
+    ];
+    const postReferer = ref("https://post-tenebras-lire.net/La-Grande-Faucheuse-James-Morrow/");
+
+    for (const userAgent of baiduUserAgents) {
+      for (const uri of coverUris) {
+        it(`blocks ${uri} for ${userAgent}`, () => {
+          expectNotFound(handler(makeEvent({ uri, userAgent, extraHeaders: postReferer })));
+        });
+      }
+      it(`still lets ${userAgent} fetch pages and other assets`, () => {
+        for (const uri of ["/La-Grande-Faucheuse-James-Morrow/", "/assets/posts_other/no_drm.avif"]) {
+          const event = makeEvent({ uri, userAgent, extraHeaders: postReferer });
+          expect(handler(event)).toEqual(event.request);
+        }
+      });
+    }
+  });
+
   it("does not filter other assets", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/assets/svgs/ecrit-par-un-humain.svg" })));
     expectNotBlocked(handler(makeEvent({ uri: "/assets/posts_other/no_drm.avif" })));

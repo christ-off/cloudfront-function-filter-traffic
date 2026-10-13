@@ -53,7 +53,8 @@ function handler(event) {
     // rationale: README.md#cover-referer
     if (coverUriRegex.test(uriLower)) {
         const referer = request.headers.referer;
-        if (!referer || !referer.value || referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0) {
+        if (ua.indexOf(COVER_DENIED_UA) !== -1 ||
+            !referer || !referer.value || referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0) {
             return createNotFoundResponse();
         }
     }
@@ -65,6 +66,8 @@ function handler(event) {
 // rationale: README.md#cover-referer
 const coverUriRegex = /^\/assets\/posts(_640)?\/.+\.webp$/;
 const COVER_REFERER_PREFIX = 'https://post-tenebras-lire.net/';
+// rationale: README.md#cover-denied-ua
+const COVER_DENIED_UA = 'baiduspider';
 
 // rationale: README.md#json-allowlist
 const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|human|pagefind\/pagefind-entry)\.json$/;
