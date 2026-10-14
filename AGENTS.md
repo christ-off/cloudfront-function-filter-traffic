@@ -18,15 +18,10 @@ function.js runs in CloudFront Functions, NOT Node.js. ES5.1 base with partial E
 
 Vitest passing ≠ CloudFront deployable. Before using any non-ES5.1 feature, fetch the runtime-2.0 docs page FRESH and grep for the exact feature name.
 
-After pushing to main, do NOT check the GitHub Actions deploy or run `aws cloudfront test-function`: the pre-push hook message "CloudFront function validated on cloudfront-js-2.0 — OK to push" is sufficient.
-
 # Blocking patterns
 Do not block Chrome requests solely because UA contains `.0.0.0` minor/patch version — real Chrome browsers report only major version to reduce fingerprinting.
 
 When asked to block a specific bot by its full user-agent string, match on the bot's name token only — drop its version number from the regex. E.g. for `... (compatible; AionBot/1.0)`, add `aionbot\/` to `blockedBotRegex`, not `aionbot\/1\.0`.
-
-# git push
-Must run standalone (not chained with `&&`). A PreToolUse hook (`cloudfront-pre-push.sh`) validates `function.js` against the real runtime and blocks the push if it errors — it only fires when the Bash command literally starts with `git push`.
 
 Size: function.js must stay below 10kB.
 
