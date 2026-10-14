@@ -438,10 +438,10 @@ LLC · Toronto, CA, a hosting provider rather than a residential/ISP network.
 Matched on the `undici` name token only, per the standard pattern in
 [blocked-bot-regex](#blocked-bot-regex).
 
-`ExaSearchBot` (`Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)`, the
-Exa AI search crawler) is blocked at the user's request as scraper behaviour.
-Matched on the `exasearchbot/` name token only, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
+`ExaSearchBot` (`Mozilla/5.0 (compatible; ExaSearchBot/1.0; +https://crawler.exa.ai/)`, the
+Exa AI search crawler) was previously blocked but is now deliberately allowed: the
+user permits Exa to learn from the blog. It is intentionally absent from
+[blocked-bot-regex](#blocked-bot-regex); do not re-add it.
 
 `serpex-index` (`Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)`) is
 blocked at the user's request — it documents no `robots.txt` policy. Matched on the

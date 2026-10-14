@@ -290,6 +290,14 @@ describe("404 response for bad actors", () => {
     });
     expect(handler(event)).toEqual(event.request);
   });
+
+  it("passes through ExaSearchBot (allowed to learn from the blog)", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (compatible; ExaSearchBot/1.0; +https://crawler.exa.ai/)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
 });
 
 // =====================================================
@@ -464,7 +472,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["VariableRatio-PublicAssetResearch/1.0", "VariableRatio-PublicAssetResearch"],
     ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
     ["undici", "undici"],
-    ["Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)", "ExaSearchBot"],
     ["Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)", "serpex-index"],
     ["Mozilla/5.0 (compatible; crawler)", "generic crawler"],
   ];
