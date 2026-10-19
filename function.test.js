@@ -243,6 +243,11 @@ describe("404 response for bad actors", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("passes through Outlook/MS Office UA", () => {
+    const event = makeEvent({ uri: "/", userAgent: "Mozilla/4.0 (compatible; ms-office; MSOffice 16)" });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("passes through PetalBot (obeys robots.txt, no longer blocked)", () => {
     const event = makeEvent({
       uri: "/",
@@ -413,7 +418,6 @@ describe("scrapper bot blocking by user-agent", () => {
     ["python-httpx/0.28.1", "Python httpx"],
     ["python-requests/2.32.5", "Python requests"],
     ["Python/3.14 aiohttp/3.14.1", "Python aiohttp"],
-    ["Mozilla/4.0 (compatible; ms-office; MSOffice 16)", "MS Office SaaS"],
     ["Welley/1.0 bot", "Welley/1.0 bot"],
     ["Welley/1.0", "Welley/1.0 (no bot suffix)"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
