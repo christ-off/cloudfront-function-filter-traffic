@@ -300,6 +300,12 @@ a scraper impersonating a browser, so it's exempted the same way as the
 Chrome floor's named exemptions in
 [chrome-floor-exemptions](#chrome-floor-exemptions).
 
+`flipboardproxy/` (Flipboard's link-preview fetcher, e.g. `Mozilla/5.0
+(Macintosh; Intel Mac OS X 10_15_7; rv:128.0) Gecko/20100101 Firefox/128.0
+(FlipboardProxy/1.2; http://flipboard.com/browserproxy)`) is exempted the same
+way: it embeds a frozen Firefox 128 UA below the floor, but is a legitimate
+fetcher identified by its own token.
+
 ### min-safari-major
 Floor set at the user's request rather than derived from `logs.db` (unlike
 [min-chrome-major](#min-chrome-major)/[min-edge-major](#min-edge-major),

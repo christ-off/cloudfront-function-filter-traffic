@@ -996,6 +996,14 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
+  it("passes through FlipboardProxy despite its stale Firefox/128 UA", () => {
+    const event = makeEvent({
+      uri: "/",
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7; rv:128.0) Gecko/20100101 Firefox/128.0 (FlipboardProxy/1.2; http://flipboard.com/browserproxy)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("allows Gemini-Deep-Research through", () => {
     const event = makeEvent({
       userAgent: "Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)",

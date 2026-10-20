@@ -132,7 +132,7 @@ const MIN_EDGE_MAJOR = 152;
 // rationale: README.md#min-firefox-major
 const MIN_FIREFOX_MAJOR = 140;
 // rationale: README.md#firefox-esr-115-exemption
-const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy/;
+const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy|flipboardproxy\//;
 
 // rationale: README.md#min-safari-major
 const MIN_SAFARI_MAJOR = 17;
