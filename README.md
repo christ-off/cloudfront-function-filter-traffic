@@ -376,6 +376,9 @@ the user's request.
 
 `aionbot/` is blocked at the user's request.
 
+`httpx - open-source project` (ProjectDiscovery httpx, `github.com/projectdiscovery/httpx`): its UA has no `/`-separated
+version, so the name phrase is matched. Blocked at the user's request.
+
 `tiktokspider` (no `/`-separated version in its UA token) is blocked at the
 user's request.
 

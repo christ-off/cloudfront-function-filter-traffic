@@ -416,6 +416,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
     ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
     ["python-httpx/0.28.1", "Python httpx"],
+    ["httpx - Open-source project (github.com/projectdiscovery/httpx)", "ProjectDiscovery httpx"],
     ["python-requests/2.32.5", "Python requests"],
     ["Python/3.14 aiohttp/3.14.1", "Python aiohttp"],
     ["Welley/1.0 bot", "Welley/1.0 bot"],
