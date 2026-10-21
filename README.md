@@ -21,23 +21,17 @@ Requests matching automated-scan patterns return `404`:
 - Common scanner folders: `/userfiles`, Laravel/Go/Apache debug endpoints (`/telescope`, `/horizon`, `/storage`, `/debug`, `/console`, `/server-status`, `/server-info`, `/manage`), `/graphql`, `/v1`, `/health`, `/proc`, `/var`, `/Dockerfile`, `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
 - Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
-### 3. Spoofed / malformed / stale Chrome/Edge UA blocking (404)
+### 3. Spoofed / malformed Chrome UA blocking (404)
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
-- A full build/patch `Chrome/` version (e.g. `130.0.6723.70`) on Chrome 113+ — post-UA-reduction Chrome only ever reports `major.0.0.0`, so a real build/patch number there is a stale, pre-freeze template (self-identifying crawlers using `compatible;`, e.g. Bingbot, are exempted)
-- A `Chrome/` major version below 142 — logs.db shows the site's real audience only from 149 up; the "asset-loading" traffic on 145–148 is a single rotating-UA cloud fleet (Tencent/Huawei/GCP/AWS ranges). Exempted: self-identifying crawlers with `compatible;` (Bingbot, Googlebot…), Samsung Internet (ships a lagging Chromium), and Feeder (`feeder.co`, an RSS service with a hardcoded `Chrome/106`)
-- An `Edg/` (desktop Edge) major version below 152 — same stale-UA-fleet pattern as Chrome, checked independently since a scraper can fake either token. Same exemptions as the Chrome floor.
 
-### 4. Outdated Firefox user-agent blocking (404)
-Requests with a `Firefox/` major version below 140 return `404`. Exempted: major `115`, Mozilla's actively-maintained legacy ESR train (Windows 7/8.1/macOS 10.12-10.14 support, extended through March 2027).
-
-### 5. IP range blocking (404)
+### 4. IP range blocking (404)
 Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
 
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
 ### 6. Bot / scraper blocking
-Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — no exceptions. Same for any other bad actor (security-scan URI or spoofed/stale-browser UA).
+Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
 
 **Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
@@ -110,9 +104,10 @@ and ignores `max-age`, and a feed is preferable to an error.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
-then truncated/malformed Chrome UAs, then outdated Chrome/Edge/Firefox UAs,
-ordered most- to least-frequent per `logs.db` so common cases short-circuit
-before rarer, costlier checks run.
+then truncated/malformed Chrome UAs, ordered most- to least-frequent per
+`logs.db` so common cases short-circuit before rarer, costlier checks run.
+In `handler`, the cheap anchored IP-range check runs before the large
+bot-name regex.
 
 ### dotfile-path
 Any path containing `/.` (a dotfile or dot-directory segment) is blocked
@@ -180,17 +175,12 @@ attacker double/triple-encodes the surrounding slashes to dodge a single
 A real browser always continues past `AppleWebKit/537.36` with
 `(KHTML, like Gecko) Chrome/... Safari/...`. A string that stops dead right
 after `AppleWebKit/537.36` is a bot with a copy-pasted, incomplete UA, not a
-real Chrome/Edge. The shared literal fragments (`UA_OPEN`, `CLOSE_APPLEWEBKIT`,
-`WINDOWS_PLATFORM`) are factored out for readability and composed into a
-`RegExp` once at parse time, not rebuilt per request.
+real Chrome/Edge. Matched by exact string equality against the lowercased UA.
 
-An exact-template match on OS/engine string plus a Chrome major-version range
-used to be treated as "spoofed" here, but real Chrome (which freezes its UA
-to `major.0.0.0`) produces this exact template too — logs.db showed the two
-most common UAs in real traffic matching it. Structure alone can't tell real
-Chrome from spoofed Chrome (see `CLAUDE.md`: never block Chrome solely on the
-`.0.0.0` minor/patch version) — see [min-chrome-major](#min-chrome-major) for
-a separate, evidence-backed floor on the version number itself.
+Structure alone can't tell real Chrome from spoofed Chrome — real Chrome freezes
+its UA to `major.0.0.0` — so no browser has a minimum version and only truncated
+or `AppleWebKit`-less forms are blocked (see `AGENTS.md`: never block Chrome
+solely on the `.0.0.0` minor/patch version).
 
 ### malformed-chrome-claim
 Every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)`
@@ -198,146 +188,6 @@ immediately before the `Chrome/` token, so a UA with `chrome/` but no
 `applewebkit` is a hand-built/incomplete UA, not a browser — catches
 malformed strings the exact-template regexes above don't cover (e.g.
 `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0`).
-
-### min-chrome-major
-Floor set from `logs.db` (June–Sept 2026, Chrome 152 current) by counting
-distinct IPs that load the site's real assets (`main.css`,
-`bootstrap.bundle.min.js`) per Chrome major, then checking *who* they are.
-Majors 145–148 look organic at first glance (~300 asset-loading IPs) but
-are one bot fleet: the same Tencent/Huawei-cloud `/16`s (116.204, 1.92,
-113.44, 81.70, 43.138…) appear on all four majors, rotating UAs, plus
-GCP/AWS monitoring ranges on 148. The site's actual audience (FR/BE/CH/CA,
-~70 % of real sessions) is essentially absent below 149 in the last 30 days
-and shows up at 149 exactly (7 IPs), then 41 at 150, 95 at 151. Below 145
-the picture is the same as it always was: no asset loads, or a single
-narrow IP/country cluster.
-
-Cost/benefit at 149: blocks ~92 % of non-crawler "Chrome ≥ 99" requests
-(~30 k/month — mostly the `Chrome/120` and `Chrome/148` fleets) for zero
-observed real-audience sessions in the last month. Real collateral found
-over three months and handled via
-[chrome-floor-exemptions](#chrome-floor-exemptions): Samsung Internet and
-Feeder. Not worth exempting: Opera on 147/148 (5 FR IPs, but Opera tracks
-Chromium within 1–2 majors so those were fresh at the time), one Electron
-app on `Chrome/124`.
-
-**Update:** floor lowered from 149 to 136 at the user's request — real humans
-are on those versions and the 145–148 scraper fleet has stopped using those
-UAs. The figures above describe the earlier 149 analysis.
-
-**Update:** floor raised from 136 to 146 at the user's request.
-
-**Update:** floor lowered from 146 to 142 at the user's request.
-
-This floor is ~3 majors behind current and **needs raising periodically**:
-the fleet will eventually move its UAs up, and every Chrome release
-(monthly, or faster) widens the gap. Re-run the per-major asset-loading-IP
-query before each bump.
-
-### min-edge-major
-Desktop Edge (`Edg/`) is Chromium underneath, so it gets the same
-stale-fleet treatment as [min-chrome-major](#min-chrome-major), checked
-independently rather than folded into the Chrome floor — a scraper can hold
-one token fixed while bumping the other. Per the user's own `logs.db`
-analysis, real Edge sessions only appear from major 150 up (floor since raised to 152); below that is
-the same rotating cloud-fleet pattern as sub-149 Chrome. Reuses
-[chrome-floor-exemptions](#chrome-floor-exemptions) rather than a separate
-list — NewsBlur's hardcoded fetcher UA (see below) carries both a stale
-`Chrome/147` and a stale `Edg/147`, so the same exemption has to cover both
-tokens or it breaks.
-
-### chrome-floor-exemptions
-UAs skipped by [min-chrome-major](#min-chrome-major) and
-[min-edge-major](#min-edge-major) (checked as one regex, same reason as
-[blocked-bot-regex](#blocked-bot-regex)):
-- `compatible;` — self-identifying crawlers: every Bingbot variant in
-  `logs.db` (7 UA shapes, ~6.9 k requests) carries it and reports
-  `Chrome/116`; Googlebot, YouBot, meta-webindexer, Google-InspectionTool
-  likewise. Crawlers that are unwanted are blocked by name in
-  [blocked-bot-regex](#blocked-bot-regex) regardless.
-- `samsungbrowser/` — Samsung Internet ships a Chromium several majors
-  behind Chrome (`SamsungBrowser/30` → `Chrome/143`, `/28` → `130`,
-  `/27` → `125`); a handful of real FR/BE/NL users over three months.
-- `feeder.co;` — Feeder, an RSS service, polls `/feed.xml` with a hardcoded
-  `Chrome/106` desktop UA (~1.2 k requests from 10 IPs, active daily).
-  Blocking it would silently drop its subscribers.
-- `newsblur.com` — NewsBlur's Feed Fetcher and Page Fetcher self-identify
-  with `NewsBlur ... - https://www.newsblur.com/site/... (Mozilla/5.0 ...
-  Chrome/147.0.0.0 ... Edg/147.0.0.0)`; the domain in the prefix is the
-  identifying token, the parenthetical is a hardcoded browser-like UA that
-  will drift stale over time same as Feeder's.
-- `chrome-lighthouse` — Google Lighthouse (and PageSpeed Insights, which
-  runs it) appends ` Chrome-Lighthouse` to whatever UA it's invoked with,
-  which is often an old hardcoded Chrome major. The token is public and
-  documented, not a secret, so this isn't security-by-obscurity — it's
-  safe to exempt because unwanted crawlers are still blocked by name in
-  [blocked-bot-regex](#blocked-bot-regex) regardless of what Chrome
-  version they claim, and a scraper wanting past the floor could just
-  claim a current Chrome major instead of bothering to fake this token.
-
-### min-firefox-major
-Firefox auto-updates, so a stale major version is a scraper with a
-hardcoded UA, not a real user. 139 shipped in June 2025 and 140 is the current ESR floor, below every
-Firefox release still in general support (current ESR is 140+); the one
-still-maintained release below it is carved out separately, see
-[firefox-esr-115-exemption](#firefox-esr-115-exemption).
-
-### firefox-esr-115-exemption
-Firefox ESR 115 is normally end-of-life, but Mozilla has repeatedly extended
-its security updates for Windows 7/8.1 and old macOS versions (currently
-through March 2027) — a real, still-patched browser used by a legacy-OS
-population, not a scraper. Its major is exempted by exact match rather than
-folded into the min-version floor, so it doesn't drag the floor down for
-everything else. Tor Browser also reports an ESR major (115 or higher), so
-privacy users on the current Tor ESR base remain unaffected either way.
-
-The same regex also exempts `googleimageproxy` (ggpht.com's GoogleImageProxy,
-e.g. `Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com
-GoogleImageProxy)`) — Google's proxy that fetches remote images for Gmail/
-Google services. It hardcodes an ancient Firefox/IE-era UA rather than a
-real browser's, but it's a legitimate fetcher identified by its own token, not
-a scraper impersonating a browser, so it's exempted the same way as the
-Chrome floor's named exemptions in
-[chrome-floor-exemptions](#chrome-floor-exemptions).
-
-`flipboardproxy/` (Flipboard's link-preview fetcher, e.g. `Mozilla/5.0
-(Macintosh; Intel Mac OS X 10_15_7; rv:128.0) Gecko/20100101 Firefox/128.0
-(FlipboardProxy/1.2; http://flipboard.com/browserproxy)`) is exempted the same
-way: it embeds a frozen Firefox 128 UA below the floor, but is a legitimate
-fetcher identified by its own token.
-
-### min-safari-major
-Floor set at the user's request rather than derived from `logs.db` (unlike
-[min-chrome-major](#min-chrome-major)/[min-edge-major](#min-edge-major),
-which are log-backed). Safari majors track the OS/App Store, not an
-auto-update cadence, so a hardcoded old major is a reasonable scraper signal
-the same way a stale Firefox major is (see
-[min-firefox-major](#min-firefox-major)) — Safari 17 shipped September 2023,
-so anything below it is years stale. Floor lowered from 18 to 17 at the
-user's request. Note Apple's version-numbering jump: Safari went from the
-18.x line straight to 26 (aligned to the iOS/macOS release year), so there's
-no 19–25 range to worry about.
-
-Matched on `version\/(\d+)\.`, not `safari\/`: the `Safari/` token in a
-Safari UA is a fixed WebKit build number (`605.1.15` desktop, `604.1`
-mobile) that doesn't track the browser release, so it can't be used as a
-version signal — see [safari-floor-exemptions](#safari-floor-exemptions) for
-why other WebKit-based browsers need excluding from this check.
-
-### safari-floor-exemptions
-UAs skipped by [min-safari-major](#min-safari-major):
-- `compatible;` — same self-identifying-crawler reasoning as
-  [chrome-floor-exemptions](#chrome-floor-exemptions).
-- `crios\/`, `fxios\/` — Chrome/Firefox for iOS are
-  Apple-mandated to use WebKit (hence the `Safari/604.1` tail) but don't
-  carry a `Version/` token in their real UA, so these never actually match;
-  listed defensively in case a future variant adds one.
-- `edgios\/` — Edge for iOS *does* carry both `Version/` (WebKit's, stale
-  and unrelated to Edge's own release) and `EdgiOS/` (its real version), so
-  without this exemption a current Edge-for-iOS user gets floored by a
-  `Version/` number that was never meant to signal anything.
-- `duckduckgo`, `ucbrowser\/` — other WebKit-based iOS/Android browsers with
-  the same stale-`Version/`-token shape as Edge for iOS.
 
 ### blocked-bot-regex
 Plain substrings matched against the (already lowercased) User-Agent header,

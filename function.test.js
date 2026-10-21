@@ -131,8 +131,7 @@ describe("PHP file blocking", () => {
 });
 
 // =====================================================
-// Bad actors (security-scan URIs, truncated/malformed Chrome UAs, stale
-// Firefox UAs) get a 404 like everything else.
+// Bad actors (security-scan URIs, truncated/malformed Chrome UAs) get a 404 like everything else.
 // =====================================================
 describe("404 response for bad actors", () => {
   it("returns 404 for a security scan URI", () => {
@@ -147,9 +146,6 @@ describe("404 response for bad actors", () => {
   });
 
   const badActorAgents = [
-    ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "outdated Firefox 72"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0", "outdated Firefox 99"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0", "outdated Firefox 138 (below MIN_FIREFOX_MAJOR)"],
     [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       "truncated Windows UA missing KHTML/Chrome/Safari tail",
@@ -158,88 +154,37 @@ describe("404 response for bad actors", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
       "malformed Chrome claim missing AppleWebKit/KHTML entirely",
     ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
-      "Chrome/83 (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.0.0 Safari/537.36",
-      "Chrome/80 (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-      "Chrome/141 (just below MIN_CHROME_MAJOR)",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Chrome/120 (below MIN_CHROME_MAJOR — the largest bot fleet in logs.db)",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
-      "Chrome/98, full build/patch version (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.70 Safari/537.36",
-      "Chrome/130, full build/patch version (below MIN_CHROME_MAJOR, no organic signal in logs.db)",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0",
-      "Edg/151 (just below MIN_EDGE_MAJOR)",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
-      "Edg/144 (below MIN_EDGE_MAJOR, stale-UA fleet per user's logs.db analysis)",
-    ],
-    [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
-      "Safari/16.6 (below MIN_SAFARI_MAJOR)",
-    ],
-    [
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
-      "Mobile Safari/16.0 (below MIN_SAFARI_MAJOR)",
-    ],
   ];
 
   it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
     expectNotFound(handler(makeEvent({ userAgent })));
   });
 
-  // A Chrome major-version range is NOT a reliable spoof signal by structure
-  // alone: real Chrome freezes its UA to major.0.0.0, and logs.db showed
-  // exactly this template as the two most common real UAs in production
-  // traffic (see CLAUDE.md: never block Chrome solely on the .0.0.0
-  // minor/patch version). MIN_CHROME_MAJOR is a separate, evidence-backed
-  // floor on the version number (see README.md#min-chrome-major).
-  const realChromeAgents = [
+  // No browser has a version floor: a version number alone is not a reliable
+  // spoof signal (see AGENTS.md), so current and old majors all pass through.
+  const browserAgents = [
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 macOS"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36", "Chrome/150 Windows"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36", "Chrome/142, exactly at the floor"],
     ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36", "Chrome/151 Linux aarch64"],
-    ["Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36", "Samsung Internet 30 (lagging Chromium, exempted from the floor)"],
-    ["Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36", "Samsung Internet 27 (lagging Chromium, exempted from the floor)"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0", "Edg/152"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0", "Edg/144"],
     ["Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/28.0 Chrome/150.0.7444.86 Mobile Safari/537.36", "Samsung Internet 28 with a full Chrome build/patch number (Samsung doesn't apply Chrome's UA-Reduction freeze)"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0", "Edg/152, exactly at the floor"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0", "Edg/152 Windows"],
+    ["Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36", "Samsung Internet 27"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0", "Firefox 138"],
+    ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "Firefox 72"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15", "Safari/16.6"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", "Mobile Safari/16.0"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Mobile Safari/26.0 (post-renumbering)"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 EdgiOS/117.0.2045.60 Mobile/15E148 Safari/604.1", "EdgiOS"],
   ];
 
-  it.each(realChromeAgents)("passes through '%s' (%s)", (userAgent) => {
+  it.each(browserAgents)("passes through '%s' (%s)", (userAgent) => {
     const event = makeEvent({ uri: "/", userAgent });
     expect(handler(event)).toEqual(event.request);
   });
 
   it("passes through Misskey/Sharkey federation UA", () => {
     const event = makeEvent({ uri: "/", userAgent: "Misskey/2025.4.7 (https://sharkey.vhack.eu/)" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  const realSafariAgents = [
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", "Safari/17.0, exactly at the floor"],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Mobile Safari/26.0 (post-renumbering)"],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 EdgiOS/117.0.2045.60 Mobile/15E148 Safari/604.1", "EdgiOS carries its own stale Version/ token, exempted from the Safari floor"],
-  ];
-
-  it.each(realSafariAgents)("passes through '%s' (%s)", (userAgent) => {
-    const event = makeEvent({ uri: "/", userAgent });
     expect(handler(event)).toEqual(event.request);
   });
 
@@ -981,30 +926,6 @@ describe("pass-through", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("passes through Firefox ESR 115 (Mozilla's extended-support train for legacy OSes)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Windows NT 6.1; rv:115.0) Gecko/20100101 Firefox/115.0",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Google Image Proxy despite its stale Firefox/11.0 UA", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through FlipboardProxy despite its stale Firefox/128 UA", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7; rv:128.0) Gecko/20100101 Firefox/128.0 (FlipboardProxy/1.2; http://flipboard.com/browserproxy)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
   it("allows Gemini-Deep-Research through", () => {
     const event = makeEvent({
       userAgent: "Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)",
@@ -1016,30 +937,6 @@ describe("pass-through", () => {
     const event = makeEvent({
       uri: "/",
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Feeder (feeder.co) with its embedded UA token", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (feeder.co; Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through NewsBlur (newsblur.com) with its embedded UA token", () => {
-    const event = makeEvent({
-      uri: "/feed.xml",
-      userAgent: "NewsBlur Feed Fetcher - 1 subscriber - https://www.newsblur.com/site/7441742/post-tenebras-lire-articles-complets (Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Chrome-Lighthouse with an old embedded Chrome major", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Chrome-Lighthouse",
     });
     expect(handler(event)).toEqual(event.request);
   });

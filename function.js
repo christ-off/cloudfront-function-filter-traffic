@@ -23,7 +23,7 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // rationale: README.md#bad-actor-response-mapping
-    if (isBadActor(uriLower, ua) || isBlockedBot(ua, uriLower) || isBlockedIpRange(viewerIp)) {
+    if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) || isBlockedBot(ua, uriLower)) {
         return uriLower === '/feed.xml' ? createFakeFeedResponse() : createNotFoundResponse();
     }
 
@@ -80,11 +80,7 @@ function isBadActor(uri, ua) {
         isDotfilePath(uri) ||
         isSecurityScanUri(uri) ||
         isTruncatedChromeUA(ua) ||
-        isMalformedChromeClaim(ua) ||
-        isSuspiciousChromeUA(ua) ||
-        isSuspiciousEdgeUA(ua) ||
-        isSuspiciousFirefoxUA(ua) ||
-        isSuspiciousSafariUA(ua);
+        isMalformedChromeClaim(ua);
 }
 
 // rationale: README.md#dotfile-path
@@ -107,60 +103,13 @@ function isPathTraversal(uri) {
 }
 
 // rationale: README.md#truncated-chrome-ua
-const UA_OPEN = 'mozilla\\/5\\.0 \\(';
-const CLOSE_APPLEWEBKIT = '\\) applewebkit\\/537\\.36';
-const WINDOWS_PLATFORM = 'windows nt 10\\.0; win64; x64';
-const truncatedWindowsUaRegex = new RegExp('^' + UA_OPEN + WINDOWS_PLATFORM + CLOSE_APPLEWEBKIT + '$');
-
 function isTruncatedChromeUA(ua) {
-    return truncatedWindowsUaRegex.test(ua);
+    return ua === 'mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36';
 }
 
 // rationale: README.md#malformed-chrome-claim
 function isMalformedChromeClaim(ua) {
     return ua.indexOf('chrome/') !== -1 && ua.indexOf('applewebkit') === -1;
-}
-
-// rationale: README.md#min-chrome-major
-const MIN_CHROME_MAJOR = 142;
-// rationale: README.md#chrome-floor-exemptions
-const chromeFloorExemptRegex = /compatible;|samsungbrowser\/|feeder\.co;|newsblur\.com|chrome-lighthouse/;
-
-// rationale: README.md#min-edge-major
-const MIN_EDGE_MAJOR = 152;
-
-// rationale: README.md#min-firefox-major
-const MIN_FIREFOX_MAJOR = 140;
-// rationale: README.md#firefox-esr-115-exemption
-const firefoxFloorExemptRegex = /firefox\/115\.|googleimageproxy|flipboardproxy\//;
-
-// rationale: README.md#min-safari-major
-const MIN_SAFARI_MAJOR = 17;
-// rationale: README.md#safari-floor-exemptions
-const safariFloorExemptRegex = /compatible;|crios\/|fxios\/|edgios\/|duckduckgo|ucbrowser\//;
-
-function isBelowMinMajor(ua, versionRegex, minMajor) {
-    const match = ua.match(versionRegex);
-    if (!match) return false;
-    return parseInt(match[1], 10) < minMajor;
-}
-
-function isSuspiciousChromeUA(ua) {
-    return isBelowMinMajor(ua, /chrome\/(\d+)\./, MIN_CHROME_MAJOR) && !chromeFloorExemptRegex.test(ua);
-}
-
-function isSuspiciousEdgeUA(ua) {
-    return isBelowMinMajor(ua, /edg\/(\d+)\./, MIN_EDGE_MAJOR) && !chromeFloorExemptRegex.test(ua);
-}
-
-function isSuspiciousFirefoxUA(ua) {
-    return isBelowMinMajor(ua, /firefox\/(\d+)\./, MIN_FIREFOX_MAJOR) && !firefoxFloorExemptRegex.test(ua);
-}
-
-function isSuspiciousSafariUA(ua) {
-    return ua.indexOf('safari/') !== -1 &&
-        isBelowMinMajor(ua, /version\/(\d+)\./, MIN_SAFARI_MAJOR) &&
-        !safariFloorExemptRegex.test(ua);
 }
 
 // rationale: README.md#blocked-bot-regex
