@@ -201,14 +201,6 @@ describe("404 response for bad actors", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it.each([
-    "Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)",
-    "Baiduspider-image+(+http://www.baidu.com/search/spider.htm)",
-  ])("passes through Baiduspider (allowed to index): %s", (userAgent) => {
-    const event = makeEvent({ uri: "/", userAgent });
-    expect(handler(event)).toEqual(event.request);
-  });
-
   it("passes through PerplexityBot (allowed to index)", () => {
     const event = makeEvent({
       uri: "/",
@@ -351,6 +343,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; SurdotlyBot/1.0; http://sur.ly/bot.html)", "SurdotlyBot"],
     ["Mozilla/5.0 (compatible; AonsightMetaBot/1.0; https://aonsight.com/bot)", "AonsightMetaBot"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
+    ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider"],
+    ["Baiduspider-image+(+http://www.baidu.com/search/spider.htm)", "Baiduspider-image"],
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],

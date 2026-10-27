@@ -344,7 +344,7 @@ version number (`8.6.0`) dropped, per the standard pattern in
 
 `AonsightMetaBot/1.0` (`aonsight.com/bot`) is blocked at the user's request. Matched on the `aonsightmetabot/` name token only, version dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
 
-`Baiduspider-render/2.0` is blocked: it fetches a post, then downloads the covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer). Matched on the `baiduspider-render/` name token only, version dropped. Plain `Baiduspider` and the other Baidu bots are deliberately NOT blocked and may still index pages.
+All `Baiduspider` variants are blocked (`Baiduspider/2.0`, `Baiduspider-image`, `Baiduspider-render/2.0`, ...): the render variant fetches a post, then downloads the covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer), and blocking only it is pointless when the family is unwanted anyway. Matched on the bare `baiduspider` name token, which covers every suffix.
 
 ### feedfetcher-google
 `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)` (Google's feed reader) is allowed on
