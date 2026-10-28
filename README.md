@@ -31,7 +31,7 @@ Requests from known-malicious IP ranges return `404` on every path, regardless o
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
 ### 5. ASN blocking (404)
-Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — or `396982` (Google Cloud, NL) — return `404` on every path, regardless of User-Agent. A missing header fails open.
+Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — or `396982` (Google Cloud, NL) — return `404` on every path, regardless of User-Agent. A missing header fails open. Exception: the Birchfeed and Claude-SearchBot user agents are allowlisted and pass even from a blocked ASN.
 
 ### 6. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
@@ -379,6 +379,11 @@ Folded into the same condition as
 the usual 404. The URI allowlist runs first, so
 `/robots.txt`, `/ads.txt` and `/backup.zip` stay reachable. If the header is
 absent (policy not attached) nothing matches: fails open.
+
+`allowedAsnBotRegex` is an allowlist of legitimate bots (`birchfeed\/`,
+`claude-searchbot\/`) that happen to be hosted in a blocked ASN; a match skips
+only the ASN check, all other rules still apply. Matched on the name token
+without version, like the bot blocklist.
 
 **Setup — getting the ASN header in AWS.** The function only sees
 `CloudFront-Viewer-ASN` if the distribution requests it. This is done once per

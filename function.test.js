@@ -547,6 +547,14 @@ describe("ASN blocking", () => {
     })));
   });
 
+  it.each([
+    "Mozilla/5.0 (compatible; Birchfeed/1.0; https://birchfeed.app; 1 subscribers)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; searchbot@anthropic.com)",
+  ])("lets allowlisted bot through a blocked ASN: %s", (userAgent) => {
+    const event = makeEvent({ extraHeaders: asn("16509"), userAgent });
+    expect(handler(event)).toEqual(event.request);
+  });
+
   it("lets /robots.txt through for a blocked ASN", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
   });

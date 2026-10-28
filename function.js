@@ -24,7 +24,7 @@ function handler(event) {
 
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) ||
-        isBlockedAsn(request.headers['cloudfront-viewer-asn']) || isBlockedBot(ua, uriLower)) {
+        isBlockedAsn(request.headers['cloudfront-viewer-asn'], ua) || isBlockedBot(ua, uriLower)) {
         return createNotFoundResponse();
     }
 
@@ -134,8 +134,10 @@ function isBlockedIpRange(ip) {
 // rationale: README.md#asn-blocking
 const blockedAsnRegex = /^(16509|14618|215125|29222|396982)$/;
 
-function isBlockedAsn(asnHeader) {
-    return !!asnHeader && blockedAsnRegex.test(asnHeader.value);
+const allowedAsnBotRegex = /birchfeed\/|claude-searchbot\//;
+
+function isBlockedAsn(asnHeader, ua) {
+    return !!asnHeader && blockedAsnRegex.test(asnHeader.value) && !allowedAsnBotRegex.test(ua);
 }
 
 // rationale: README.md#bad-actor-response-mapping
