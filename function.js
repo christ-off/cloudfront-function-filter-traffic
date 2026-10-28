@@ -25,7 +25,7 @@ function handler(event) {
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) ||
         isBlockedAsn(request.headers['cloudfront-viewer-asn']) || isBlockedBot(ua, uriLower)) {
-        return uriLower === '/feed.xml' ? createFakeFeedResponse() : createNotFoundResponse();
+        return createNotFoundResponse();
     }
 
     if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
@@ -81,7 +81,6 @@ function isBadActor(uri, ua) {
         isDotfilePath(uri) ||
         isSecurityScanUri(uri) ||
         isTruncatedChromeUA(ua) ||
-        isFrozenChrome152LinuxUA(ua) ||
         isMalformedChromeClaim(ua);
 }
 
@@ -107,11 +106,6 @@ function isPathTraversal(uri) {
 // rationale: README.md#truncated-chrome-ua
 function isTruncatedChromeUA(ua) {
     return ua === 'mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36';
-}
-
-// rationale: README.md#frozen-chrome-152-linux
-function isFrozenChrome152LinuxUA(ua) {
-    return ua === 'mozilla/5.0 (x11; linux x86_64) applewebkit/537.36 (khtml, like gecko) chrome/152.0.0.0 safari/537.36';
 }
 
 // rationale: README.md#malformed-chrome-claim
@@ -151,19 +145,6 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
-    };
-}
-
-function createFakeFeedResponse() {
-    return {
-        statusCode: 200,
-        statusDescription: 'OK',
-        headers: {
-            "content-type": {value: "application/atom+xml"},
-            "cache-control": {value: "public, max-age=604800"}
-        },
-        body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">' +
-            '<title>Feed</title><id>tag:feed,2026-01-01:feed</id><updated>2026-01-01T00:00:00Z</updated></feed>\n'
     };
 }
 

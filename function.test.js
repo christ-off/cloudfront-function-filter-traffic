@@ -154,10 +154,6 @@ describe("404 response for bad actors", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
       "malformed Chrome claim missing AppleWebKit/KHTML entirely",
     ],
-    [
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
-      "frozen Chrome 152 on Linux x86_64 scraper",
-    ],
   ];
 
   it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
@@ -169,6 +165,7 @@ describe("404 response for bad actors", () => {
   const browserAgents = [
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 macOS"],
     ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36", "Chrome/151 Linux aarch64"],
+    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 Linux x86_64 (blocked by ASN instead, not by UA)"],
     ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36", "Chrome/153 Linux x86_64"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0", "Edg/152"],
@@ -553,12 +550,6 @@ describe("ASN blocking", () => {
   it("lets /robots.txt through for a blocked ASN", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
   });
-
-  it("answers /feed.xml with the fake feed for a blocked ASN", () => {
-    const result = handler(makeEvent({ uri: "/feed.xml", extraHeaders: asn("14618") }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-  });
 });
 
 // =====================================================
@@ -580,27 +571,15 @@ describe("robots.txt for blocked bots", () => {
 });
 
 // =====================================================
-// Empty feed.xml for blocked bots
+// feed.xml gets no special treatment
 // =====================================================
-describe("feed.xml fake atom feed for blocked bots", () => {
-
-  it("answers a blocked bot's /feed.xml with a empty 200 atom feed", () => {
-    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/atom+xml");
-    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(result.body).not.toContain('<entry>');
+describe("feed.xml for blocked bots", () => {
+  it("answers a blocked bot's /feed.xml with a plain 404", () => {
+    expectNotFound(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("answers a blocked IP's /FEED.XML case-insensitively", () => {
-    const result = handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(result.body).not.toContain('<entry>');
-  });
-
-  it("does not affect other bad-actor rules", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" })));
+  it("answers a blocked IP's /FEED.XML with a plain 404", () => {
+    expectNotFound(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
   });
 
   it("still lets a normal browser's /feed.xml through untouched", () => {
