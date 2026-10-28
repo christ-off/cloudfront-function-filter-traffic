@@ -521,7 +521,7 @@ describe("IP range blocking", () => {
 describe("ASN blocking", () => {
   const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
 
-  it.each(["16509", "14618"])("blocks AS%s", (value) => {
+  it.each(["16509", "14618", "215125"])("blocks AS%s", (value) => {
     expectNotFound(handler(makeEvent({ extraHeaders: asn(value) })));
   });
 
