@@ -80,6 +80,7 @@ function isBadActor(uri, ua) {
         isDotfilePath(uri) ||
         isSecurityScanUri(uri) ||
         isTruncatedChromeUA(ua) ||
+        isFrozenChrome152LinuxUA(ua) ||
         isMalformedChromeClaim(ua);
 }
 
@@ -105,6 +106,11 @@ function isPathTraversal(uri) {
 // rationale: README.md#truncated-chrome-ua
 function isTruncatedChromeUA(ua) {
     return ua === 'mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36';
+}
+
+// rationale: README.md#frozen-chrome-152-linux
+function isFrozenChrome152LinuxUA(ua) {
+    return ua === 'mozilla/5.0 (x11; linux x86_64) applewebkit/537.36 (khtml, like gecko) chrome/152.0.0.0 safari/537.36';
 }
 
 // rationale: README.md#malformed-chrome-claim

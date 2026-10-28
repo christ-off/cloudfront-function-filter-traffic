@@ -24,6 +24,7 @@ Requests matching automated-scan patterns return `404`:
 ### 3. Spoofed / malformed Chrome UA blocking (404)
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
+- The exact UA `Chrome/152.0.0.0` on `X11; Linux x86_64`, emitted by a scraper stuck on a frozen Chrome 152
 
 ### 4. IP range blocking (404)
 Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
@@ -104,7 +105,7 @@ and ignores `max-age`, and a feed is preferable to an error.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
-then truncated/malformed Chrome UAs, ordered most- to least-frequent per
+then truncated/frozen-152/malformed Chrome UAs, ordered most- to least-frequent per
 `logs.db` so common cases short-circuit before rarer, costlier checks run.
 In `handler`, the cheap anchored IP-range check runs before the large
 bot-name regex.
@@ -181,6 +182,17 @@ Structure alone can't tell real Chrome from spoofed Chrome — real Chrome freez
 its UA to `major.0.0.0` — so no browser has a minimum version and only truncated
 or `AppleWebKit`-less forms are blocked (see `AGENTS.md`: never block Chrome
 solely on the `.0.0.0` minor/patch version).
+
+### frozen-chrome-152-linux
+A scraper hammering the site sends exactly
+`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36`
+and gets mostly 404s. Matched by exact string equality against the lowercased
+UA, so Chrome 151/153, other platforms and Edge are untouched (consistent with
+the no-version-floor rule in `AGENTS.md`).
+
+Trade-off: UA reduction means genuine Linux x86_64 Chrome 152 sends the same
+string, so those users are blocked too. Stable has long moved past 152, so the
+collateral is small; remove this rule once the scraper rotates its UA.
 
 ### malformed-chrome-claim
 Every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)`
