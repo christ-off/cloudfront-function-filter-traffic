@@ -21,6 +21,6 @@
   "homepage": "https://github.com/christ-off/cloudfront-function-filter-traffic#readme",
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.5",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   }
 }

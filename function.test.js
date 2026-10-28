@@ -165,6 +165,8 @@ describe("404 response for bad actors", () => {
   const browserAgents = [
     ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 macOS"],
     ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36", "Chrome/151 Linux aarch64"],
+    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 Linux x86_64 (blocked by ASN instead, not by UA)"],
+    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36", "Chrome/153 Linux x86_64"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0", "Edg/152"],
     ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0", "Edg/144"],
@@ -198,14 +200,6 @@ describe("404 response for bad actors", () => {
       uri: "/",
       userAgent: "Mozilla/5.0 (compatible;PetalBot; https://webmaster.petalsearch.com/site/petalbot)",
     });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it.each([
-    "Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)",
-    "Baiduspider-image+(+http://www.baidu.com/search/spider.htm)",
-  ])("passes through Baiduspider (allowed to index): %s", (userAgent) => {
-    const event = makeEvent({ uri: "/", userAgent });
     expect(handler(event)).toEqual(event.request);
   });
 
@@ -351,6 +345,8 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Mozilla/5.0 (compatible; SurdotlyBot/1.0; http://sur.ly/bot.html)", "SurdotlyBot"],
     ["Mozilla/5.0 (compatible; AonsightMetaBot/1.0; https://aonsight.com/bot)", "AonsightMetaBot"],
     ["Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
+    ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider"],
+    ["Baiduspider-image+(+http://www.baidu.com/search/spider.htm)", "Baiduspider-image"],
     ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
     ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
@@ -520,6 +516,43 @@ describe("IP range blocking", () => {
 });
 
 // =====================================================
+// ASN blocking (CloudFront-Viewer-ASN header)
+// =====================================================
+describe("ASN blocking", () => {
+  const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
+
+  it.each(["16509", "14618"])("blocks AS%s", (value) => {
+    expectNotFound(handler(makeEvent({ extraHeaders: asn(value) })));
+  });
+
+  it("does not block another ASN", () => {
+    const event = makeEvent({ extraHeaders: asn("3215") });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not match an ASN merely containing a blocked number", () => {
+    const event = makeEvent({ extraHeaders: asn("165091") });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("fails open when the header is absent", () => {
+    const event = makeEvent({});
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("blocks a blocked ASN even with a normal browser UA", () => {
+    expectNotFound(handler(makeEvent({
+      extraHeaders: asn("16509"),
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    })));
+  });
+
+  it("lets /robots.txt through for a blocked ASN", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
+  });
+});
+
+// =====================================================
 // /robots.txt is allowlisted (always passes through, even for blocked bots/IPs)
 // =====================================================
 describe("robots.txt for blocked bots", () => {
@@ -538,27 +571,15 @@ describe("robots.txt for blocked bots", () => {
 });
 
 // =====================================================
-// Empty feed.xml for blocked bots
+// feed.xml gets no special treatment
 // =====================================================
-describe("feed.xml fake atom feed for blocked bots", () => {
-
-  it("answers a blocked bot's /feed.xml with a empty 200 atom feed", () => {
-    const result = handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toBe("application/atom+xml");
-    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(result.body).not.toContain('<entry>');
+describe("feed.xml for blocked bots", () => {
+  it("answers a blocked bot's /feed.xml with a plain 404", () => {
+    expectNotFound(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("answers a blocked IP's /FEED.XML case-insensitively", () => {
-    const result = handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" }));
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(result.body).not.toContain('<entry>');
-  });
-
-  it("does not affect other bad-actor rules", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" })));
+  it("answers a blocked IP's /FEED.XML with a plain 404", () => {
+    expectNotFound(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
   });
 
   it("still lets a normal browser's /feed.xml through untouched", () => {

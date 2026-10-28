@@ -30,6 +30,9 @@ Requests from known-malicious IP ranges return `404` on every path, regardless o
 
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
+### 5. ASN blocking (404)
+Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is an Amazon AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — return `404` on every path, regardless of User-Agent. A missing header fails open.
+
 ### 6. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
 
@@ -98,9 +101,7 @@ dotfile/prefix checks — still ends up fully decoded before matching.
 ### bad-actor-response-mapping
 Bad actors and blocked bots get a plain 404 on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
-disallows everything and allowlists specific bots. `/feed.xml` always gets a `200`
-empty fake Atom `<feed>` instead of a 404: a blocked source polls it every minute
-and ignores `max-age`, and a feed is preferable to an error.
+disallows everything and allowlists specific bots.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
@@ -344,7 +345,7 @@ version number (`8.6.0`) dropped, per the standard pattern in
 
 `AonsightMetaBot/1.0` (`aonsight.com/bot`) is blocked at the user's request. Matched on the `aonsightmetabot/` name token only, version dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
 
-`Baiduspider-render/2.0` is blocked: it fetches a post, then downloads the covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer). Matched on the `baiduspider-render/` name token only, version dropped. Plain `Baiduspider` and the other Baidu bots are deliberately NOT blocked and may still index pages.
+All `Baiduspider` variants are blocked (`Baiduspider/2.0`, `Baiduspider-image`, `Baiduspider-render/2.0`, ...): the render variant fetches a post, then downloads the covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer), and blocking only it is pointless when the family is unwanted anyway. Matched on the bare `baiduspider` name token, which covers every suffix.
 
 ### feedfetcher-google
 `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)` (Google's feed reader) is allowed on
@@ -365,6 +366,54 @@ on behalf of its users, not a scraper. It isn't currently matched by
 [blocked-bot-regex](#blocked-bot-regex) (no generic `bot` substring is
 matched, only specific named tokens), noted here so it stays excluded if the
 regex is ever extended.
+
+### asn-blocking
+A scraper with a frozen Chrome 152 UA (`Chrome/152.0.0.0` on `X11; Linux x86_64`) crawls from a rotating pool of AWS
+us-east-1 IPs (one IP per request), so [ip-range-blocking](#ip-range-blocking)
+is useless against it. Blocking the network instead covers the whole pool and
+survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
+origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
+and `blockedAsnRegex` matches the header value exactly (`^(16509|14618)$`).
+Folded into the same condition as
+[bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
+the usual 404. The URI allowlist runs first, so
+`/robots.txt`, `/ads.txt` and `/backup.zip` stay reachable. If the header is
+absent (policy not attached) nothing matches: fails open.
+
+**Setup — getting the ASN header in AWS.** The function only sees
+`CloudFront-Viewer-ASN` if the distribution requests it. This is done once per
+distribution, and the header is not part of the cache key.
+
+1. *Check the current policies.* Repeat for every cache behavior that uses the function (replace `<DISTRIBUTION_ID>`):
+   ```bash
+   aws cloudfront get-distribution-config --id <DISTRIBUTION_ID> \
+     --query 'DistributionConfig.DefaultCacheBehavior.{ORP:OriginRequestPolicyId,Cache:CachePolicyId}'
+   ```
+2. *Create an origin request policy.*
+   - `ORP` is `null` → create a policy with only the ASN header:
+     ```bash
+     aws cloudfront create-origin-request-policy --origin-request-policy-config '{
+       "Name": "Viewer-ASN",
+       "HeadersConfig": {"HeaderBehavior": "whitelist",
+         "Headers": {"Quantity": 1, "Items": ["CloudFront-Viewer-ASN"]}},
+       "CookiesConfig": {"CookieBehavior": "none"},
+       "QueryStringsConfig": {"QueryStringBehavior": "none"}
+     }'
+     ```
+   - A managed policy is already attached (e.g. `CORS-S3Origin`) → managed policies can't be edited: create a custom one that copies its headers **plus** `CloudFront-Viewer-ASN`.
+3. *Attach it.* Console → CloudFront → your distribution → Behaviors → Edit → **Origin request policy** → `Viewer-ASN`, for every behavior using the function.
+
+The header can't go in a cache policy; it must be an origin request policy.
+There is no cache impact, and S3 ignores the unknown header (OAC signing is
+unaffected). To check it works, temporarily log it from the function with
+`console.log('asn=' + (h ? h.value : '-'))` and read the CloudWatch log group
+`/aws/cloudfront/function/<FunctionName>` in us-east-1; `asn=-` means the policy
+is not attached.
+
+**Trade-off:** this blocks everything hosted on AWS, including Amazonbot and
+any AWS-hosted SummalyBot / Linkwarden / Synapse instance. If such traffic
+shows up, exempt those UA tokens inside `isBlockedAsn`. Some Amazon ranges are
+announced from other ASNs (e.g. AS8987 EU): check bgp.he.net before extending.
 
 ### ip-range-blocking
 `event.viewer.ip` (the client IP CloudFront Functions exposes on every viewer

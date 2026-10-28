@@ -23,8 +23,9 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // rationale: README.md#bad-actor-response-mapping
-    if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) || isBlockedBot(ua, uriLower)) {
-        return uriLower === '/feed.xml' ? createFakeFeedResponse() : createNotFoundResponse();
+    if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) ||
+        isBlockedAsn(request.headers['cloudfront-viewer-asn']) || isBlockedBot(ua, uriLower)) {
+        return createNotFoundResponse();
     }
 
     if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
@@ -113,7 +114,7 @@ function isMalformedChromeClaim(ua) {
 }
 
 // rationale: README.md#blocked-bot-regex
-const blockedBotRegex = /linkupbot\/|sleepbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|trident|amzn-searchbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|analyseseonet\/|scrapy|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|navcrawl\/|wellknownbot|siteauditbot\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|wpbot\/|googlebot-image|dataforseobot|imagebot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|domain-intel\/|screaming frog seo spider|openclaw|discordbot\/|sharkey \(like|reflectionbot\/|lightpanda\/|forestengine\/|seojuice-searchbot\/|coccocbot|hubspot crawler|domain-harvester\/|mapthenetbot\/|expansel-monitor\/|fogbot\/|newsletterformresearchbot\/|srchs-research-bot\/|aionbot\/|tiktokspider|opentheboxbot\/|veryhip\/|cms-security-auditor\/|censysinspect\/|publicwwwbot\/|wp2shell|webatlabot|ssi-nutch\/|variableratio-publicassetresearch\/|halobot\/|flowb0t-contentengine\/|claritybot\/|undici|serpex-index\/|compatible; crawler\)|webapp-mapper\/|ironfountain-leads\/|what10bot\/|konqueror\/|brightbot|rust-scrape\/|crawl-engine\/|keenablebot\/|wordpress\/|curl\/|tphotobot\/|websiteresearch\/|surdotlybot\/|aonsightmetabot\/|baiduspider-render\/|httpx - open-source project/;
+const blockedBotRegex = /linkupbot\/|sleepbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|trident|amzn-searchbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|analyseseonet\/|scrapy|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|navcrawl\/|wellknownbot|siteauditbot\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|wpbot\/|googlebot-image|dataforseobot|imagebot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|domain-intel\/|screaming frog seo spider|openclaw|discordbot\/|sharkey \(like|reflectionbot\/|lightpanda\/|forestengine\/|seojuice-searchbot\/|coccocbot|hubspot crawler|domain-harvester\/|mapthenetbot\/|expansel-monitor\/|fogbot\/|newsletterformresearchbot\/|srchs-research-bot\/|aionbot\/|tiktokspider|opentheboxbot\/|veryhip\/|cms-security-auditor\/|censysinspect\/|publicwwwbot\/|wp2shell|webatlabot|ssi-nutch\/|variableratio-publicassetresearch\/|halobot\/|flowb0t-contentengine\/|claritybot\/|undici|serpex-index\/|compatible; crawler\)|webapp-mapper\/|ironfountain-leads\/|what10bot\/|konqueror\/|brightbot|rust-scrape\/|crawl-engine\/|keenablebot\/|wordpress\/|curl\/|tphotobot\/|websiteresearch\/|surdotlybot\/|aonsightmetabot\/|baiduspider|httpx - open-source project/;
 
 function isBlockedBot(normalizedUserAgent, uri) {
     // rationale: README.md#feedfetcher-google
@@ -130,6 +131,13 @@ function isBlockedIpRange(ip) {
     return blockedIpRangeRegex.test(ip);
 }
 
+// rationale: README.md#asn-blocking
+const blockedAsnRegex = /^(16509|14618)$/;
+
+function isBlockedAsn(asnHeader) {
+    return !!asnHeader && blockedAsnRegex.test(asnHeader.value);
+}
+
 // rationale: README.md#bad-actor-response-mapping
 function createNotFoundResponse() {
     return {
@@ -137,19 +145,6 @@ function createNotFoundResponse() {
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
-    };
-}
-
-function createFakeFeedResponse() {
-    return {
-        statusCode: 200,
-        statusDescription: 'OK',
-        headers: {
-            "content-type": {value: "application/atom+xml"},
-            "cache-control": {value: "public, max-age=604800"}
-        },
-        body: '<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">' +
-            '<title>Feed</title><id>tag:feed,2026-01-01:feed</id><updated>2026-01-01T00:00:00Z</updated></feed>\n'
     };
 }
 
