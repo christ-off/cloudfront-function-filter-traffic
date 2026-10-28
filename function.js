@@ -2,6 +2,10 @@ function handler(event) {
     const request = event.request;
     const viewerIp = (event.viewer && event.viewer.ip) || '';
 
+    // Temporary logs ASN
+    const asnHeader = request.headers['cloudfront-viewer-asn'];
+    console.log('asn=' + (asnHeader ? asnHeader.value : '-') + ' ' + viewerIp);
+
     // rationale: README.md#allowlisted-uris
     if (allowlistedUriRegex.test(request.uri || '')) {
         return request;
