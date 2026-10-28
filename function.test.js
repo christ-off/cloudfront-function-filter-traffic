@@ -519,6 +519,49 @@ describe("IP range blocking", () => {
 });
 
 // =====================================================
+// ASN blocking (CloudFront-Viewer-ASN header)
+// =====================================================
+describe("ASN blocking", () => {
+  const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
+
+  it.each(["16509", "14618"])("blocks AS%s", (value) => {
+    expectNotFound(handler(makeEvent({ extraHeaders: asn(value) })));
+  });
+
+  it("does not block another ASN", () => {
+    const event = makeEvent({ extraHeaders: asn("3215") });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("does not match an ASN merely containing a blocked number", () => {
+    const event = makeEvent({ extraHeaders: asn("165091") });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("fails open when the header is absent", () => {
+    const event = makeEvent({});
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("blocks a blocked ASN even with a normal browser UA", () => {
+    expectNotFound(handler(makeEvent({
+      extraHeaders: asn("16509"),
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    })));
+  });
+
+  it("lets /robots.txt through for a blocked ASN", () => {
+    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
+  });
+
+  it("answers /feed.xml with the fake feed for a blocked ASN", () => {
+    const result = handler(makeEvent({ uri: "/feed.xml", extraHeaders: asn("14618") }));
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+  });
+});
+
+// =====================================================
 // /robots.txt is allowlisted (always passes through, even for blocked bots/IPs)
 // =====================================================
 describe("robots.txt for blocked bots", () => {
