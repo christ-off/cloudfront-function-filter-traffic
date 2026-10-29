@@ -10,7 +10,7 @@ function handler(event) {
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createGoneResponse();
+        return createGoneResponse(request.uri || '');
     }
 
     const uri = decodeUri(request.uri || '');
@@ -25,7 +25,7 @@ function handler(event) {
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) ||
         isBlockedAsn(request.headers['cloudfront-viewer-asn'], ua) || isBlockedBot(ua, uriLower)) {
-        return createGoneResponse();
+        return createGoneResponse(uriLower);
     }
 
     if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
@@ -150,7 +150,15 @@ function createNotFoundResponse() {
 }
 
 // rationale: README.md#bad-actor-response-mapping
-function createGoneResponse() {
+function createGoneResponse(uri) {
+    // rationale: README.md#feed-redirect
+    if (uri.toLowerCase() === '/feed.xml') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: {location: {value: '/backup.zip'}}
+        };
+    }
     return {
         statusCode: 410,
         statusDescription: 'Gone',

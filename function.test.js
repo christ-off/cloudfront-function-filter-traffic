@@ -585,15 +585,24 @@ describe("robots.txt for blocked bots", () => {
 });
 
 // =====================================================
-// feed.xml gets no special treatment
+// feed.xml: 410 becomes a 301 to /backup.zip
 // =====================================================
 describe("feed.xml for blocked bots", () => {
-  it("answers a blocked bot's /feed.xml with a plain 404", () => {
-    expectGone(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
+  function expectFeedRedirect(result) {
+    expect(result.statusCode).toBe(301);
+    expect(result.headers.location.value).toBe("/backup.zip");
+  }
+
+  it("redirects a blocked bot's /feed.xml to /backup.zip", () => {
+    expectFeedRedirect(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("answers a blocked IP's /FEED.XML with a plain 404", () => {
-    expectGone(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
+  it("redirects a blocked IP's /FEED.XML to /backup.zip", () => {
+    expectFeedRedirect(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
+  });
+
+  it("redirects a no-user-agent /feed.xml to /backup.zip", () => {
+    expectFeedRedirect(handler(makeEvent({ uri: "/feed.xml", userAgent: null })));
   });
 
   it("still lets a normal browser's /feed.xml through untouched", () => {
