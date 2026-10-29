@@ -1,17 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "./function.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip } = {}) {
+function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } = {}) {
   const headers = {};
   if (userAgent !== null) {
     headers["user-agent"] = { value: userAgent };
   }
   Object.assign(headers, extraHeaders);
-  const event = { request: { uri, headers } };
-  if (ip !== undefined) {
-    event.viewer = { ip };
-  }
-  return event;
+  return { request: { uri, headers } };
 }
 
 function expectGone(result) {
@@ -43,12 +39,8 @@ describe("URI allowlist", () => {
     );
   });
 
-  it("allows /backup.zip through for a blocked IP range", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/backup.zip", ip: "45.148.10.5" })));
-  });
-
-  it.each(["/robots.txt", "/ads.txt"])("allows %s through for blocked UA and IP", (uri) => {
-    expectNotBlocked(handler(makeEvent({ uri, userAgent: "Scrapy/1.0", ip: "45.148.10.5" })));
+  it.each(["/robots.txt", "/ads.txt"])("allows %s through for blocked UA", (uri) => {
+    expectNotBlocked(handler(makeEvent({ uri, userAgent: "Scrapy/1.0" })));
   });
 
   it("is case-insensitive", () => {
@@ -473,55 +465,6 @@ describe("scrapper bot blocking by user-agent", () => {
 });
 
 // =====================================================
-// IP range blocking (Techoff SRV Limited)
-// =====================================================
-describe("IP range blocking", () => {
-  const blockedIps = [
-    ["45.148.10.0", "45.148.10.0/24 start"],
-    ["45.148.10.255", "45.148.10.0/24 end"],
-    ["93.123.109.42", "93.123.109.0/24"],
-    ["195.178.110.1", "195.178.110.0/24"],
-    ["213.209.159.7", "213.209.159.0/24"],
-    ["213.177.179.7", "213.177.179.0/24"],
-    ["62.60.131.7", "62.60.131.0/24"],
-    ["45.138.12.7", "45.138.12.0/24"],
-    ["185.218.86.7", "185.218.86.0/24"],
-  ];
-
-  it.each(blockedIps)("blocks %s (%s)", (ip) => {
-    const result = handler(makeEvent({ ip }));
-    expect(result.statusCode).toBe(410);
-    expect(result.body).toBe("Gone");
-  });
-
-  const allowedIps = [
-    ["45.148.11.0", "just past the 45.148.10.0/24 boundary"],
-    ["45.148.9.255", "just before the 45.148.10.0/24 boundary"],
-    ["93.123.108.255", "just before the 93.123.109.0/24 boundary"],
-    ["195.178.111.0", "just past the 195.178.110.0/24 boundary"],
-    ["8.8.8.8", "unrelated IP"],
-  ];
-
-  it.each(allowedIps)("does not block %s (%s)", (ip) => {
-    const event = makeEvent({ ip });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block when no viewer IP is present on the event", () => {
-    const event = makeEvent({});
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("blocks a blocked IP even with a normal browser UA", () => {
-    const result = handler(makeEvent({
-      ip: "93.123.109.7",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
-    }));
-    expect(result.statusCode).toBe(410);
-  });
-});
-
-// =====================================================
 // ASN blocking (CloudFront-Viewer-ASN header)
 // =====================================================
 describe("ASN blocking", () => {
@@ -575,10 +518,6 @@ describe("robots.txt for blocked bots", () => {
     expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("lets a blocked IP's /robots.txt through", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", ip: "45.148.10.5" })));
-  });
-
   it("still lets a normal browser's /robots.txt through untouched", () => {
     const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
     expect(handler(event)).toEqual(event.request);
@@ -598,10 +537,6 @@ describe("feed.xml for blocked bots", () => {
 
   it("answers a blocked bot's /feed.xml with an empty Atom feed", () => {
     expectFakeFeed(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
-  });
-
-  it("answers a blocked IP's /FEED.XML with an empty Atom feed", () => {
-    expectFakeFeed(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
   });
 
   it("answers a no-user-agent /feed.xml with an empty Atom feed", () => {

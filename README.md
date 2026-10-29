@@ -16,11 +16,10 @@ Checks run in this order; the first match wins. Reasoning is under
 | 0 | URI allowlist: `/backup.zip`, `/robots.txt`, `/ads.txt` bypass everything below | pass-through |
 | 1 | Missing, empty or whitespace-only `User-Agent` | `410` |
 | 2 | Bad actor: path traversal, dotfile paths, security-scan URIs, truncated/malformed Chrome UA | `410` |
-| 3 | Blocked IP range ([ip-range-blocking](#ip-range-blocking)) | `410` |
-| 4 | Blocked ASN ([asn-blocking](#asn-blocking)) | `410` |
-| 5 | Blocked bot/scraper user-agent ([blocked-bot-regex](#blocked-bot-regex)) | `410` |
-| 6 | `.json` / `.js` not on the allowlists, post covers without the site `Referer` | `404` |
-| 7 | Anything else | pass-through |
+| 3 | Blocked ASN ([asn-blocking](#asn-blocking)) | `410` |
+| 4 | Blocked bot/scraper user-agent ([blocked-bot-regex](#blocked-bot-regex)) | `410` |
+| 5 | `.json` / `.js` not on the allowlists, post covers without the site `Referer` | `404` |
+| 6 | Anything else | pass-through |
 
 Every `410` for `/feed.xml` becomes a `200` with an empty Atom feed
 ([fake-empty-feed](#fake-empty-feed)). A directory-style path without a trailing slash
@@ -58,7 +57,7 @@ identifier the code points at.
 ### allowlisted-uris
 Requests for these exact URIs pass straight through to the origin, before
 even the missing-user-agent check — nothing below this point can block them,
-including the IP-range and bot-UA checks. Case-insensitive exact-path match.
+including the bot-UA checks. Case-insensitive exact-path match.
 
 - `/backup.zip` — allowed at the user's request. Do not live-test this rule
   against the deployed function (e.g. `aws cloudfront test-function`); verify
@@ -76,7 +75,7 @@ single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
-Bad actors, blocked IPs, ASNs and bots get a plain `410 Gone` on every path except the
+Bad actors, ASNs and bots get a plain `410 Gone` on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
 disallows everything and allowlists specific bots. `410` (permanent) rather
 than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
@@ -89,14 +88,12 @@ replies `200` with a valid but empty Atom feed (`application/atom+xml`, no entri
 `updated` date) instead. Feed readers treat it as a feed with nothing new and keep polling
 quietly, rather than treating the 410 as an error. A `301` to `/backup.zip` and a bodyless
 `304` were both tried and rejected: the 301 was useless and a 304 is only valid as an answer
-to a conditional request. This covers every 410 rule (missing UA, bad actor, IP, ASN, bot).
+to a conditional request. This covers every 410 rule (missing UA, bad actor, ASN, bot).
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
 then truncated/malformed Chrome UAs, ordered most- to least-frequent per
 `logs.db` so common cases short-circuit before rarer, costlier checks run.
-In `handler`, the cheap anchored IP-range check runs before the large
-bot-name regex.
 
 ### dotfile-path
 Any path containing `/.` (a dotfile or dot-directory segment) is blocked
@@ -230,8 +227,7 @@ its UA has no `/`-separated version, so the name phrase is matched).
 
 ### asn-blocking
 A scraper with a frozen Chrome 152 UA (`Chrome/152.0.0.0` on `X11; Linux x86_64`) crawls from a rotating pool of AWS
-us-east-1 IPs (one IP per request), so [ip-range-blocking](#ip-range-blocking)
-is useless against it. Blocking the network instead covers the whole pool and
+us-east-1 IPs (one IP per request), so blocking by IP is useless against it. Blocking the network instead covers the whole pool and
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
 and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
@@ -297,41 +293,11 @@ any AWS-hosted SummalyBot / Linkwarden / Synapse instance. If such traffic
 shows up, exempt those UA tokens inside `isBlockedAsn`. Some Amazon ranges are
 announced from other ASNs (e.g. AS8987 EU): check bgp.he.net before extending.
 
-### ip-range-blocking
-`event.viewer.ip` (the client IP CloudFront Functions exposes on every viewer
-request/response) is matched against a blocklist of known-malicious network
-ranges via `blockedIpRangeRegex` — a plain string-prefix regex, same style as
-[blocked-bot-regex](#blocked-bot-regex), not integer/bitmask CIDR math. This
-only works because every current range is `/24` (octet-aligned): the regex
-alternatives are literal `first.second.third.` prefixes, so a match on
-`45.148.10.` covers exactly `45.148.10.0`–`45.148.10.255`. Folded into the
-same condition as [bad-actor-response-mapping](#bad-actor-response-mapping)
-so a blocked IP is treated like any other bad actor, regardless of what
-User-Agent it sends.
-
-Currently blocked, at the user's request:
-
-| Range | Network |
-|---|---|
-| `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24` | Techoff SRV Limited |
-| `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24` | Feo Prest SRL, AS208137, Aachen DE |
-| `45.138.12.0/24`, `185.218.86.0/24` | TC Datacenter Limited, AS218785, Warsaw PL |
-
-**Pending (not yet blocked):** `31.57.216.50`: AS197769, VPS Dedicated LLC, Ljubljana, SI.
-
-If a future range isn't octet-aligned (e.g. a `/25` or `/22`), the
-string-prefix trick stops working and the check needs real integer/bitmask
-CIDR matching instead — don't force a non-aligned range into this regex.
-
-To add a range: append `|a\.b\.c\.` (escaping the dots) to
-`blockedIpRangeRegex` for a `/24`, or `|a\.b\.` for a `/16`, and add an IP
-sample to the `blockedIps` fixture in `function.test.js`.
-
 ### json-allowlist
 Scanners probe for `.json` files (`/package.json`, `/composer.json`,
 `/config.json`, ...). Only the five real JSON files the site serves are
 allowed; every other `.json` path gets `404`. The check runs last, after the
-bad-actor/bot/IP checks, so a blocked bot gets its `410` from those rules
+bad-actor/bot checks, so a blocked bot gets its `410` from those rules
 first and only a legitimate-looking client can reach a real JSON file. It
 matches the decoded, lowercased `uriLower` exactly (no query string is part
 of `uri`).
@@ -342,7 +308,7 @@ To allow another file, add it to `allowedJsonRegex` and the test fixture.
 Same approach as [json-allowlist](#json-allowlist): scanners probe for
 `.js` files (`/app.js`, `/main.js`, `/config.js`, ...), so only the six real
 scripts the site serves are allowed and every other `.js` path gets `404`.
-Runs last, after the bad-actor/bot/IP checks. Matches the decoded, lowercased
+Runs last, after the bad-actor/bot checks. Matches the decoded, lowercased
 `uriLower` exactly; `.json` paths are handled by the JSON rule, not this one.
 
 To allow another file, add it to `allowedJsRegex` and the test fixture.
@@ -380,4 +346,4 @@ npm test           # run once
 npm run test:watch # watch mode
 ```
 
-`function.test.js` builds a minimal CloudFront event (`{ request: { uri, headers } }`) and asserts on the return value: the original `request` (pass-through) or a synthetic response with `statusCode`, `headers` and `body`. It covers every rule above: scanner URIs, bot UAs, IP ranges, ASNs, the allowlisted URIs, the fake `/feed.xml`, empty UAs, percent-encoded URIs and pass-through.
+`function.test.js` builds a minimal CloudFront event (`{ request: { uri, headers } }`) and asserts on the return value: the original `request` (pass-through) or a synthetic response with `statusCode`, `headers` and `body`. It covers every rule above: scanner URIs, bot UAs, ASNs, the allowlisted URIs, the fake `/feed.xml`, empty UAs, percent-encoded URIs and pass-through.

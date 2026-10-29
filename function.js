@@ -1,6 +1,5 @@
 function handler(event) {
     const request = event.request;
-    const viewerIp = (event.viewer && event.viewer.ip) || '';
 
     // rationale: README.md#allowlisted-uris
     if (allowlistedUriRegex.test(request.uri || '')) {
@@ -23,7 +22,7 @@ function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     // rationale: README.md#bad-actor-response-mapping
-    if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) ||
+    if (isBadActor(uriLower, ua) ||
         isBlockedAsn(request.headers['cloudfront-viewer-asn'], ua) || isBlockedBot(ua, uriLower)) {
         return createGoneResponse(uriLower);
     }
@@ -122,13 +121,6 @@ function isBlockedBot(normalizedUserAgent, uri) {
         return uri !== '/feed.xml';
     }
     return blockedBotRegex.test(normalizedUserAgent);
-}
-
-// rationale: README.md#ip-range-blocking
-const blockedIpRangeRegex = /^(45\.148\.10\.|93\.123\.109\.|195\.178\.110\.|213\.209\.159\.|213\.177\.179\.|62\.60\.131\.|45\.138\.12\.|185\.218\.86\.)/;
-
-function isBlockedIpRange(ip) {
-    return blockedIpRangeRegex.test(ip);
 }
 
 // rationale: README.md#asn-blocking
