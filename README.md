@@ -8,47 +8,24 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
-### 0. URI allowlist (pass-through)
-A short list of exact paths (currently `/backup.zip`, `/robots.txt`, `/ads.txt`) always pass through
-to the origin, checked before every other rule — nothing below can block them.
+Checks run in this order; the first match wins. Reasoning is under
+[Blocking rules — rationale](#blocking-rules--rationale).
 
-### 1. Missing user-agent blocking (410)
-Requests with no `User-Agent` header, an empty value, or whitespace-only value return `410`. This check runs first, before URI decoding, and cannot be bypassed.
+| # | Rule | Response |
+|---|---|---|
+| 0 | URI allowlist: `/backup.zip`, `/robots.txt`, `/ads.txt` bypass everything below | pass-through |
+| 1 | Missing, empty or whitespace-only `User-Agent` | `410` |
+| 2 | Bad actor: path traversal, dotfile paths, security-scan URIs, truncated/malformed Chrome UA | `410` |
+| 3 | Blocked IP range ([ip-range-blocking](#ip-range-blocking)) | `410` |
+| 4 | Blocked ASN ([asn-blocking](#asn-blocking)) | `410` |
+| 5 | Blocked bot/scraper user-agent ([blocked-bot-regex](#blocked-bot-regex)) | `410` |
+| 6 | `.json` / `.js` not on the allowlists, post covers without the site `Referer` | `404` |
+| 7 | Anything else | pass-through |
 
-### 2. Security scan blocking (410)
-Requests matching automated-scan patterns return `410`:
-- URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.config`, `.ya?ml`, `.toml`, `.conf`, `.key`, `.pem`, `.axd`, `.boto`, `.s3cfg`, `.npmrc`, `.htpasswd`, `.tfstate`, `.old`, `.env`, `.map`, `.webmanifest` (backup copies, env files, source maps; the static site has no PWA manifest and no `.map` files)
-- Common scanner folders: `/userfiles`, Laravel/Go/Apache debug endpoints (`/telescope`, `/horizon`, `/storage`, `/debug`, `/console`, `/server-status`, `/server-info`, `/manage`), `/graphql`, `/v1`, `/health`, `/proc`, `/var`, `/Dockerfile`, `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
-- Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
-
-### 3. Spoofed / malformed Chrome UA blocking (410)
-- A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
-- Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
-
-### 4. IP range blocking (410)
-Requests from known-malicious IP ranges return `410` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
-
-**Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
-
-### 5. ASN blocking (410)
-Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — `396982` (Google Cloud, NL) — `1299` (Arelion Sweden AB) — `48090` (Techoff SRV Limited, Amsterdam NL) — `8075` (Microsoft Corporation, HK) — `4134` (CHINANET BACKBONE, Shijiazhuang CN) — `23724` (IDC China Telecommunications, Beijing CN) — `271315` (Netfusion Internet LTDA, Rio de Janeiro BR) — or `209334` (Modat B.V., security scanner, CA) — return `410` on every path, regardless of User-Agent. A missing header fails open. Exception: the Birchfeed and Claude-SearchBot user agents are allowlisted and pass even from a blocked ASN.
-
-### 6. Bot / scraper blocking
-Requests matching 60+ known bot/scraper user-agent patterns return `410` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
-
-**Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
-
-### 7. JSON allowlist (404)
-Any path ending in `.json` returns `404` unless it is one of: `/about/data/blogs.json`, `/about/data/pages.json`, `/about/data/visitors.json`, `/human.json`, `/pagefind/pagefind-entry.json`. This runs last, after all bot/security filtering.
-
-### 8. JS allowlist (404)
-Any path ending in `.js` returns `404` unless it is one of: `/javascript/recommended-blogs.js`, `/javascript/chart.umd.min.js`, `/javascript/bootstrap.bundle.min.js`, `/pagefind/pagefind.js`, `/pagefind/pagefind-worker.js`, `/pagefind/pagefind-ui.js`. Runs last, like the JSON allowlist.
-
-### 9. Cover referer check (404)
-`.webp` files under `/assets/posts/` and `/assets/posts_640/` (post covers) return `404` unless the `Referer` header starts with `https://post-tenebras-lire.net/`. Other assets (`/assets/svgs/`, `/assets/posts_other/`, ...) are not filtered. Runs last.
-
-### 10. Pass-through
-All other requests are forwarded to the origin unchanged. A directory-style path without a trailing slash (e.g. `/about`) is not rewritten: the origin replies with a `301` to `/about/`. That `301` indicates the path **exists**, whereas a missing path gets a `404`.
+Every `410` for `/feed.xml` becomes a `200` with an empty Atom feed
+([fake-empty-feed](#fake-empty-feed)). A directory-style path without a trailing slash
+(e.g. `/about`) is not rewritten: the origin replies `301` to `/about/`, which shows the
+path **exists**, whereas a missing path gets a `404`.
 
 ## Compute utilization baseline
 
@@ -99,7 +76,7 @@ single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
-Bad actors and blocked bots get a plain `410 Gone` on every path except the
+Bad actors, blocked IPs, ASNs and bots get a plain `410 Gone` on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
 disallows everything and allowlists specific bots. `410` (permanent) rather
 than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
@@ -202,181 +179,54 @@ malformed strings the exact-template regexes above don't cover (e.g.
 `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0`).
 
 ### blocked-bot-regex
-Plain substrings matched against the (already lowercased) User-Agent header,
-as ONE regex literal. Written out literally rather than built at runtime
-from an array: a literal is compiled when the script is parsed, whereas
-`new RegExp(list.map(escape).join('|'))` re-does the escape calls, a map, a
-join and a pattern compile on every script evaluation — pure compute we were
-paying for. Alternatives are ordered most- to least-frequent per `logs.db` so
-common bots exit early (non-matching UAs still try every alternative).
+Plain substrings matched against the lowercased User-Agent, as ONE regex literal.
+A literal is compiled when the script is parsed, whereas building it at runtime
+(`new RegExp(list.map(escape).join('|'))`) would redo the escapes, map, join and
+compile on every evaluation. Alternatives are ordered most- to least-frequent per
+`logs.db` so common bots exit early.
 
-To add a bot: append `|your-token` (escaping `.`, `(`, `)` and `/` as
-`\.`, `\(`, `\)`, `\/`) and add a UA sample to the `blockedAgents` fixture in
-`function.test.js`.
+Match the bot's name token only and drop its version (`aionbot\/`, not
+`aionbot\/1\.0`); see `AGENTS.md`. To add a bot: append `|your-token` (escape `.`, `(`,
+`)` and `/` as `\.`, `\(`, `\)`, `\/`) and add a UA sample to the `blockedAgents`
+fixture in `function.test.js`.
 
-`seojuice-searchbot/` (SEOJuice, `seojuice.io`) is blocked because it does
-not obey `robots.txt`.
+**Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
+`hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
+`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `tiktokspider` (no
+`/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
+`rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
+`publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
+`variableratio-publicassetresearch/`, `halobot/`, `flowb0t-contentengine/`, `tphotobot/`,
+`websiteresearch/`, `aonsightmetabot/`, `wordpress/` (pingback/XML-RPC UA), `curl/` (no
+legitimate need to curl the site), `httpx - open-source project` (ProjectDiscovery httpx;
+its UA has no `/`-separated version, so the name phrase is matched).
 
-`coccocbot` (Coc Coc, `coccoc.com`, a Vietnamese search engine crawler) is
-blocked at the user's request.
+**With a reason:**
 
-`hubspot crawler` (HubSpot's own crawler, `hubspot.com`) is blocked at the
-user's request.
+| Token | Why |
+|---|---|
+| `cms-security-auditor/` | Claims to be an "authorized self-check", but the origin has no allowlist for it, so it is treated like any unsolicited scanner |
+| `seojuice-searchbot/` | Ignores `robots.txt` |
+| `what10bot/` | Ignores `robots.txt` |
+| `surdotlybot/` | Ignores `robots.txt` despite claiming to obey it |
+| `claritybot/` | AI crawler that ignores `robots.txt`; its bot info page is missing |
+| `keenablebot/` | Ignores `robots.txt` |
+| `crawl-engine/` | Ignores `robots.txt` |
+| `serpex-index/` | Documents no `robots.txt` policy |
+| `undici` | Node.js HTTP client; never fetches `robots.txt`, traffic comes from a hosting provider (DigitalOcean, Toronto) |
+| `konqueror/` | `Mozilla/5.0 (compatible; Konqueror/3; Linux)`: no real visitor sends this UA anymore; only scrapers spoof it |
+| `compatible; crawler)` | Full UA `Mozilla/5.0 (compatible; crawler)`. The bare word "crawler" is too generic (it appears in `https://crawler.exa.ai/`), so the whole substring is anchored |
+| `baiduspider` | Every variant (`-image`, `-render/2.0`, ...). The render variant downloads covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer); blocking only it is pointless |
 
-`domain-harvester/` (`github.com/esc-city/domain-harvester`) is blocked at
-the user's request.
-
-`mapthenetbot/` (`mapthenet.org`) is blocked at the user's request.
-
-`expansel-monitor/` (`expansel.com`) is blocked at the user's request.
-
-`fogbot/` is blocked at the user's request.
-
-`newsletterformresearchbot/` is blocked at the user's request.
-
-`srchs-research-bot/` is blocked at the user's request.
-
-`aionbot/` is blocked at the user's request.
-
-`httpx - open-source project` (ProjectDiscovery httpx, `github.com/projectdiscovery/httpx`): its UA has no `/`-separated
-version, so the name phrase is matched. Blocked at the user's request.
-
-`tiktokspider` (no `/`-separated version in its UA token) is blocked at the
-user's request.
-
-`opentheboxbot/` is blocked at the user's request.
-
-`brightbot` (UA is `Brightbot 1.0`, no `/`) is blocked at the user's request.
-
-`rust-scrape/` is blocked at the user's request.
-
-`webapp-mapper/` is blocked at the user's request.
-
-`ironfountain-leads/` is blocked at the user's request.
-
-`what10bot/` (What10Bot, what10.com/bot) does not obey `robots.txt`.
-
-`konqueror/` (`Mozilla/5.0 (compatible; Konqueror/3; Linux)`): a KDE browser UA no real visitor sends anymore; only scrapers spoof it.
-
-`veryhip/` (`veryhip.com`) is blocked at the user's request.
-
-`cms-security-auditor/` is blocked at the user's request, despite
-self-identifying as an "authorized self-check" — the origin has no
-allowlist for it, so it's treated like any other unsolicited scanner.
-
-`censysinspect/` (Censys internet-scanning bot, `about.censys.io`) is
-blocked at the user's request.
-
-`petalbot` (Huawei's search crawler, `webmaster.petalsearch.com`) is no
-longer blocked: it honors the `robots.txt` disallow list, so it's allowed
-through like any other well-behaved crawler.
-
-`publicwwwbot/` (PublicWWW, `publicwww.com`, a source-code search engine
-crawler) is blocked at the user's request.
-
-`wp2shell` (a WordPress vulnerability scanner/exploit tool) is blocked at
-the user's request.
-
-`webatlabot` (`https://webatla.com/bot`) is blocked at the user's request.
-
-`ssi-nutch/` (SSI's broad web crawler, `https://ssi.inc/`, run by
-`adi@ssi.inc`) is blocked at the user's request. Matched on the `ssi-nutch/`
-name token only, version number dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`variableratio-publicassetresearch/` is blocked at the user's request.
-Matched on the `variableratio-publicassetresearch/` name token only, version
-number (`1.0`) dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`HaloBot/1.0` is blocked at the user's request. Matched on the `halobot/`
-name token only, version number (`1.0`) dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`Flowb0t-ContentEngine/1.0` is blocked at the user's request. Matched on the
-`flowb0t-contentengine/` name token only, version number (`1.0`) dropped, per
-the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
-
-`ClarityBot/0.1 (https://clarity.surf/bot)` is an AI crawler that does not
-consult `robots.txt`, and its bot info page is missing — blocked at the
-user's request. Matched on the `claritybot/` name token only, version number
-(`0.1`) dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`undici` (the Node.js HTTP client) is blocked at the user's request — it does
-not fetch `robots.txt` and the traffic observed operates from DigitalOcean,
-LLC · Toronto, CA, a hosting provider rather than a residential/ISP network.
-Matched on the `undici` name token only, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`ExaSearchBot` (`Mozilla/5.0 (compatible; ExaSearchBot/1.0; +https://crawler.exa.ai/)`, the
-Exa AI search crawler) was previously blocked but is now deliberately allowed: the
-user permits Exa to learn from the blog. It is intentionally absent from
-[blocked-bot-regex](#blocked-bot-regex); do not re-add it.
-
-`serpex-index` (`Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)`) is
-blocked at the user's request — it documents no `robots.txt` policy. Matched on the
-`serpex-index/` name token only, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`compatible; crawler)` (full UA: `Mozilla/5.0 (compatible; crawler)`) is blocked at
-the user's request. Its self-identifying name is the bare word "crawler", too
-generic to match alone — it appears inside other, legitimate bots' self-ID URLs
-(e.g. `ExaSearchBot`'s `https://crawler.exa.ai/`) — so the match is anchored to the
-full `compatible; crawler)` substring instead of the usual bare name-token pattern
-in [blocked-bot-regex](#blocked-bot-regex).
-
-`crawl-engine/0.1 (https://abuse.creasource.dev/; abuse-report@creasource.dev)`
-is blocked at the user's request — it does not respect `robots.txt`. Matched
-on the `crawl-engine/` name token only, version number (`0.1`) dropped, per
-the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
-
-`KeenableBot/1.0` (`https://keenable.ai/`) does not respect `robots.txt` and
-is blocked. Matched on the `keenablebot/` name token only, version number
-(`1.0`) dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`WordPress/6.4.3` (the generic self-hosted-WordPress UA sent by pingbacks/
-XML-RPC requests, version varies per site) is blocked at the user's request.
-Matched on the `wordpress/` name token only, version number (`6.4.3`)
-dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
-
-`curl/8.6.0` (the curl CLI default UA) is blocked at the user's request —
-no legitimate need to curl the site. Matched on the `curl/` name token only,
-version number (`8.6.0`) dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`tphotobot/` is blocked at the user's request.
-
-`WebsiteResearch/1.0` is blocked at the user's request. Matched on the
-`websiteresearch/` name token only, version dropped, per the standard pattern in
-[blocked-bot-regex](#blocked-bot-regex).
-
-`SurdotlyBot/1.0` (`sur.ly/bot.html`) is blocked: it ignores robots.txt despite claiming to obey it. Matched on the `surdotlybot/` name token only, version dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
-
-`AonsightMetaBot/1.0` (`aonsight.com/bot`) is blocked at the user's request. Matched on the `aonsightmetabot/` name token only, version dropped, per the standard pattern in [blocked-bot-regex](#blocked-bot-regex).
-
-All `Baiduspider` variants are blocked (`Baiduspider/2.0`, `Baiduspider-image`, `Baiduspider-render/2.0`, ...): the render variant fetches a post, then downloads the covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer), and blocking only it is pointless when the family is unwanted anyway. Matched on the bare `baiduspider` name token, which covers every suffix.
+**Deliberately not blocked** (absent from the regex; do not add):
+- `ExaSearchBot`: the user permits Exa to learn from the blog.
+- `PetalBot` (Huawei): honors the `robots.txt` disallow list.
+- `SummalyBot` (Misskey link previews), `Linkwarden (Server-Side Fetch)` (self-hosted link manager), `Synapse (bot; ...)` (Matrix URL previews): legitimate server-side fetchers on behalf of users. Synapse isn't matched anyway (no generic `bot` substring); noted so it stays excluded if the regex is ever extended.
 
 ### feedfetcher-google
 `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)` (Google's feed reader) is allowed on
 `/feed.xml` only and blocked everywhere else. It is handled in `isBlockedBot` rather than in
 [blocked-bot-regex](#blocked-bot-regex), so it is not in the regex.
-
-`SummalyBot/x.y.z` (Misskey's link-preview fetcher, run by many instances) must **not** be
-blocked — it is used by fediverse tools to render link previews.
-
-`Linkwarden (Server-Side Fetch)` (the self-hosted link manager,
-`linkwarden.app`, fetching link previews/archives on behalf of its users) must
-**not** be blocked — it's legitimate self-hosted server-side traffic, not a
-scraper.
-
-`Synapse (bot; https://github.com/matrix-org/synapse)` must **not** be
-blocked — Synapse is an open-source Matrix homeserver fetching URL previews
-on behalf of its users, not a scraper. It isn't currently matched by
-[blocked-bot-regex](#blocked-bot-regex) (no generic `bot` substring is
-matched, only specific named tokens), noted here so it stays excluded if the
-regex is ever extended.
 
 ### asn-blocking
 A scraper with a frozen Chrome 152 UA (`Chrome/152.0.0.0` on `X11; Linux x86_64`) crawls from a rotating pool of AWS
@@ -384,15 +234,30 @@ us-east-1 IPs (one IP per request), so [ip-range-blocking](#ip-range-blocking)
 is useless against it. Blocking the network instead covers the whole pool and
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
-and `blockedAsnRegex` matches the header value exactly (`^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334)$`).
+and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
 Folded into the same condition as
 [bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
 the usual 410. The URI allowlist runs first, so
 `/robots.txt`, `/ads.txt` and `/backup.zip` stay reachable. If the header is
 absent (policy not attached) nothing matches: fails open.
 
-`allowedAsnBotRegex` is an allowlist of legitimate bots (`birchfeed\/`,
-`claude-searchbot\/`) that happen to be hosted in a blocked ASN; a match skips
+Blocked ASNs (all at the user's request):
+
+| ASN | Network |
+|---|---|
+| 16509, 14618 | AMAZON-02, AMAZON-AES |
+| 215125 | Church of Cyberology, NL scraper |
+| 29222 | Infomaniak, CH feed scraper |
+| 396982 | Google Cloud, NL |
+| 1299 | Arelion Sweden AB |
+| 48090 | Techoff SRV Limited, Amsterdam NL |
+| 8075 | Microsoft Corporation, HK |
+| 4134 | CHINANET BACKBONE, Shijiazhuang CN |
+| 23724 | IDC China Telecommunications, Beijing CN |
+| 271315 | Netfusion Internet LTDA, Rio de Janeiro BR |
+| 209334 | Modat B.V., security scanner, CA |
+
+`allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
 
@@ -443,10 +308,15 @@ same condition as [bad-actor-response-mapping](#bad-actor-response-mapping)
 so a blocked IP is treated like any other bad actor, regardless of what
 User-Agent it sends.
 
-Currently blocked: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`
-(Techoff SRV Limited); `213.209.159.0/24`
-(Feo Prest SRL, AS208137, Aachen DE); `45.138.12.0/24`, `185.218.86.0/24`
-(TC Datacenter Limited, AS218785, Warsaw PL). Blocked at the user's request.
+Currently blocked, at the user's request:
+
+| Range | Network |
+|---|---|
+| `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24` | Techoff SRV Limited |
+| `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24` | Feo Prest SRL, AS208137, Aachen DE |
+| `45.138.12.0/24`, `185.218.86.0/24` | TC Datacenter Limited, AS218785, Warsaw PL |
+
+**Pending (not yet blocked):** `31.57.216.50`: AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
 If a future range isn't octet-aligned (e.g. a `/25` or `/22`), the
 string-prefix trick stops working and the check needs real integer/bitmask
@@ -488,52 +358,25 @@ casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
 
 ## Why a CloudFront Function (not Lambda@Edge)?
 
-CloudFront Functions run at **every edge location** with sub-millisecond startup and are ~6× cheaper than Lambda@Edge. They are the right tool for stateless, CPU-light request manipulation that requires no network I/O, no large runtimes, and no response body streaming. This filter fits that profile exactly: pure string matching, no external calls.
-
-The trade-off is a restricted runtime — no `setTimeout`, no `fetch`, no Node.js built-ins. The function is written deliberately to stay within those constraints.
+CloudFront Functions run at **every edge location** with sub-millisecond startup and are ~6× cheaper than Lambda@Edge. They suit stateless, CPU-light request filtering with no network I/O. This filter is pure string matching, so it fits; the trade-off is a restricted runtime (no `setTimeout`, no `fetch`, no Node.js built-ins).
 
 ---
 
 ## Deployment
 
-Copy the body of `function.js` into the CloudFront Functions editor in the AWS Console (or deploy via AWS CLI / CDK / Terraform). Associate the function with the **viewer request** event of your distribution.
+Copy the body of `function.js` into the CloudFront Functions editor in the AWS Console (or deploy via AWS CLI / CDK / Terraform) and associate it with the **viewer request** event of your distribution.
 
-> **Important:** remove the `export { handler }` line before deploying — CloudFront's JS 2.0 runtime does not support ES module `export` syntax. That line exists solely so Vitest can import the function during testing.
+> **Important:** remove the `export { handler }` line before deploying — the JS 2.0 runtime does not support ES module `export`. It exists only so Vitest can import the function.
 
 ---
 
-## Test framework
+## Tests
 
-Tests are written with **[Vitest](https://vitest.dev/)**.
-
-Vitest was chosen over Jest for this project because:
-
-- **Native ESM support** — no Babel transform needed. The function uses `export { handler }` which works out of the box with `"type": "module"` in `package.json`.
-- **Zero config** — no `jest.config.js`, no transform pipeline to maintain.
-- **Fast** — Vitest starts in milliseconds; the full suite runs in under 250 ms.
-- **Jest-compatible API** — `describe`, `it`, `expect`, `it.each` are identical, so the syntax is familiar.
-
-### Running the tests
+[Vitest](https://vitest.dev/) (native ESM, zero config, Jest-compatible API).
 
 ```bash
 npm test           # run once
-npm run test:watch # watch mode (re-runs on file save)
+npm run test:watch # watch mode
 ```
 
-### Test structure
-
-`function.test.js` covers all behaviours with 379 tests:
-
-| Suite | What is tested |
-|---|---|
-| PHP / bad folder / security scan blocking | File extensions, scanner folders, sensitive/credential paths, `/ip` |
-| Scrapper bot blocking by user-agent | 60+ bot/scraper patterns, matched case-insensitively |
-| IP range blocking | Known-malicious `/24` ranges blocked regardless of UA; boundary IPs just outside a range pass through |
-| robots.txt for blocked bots | Allowlisted: always passes through, even for blocked bots and bad actors |
-| sitemap.xml for blocked bots | Blocked bots get a plain 410 on `/sitemap.xml`; normal browsers pass through untouched |
-| Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
-| Percent-encoded URI handling | URI decoding before pattern matching |
-| ads.txt and llms.txt | `/ads.txt` is allowlisted; `/llms.txt` follows normal UA blocking |
-| Pass-through | Normal requests forwarded unchanged |
-
-Each test builds a minimal CloudFront event object (`{ request: { uri, headers } }`) and asserts on the return value — either the original `request` object (pass-through) or a synthetic response with `statusCode`, `headers`, and `body`.
+`function.test.js` builds a minimal CloudFront event (`{ request: { uri, headers } }`) and asserts on the return value: the original `request` (pass-through) or a synthetic response with `statusCode`, `headers` and `body`. It covers every rule above: scanner URIs, bot UAs, IP ranges, ASNs, the allowlisted URIs, the fake `/feed.xml`, empty UAs, percent-encoded URIs and pass-through.
