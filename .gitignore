@@ -5,3 +5,4 @@
 .DS_Store
 /coverage/
 /.vitest/
+.claude/settings.local.json
