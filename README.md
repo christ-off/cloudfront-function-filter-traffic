@@ -257,7 +257,7 @@ Blocked ASNs (all at the user's request):
 | 271315 | Netfusion Internet LTDA, Rio de Janeiro BR |
 | 209334 | Modat B.V., security scanner, CA |
 
-`allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot) that happen to be hosted in a blocked ASN; a match skips
+`allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
 

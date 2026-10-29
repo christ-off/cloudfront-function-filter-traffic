@@ -134,7 +134,7 @@ function isBlockedIpRange(ip) {
 // rationale: README.md#asn-blocking
 const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334)$/;
 
-const allowedAsnBotRegex = /birchfeed\/|claude-searchbot\//;
+const allowedAsnBotRegex = /birchfeed\/|claude-searchbot\/|bingbot\//;
 
 function isBlockedAsn(asnHeader, ua) {
     return !!asnHeader && blockedAsnRegex.test(asnHeader.value) && !allowedAsnBotRegex.test(ua);
