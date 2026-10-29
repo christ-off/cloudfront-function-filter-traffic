@@ -151,12 +151,12 @@ function createNotFoundResponse() {
 
 // rationale: README.md#bad-actor-response-mapping
 function createGoneResponse(uri) {
-    // rationale: README.md#feed-redirect
+    // rationale: README.md#feed-not-modified
     if (uri.toLowerCase() === '/feed.xml') {
         return {
-            statusCode: 301,
-            statusDescription: 'Moved Permanently',
-            headers: {location: {value: '/backup.zip'}}
+            statusCode: 304,
+            statusDescription: 'Not Modified',
+            headers: {"content-type": {value: "application/atom+xml"}}
         };
     }
     return {

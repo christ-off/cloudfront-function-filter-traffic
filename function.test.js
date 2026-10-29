@@ -585,24 +585,25 @@ describe("robots.txt for blocked bots", () => {
 });
 
 // =====================================================
-// feed.xml: 410 becomes a 301 to /backup.zip
+// feed.xml: 410 becomes a fake 304 Not Modified
 // =====================================================
 describe("feed.xml for blocked bots", () => {
-  function expectFeedRedirect(result) {
-    expect(result.statusCode).toBe(301);
-    expect(result.headers.location.value).toBe("/backup.zip");
+  function expectFeedNotModified(result) {
+    expect(result.statusCode).toBe(304);
+    expect(result.headers["content-type"].value).toBe("application/atom+xml");
+    expect(result.body).toBeUndefined();
   }
 
-  it("redirects a blocked bot's /feed.xml to /backup.zip", () => {
-    expectFeedRedirect(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
+  it("answers a blocked bot's /feed.xml with a 304", () => {
+    expectFeedNotModified(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
-  it("redirects a blocked IP's /FEED.XML to /backup.zip", () => {
-    expectFeedRedirect(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
+  it("answers a blocked IP's /FEED.XML with a 304", () => {
+    expectFeedNotModified(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
   });
 
-  it("redirects a no-user-agent /feed.xml to /backup.zip", () => {
-    expectFeedRedirect(handler(makeEvent({ uri: "/feed.xml", userAgent: null })));
+  it("answers a no-user-agent /feed.xml with a 304", () => {
+    expectFeedNotModified(handler(makeEvent({ uri: "/feed.xml", userAgent: null })));
   });
 
   it("still lets a normal browser's /feed.xml through untouched", () => {

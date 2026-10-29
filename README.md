@@ -106,11 +106,12 @@ than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
 allowlists, the cover referer check and undecodable URIs stay `404`, as those
 are ordinary missing resources, not blocked clients.
 
-### feed-redirect
+### feed-not-modified
 Whenever the function would answer `410` and the URI is `/feed.xml` (case-insensitive), it
-replies `301 Moved Permanently` with `Location: /backup.zip` instead. This covers every 410
-rule (missing UA, bad actor, IP, ASN, bot). `/backup.zip` is allowlisted, so the redirect
-target is never itself blocked.
+replies a bodyless `304 Not Modified` with `Content-Type: application/atom+xml` instead. Feed
+readers treat it as "feed unchanged" and keep their cached copy, so they stop retrying instead
+of treating the 410 as an error; an earlier `301` to `/backup.zip` was useless. This covers every
+410 rule (missing UA, bad actor, IP, ASN, bot).
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
