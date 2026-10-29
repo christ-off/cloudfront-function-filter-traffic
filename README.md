@@ -31,7 +31,7 @@ Requests from known-malicious IP ranges return `410` on every path, regardless o
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
 ### 5. ASN blocking (410)
-Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — `396982` (Google Cloud, NL) — `1299` (Arelion Sweden AB) — `48090` (Techoff SRV Limited, Amsterdam NL) — or `8075` (Microsoft Corporation, HK) — return `410` on every path, regardless of User-Agent. A missing header fails open. Exception: the Birchfeed and Claude-SearchBot user agents are allowlisted and pass even from a blocked ASN.
+Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — `396982` (Google Cloud, NL) — `1299` (Arelion Sweden AB) — `48090` (Techoff SRV Limited, Amsterdam NL) — `8075` (Microsoft Corporation, HK) — or `4134` (CHINANET BACKBONE, Shijiazhuang CN) — return `410` on every path, regardless of User-Agent. A missing header fails open. Exception: the Birchfeed and Claude-SearchBot user agents are allowlisted and pass even from a blocked ASN.
 
 ### 6. Bot / scraper blocking
 Requests matching 60+ known bot/scraper user-agent patterns return `410` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
@@ -382,7 +382,7 @@ us-east-1 IPs (one IP per request), so [ip-range-blocking](#ip-range-blocking)
 is useless against it. Blocking the network instead covers the whole pool and
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
-and `blockedAsnRegex` matches the header value exactly (`^(16509|14618|215125|29222|396982|1299|48090|8075)$`).
+and `blockedAsnRegex` matches the header value exactly (`^(16509|14618|215125|29222|396982|1299|48090|8075|4134)$`).
 Folded into the same condition as
 [bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
 the usual 410. The URI allowlist runs first, so
