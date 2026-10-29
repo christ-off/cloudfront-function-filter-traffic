@@ -14,6 +14,11 @@ function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {}, ip
   return event;
 }
 
+function expectGone(result) {
+  expect(result.statusCode).toBe(410);
+  expect(result.body).toBe("Gone");
+}
+
 function expectNotFound(result) {
   expect(result.statusCode).toBe(404);
   expect(result.body).toBe("Not Found");
@@ -21,6 +26,7 @@ function expectNotFound(result) {
 
 function expectNotBlocked(result) {
   expect(result.statusCode).not.toBe(404);
+  expect(result.statusCode).not.toBe(410);
 }
 
 // =====================================================
@@ -50,7 +56,7 @@ describe("URI allowlist", () => {
   });
 
   it("does not allowlist a similarly-named path", () => {
-    expectNotFound(handler(makeEvent({ uri: "/backup.zip.php" })));
+    expectGone(handler(makeEvent({ uri: "/backup.zip.php" })));
   });
 });
 
@@ -63,7 +69,7 @@ describe("scanner probe blocking", () => {
     "/pages/index.astro.mjs.map", "/_astro/pages/index.astro.mjs.map",
     "/storage/logs/laravel.log",
   ])("returns 404 for %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it.each([
@@ -75,15 +81,15 @@ describe("scanner probe blocking", () => {
     "/proc/self/cmdline/",
     "/var/run/secrets/kubernetes.io/serviceaccount/token/", "/Dockerfile/",
   ])("returns 404 for %s (trailing slash)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it.each(["/id_rsa", "/id_ed25519", "/id_rsa.pub", "/id_dsa"])("returns 404 for ssh key probe %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it.each(["/_next/static/x", "/_nuxt/x", "/_anything"])("returns 404 for underscore-prefixed %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it("does not block similarly-prefixed legitimate paths", () => {
@@ -97,15 +103,15 @@ describe("scanner probe blocking", () => {
 // =====================================================
 describe("PHP file blocking", () => {
   it("returns 404 for a .php file at the root", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-login.php" })));
+    expectGone(handler(makeEvent({ uri: "/wp-login.php" })));
   });
 
   it("returns 404 for a .php file in a sub-directory", () => {
-    expectNotFound(handler(makeEvent({ uri: "/path/to/script.php" })));
+    expectGone(handler(makeEvent({ uri: "/path/to/script.php" })));
   });
 
   it("PHP block is case-insensitive due to URI normalisation", () => {
-    expectNotFound(handler(makeEvent({ uri: "/Shell.PHP" })));
+    expectGone(handler(makeEvent({ uri: "/Shell.PHP" })));
   });
 
     it("does not block a path that merely contains 'php' as a substring", () => {
@@ -113,20 +119,20 @@ describe("PHP file blocking", () => {
     });
 
   it("returns 404 for a .php5 file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/shell.php5" })));
+    expectGone(handler(makeEvent({ uri: "/shell.php5" })));
   });
 
   it("returns 404 for a .php7 file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/shell.php7" })));
+    expectGone(handler(makeEvent({ uri: "/shell.php7" })));
   });
 
   it("returns 404 for a .phtml file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/page.phtml" })));
+    expectGone(handler(makeEvent({ uri: "/page.phtml" })));
   });
 
   it("returns 404 for a multi-digit .phpNN suffix", () => {
-    expectNotFound(handler(makeEvent({ uri: "/zup.php73" })));
-    expectNotFound(handler(makeEvent({ uri: "/about.php525" })));
+    expectGone(handler(makeEvent({ uri: "/zup.php73" })));
+    expectGone(handler(makeEvent({ uri: "/about.php525" })));
   });
 });
 
@@ -136,7 +142,7 @@ describe("PHP file blocking", () => {
 describe("404 response for bad actors", () => {
   it("returns 404 for a security scan URI", () => {
     const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expectNotFound(result);
+    expectGone(result);
     expect(result.headers["content-type"].value).toBe("text/plain");
   });
 
@@ -157,7 +163,7 @@ describe("404 response for bad actors", () => {
   ];
 
   it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
-    expectNotFound(handler(makeEvent({ userAgent })));
+    expectGone(handler(makeEvent({ userAgent })));
   });
 
   // No browser has a version floor: a version number alone is not a reliable
@@ -281,15 +287,15 @@ describe("bad folder blocking", () => {
   ];
 
   it.each(cases404)("returns 404 for %s (%s)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it.each(casesTrailingSlash)("returns 404 for %s (%s, trailing slash)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it("returns 404 for a bad folder path with no trailing content (bare folder)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/cgi-bin" })));
+    expectGone(handler(makeEvent({ uri: "/cgi-bin" })));
   });
 
   it("does not block a path that shares a prefix but is a different folder", () => {
@@ -309,11 +315,11 @@ describe("bad folder blocking", () => {
   });
 
   it("blocking is case-insensitive due to URI normalisation", () => {
-    expectNotFound(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
+    expectGone(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
   });
 
   it("returns 404 for /ip (server IP disclosure probe)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/ip" })));
+    expectGone(handler(makeEvent({ uri: "/ip" })));
   });
 });
 
@@ -424,19 +430,19 @@ describe("scrapper bot blocking by user-agent", () => {
 
   it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
     const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 
   it("lets FeedFetcher-Google fetch /feed.xml but blocks it elsewhere", () => {
     const userAgent = "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)";
     const event = makeEvent({ uri: "/feed.xml", userAgent });
     expect(handler(event)).toEqual(event.request);
-    expect(handler(makeEvent({ uri: "/other", userAgent })).statusCode).toBe(404);
+    expect(handler(makeEvent({ uri: "/other", userAgent })).statusCode).toBe(410);
   });
 
   it("scrapper bot matching is case-insensitive (BuiltWith)", () => {
     const result = handler(makeEvent({ userAgent: "BuiltWith/1.4" }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 
   // /rss.xml gets no special treatment; /feed.xml has its own describe block below.
@@ -444,8 +450,8 @@ describe("scrapper bot blocking by user-agent", () => {
 
   it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
     const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(404);
-    expect(result.body).toBe("Not Found");
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toBe("Gone");
   });
 
   it.each(feedPaths)("ignores conditional request headers on %s", (uri) => {
@@ -457,7 +463,7 @@ describe("scrapper bot blocking by user-agent", () => {
         "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" },
       }
     }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 
   it.each(feedPaths)("still lets a normal browser through on %s", (uri) => {
@@ -484,8 +490,8 @@ describe("IP range blocking", () => {
 
   it.each(blockedIps)("blocks %s (%s)", (ip) => {
     const result = handler(makeEvent({ ip }));
-    expect(result.statusCode).toBe(404);
-    expect(result.body).toBe("Not Found");
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toBe("Gone");
   });
 
   const allowedIps = [
@@ -511,7 +517,7 @@ describe("IP range blocking", () => {
       ip: "93.123.109.7",
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
     }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 });
 
@@ -521,8 +527,8 @@ describe("IP range blocking", () => {
 describe("ASN blocking", () => {
   const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
 
-  it.each(["16509", "14618", "215125", "29222", "396982"])("blocks AS%s", (value) => {
-    expectNotFound(handler(makeEvent({ extraHeaders: asn(value) })));
+  it.each(["16509", "14618", "215125", "29222", "396982", "1299"])("blocks AS%s", (value) => {
+    expectGone(handler(makeEvent({ extraHeaders: asn(value) })));
   });
 
   it("does not block another ASN", () => {
@@ -541,7 +547,7 @@ describe("ASN blocking", () => {
   });
 
   it("blocks a blocked ASN even with a normal browser UA", () => {
-    expectNotFound(handler(makeEvent({
+    expectGone(handler(makeEvent({
       extraHeaders: asn("16509"),
       userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
     })));
@@ -583,11 +589,11 @@ describe("robots.txt for blocked bots", () => {
 // =====================================================
 describe("feed.xml for blocked bots", () => {
   it("answers a blocked bot's /feed.xml with a plain 404", () => {
-    expectNotFound(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
+    expectGone(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
   it("answers a blocked IP's /FEED.XML with a plain 404", () => {
-    expectNotFound(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
+    expectGone(handler(makeEvent({ uri: "/FEED.XML", ip: "45.148.10.5" })));
   });
 
   it("still lets a normal browser's /feed.xml through untouched", () => {
@@ -601,7 +607,7 @@ describe("feed.xml for blocked bots", () => {
 // =====================================================
 describe("sitemap.xml for blocked bots", () => {
   it("answers a blocked bot's /sitemap.xml with a plain 404", () => {
-    expectNotFound(handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" })));
+    expectGone(handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" })));
   });
 
   it("still lets a normal browser's /sitemap.xml through untouched", () => {
@@ -616,17 +622,17 @@ describe("sitemap.xml for blocked bots", () => {
 describe("null or empty user-agent blocking", () => {
   it("blocks a request with no user-agent header", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: null }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 
   it("blocks a request with an empty user-agent value", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: "" }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 
   it("blocks a request with a whitespace-only user-agent value", () => {
     const result = handler(makeEvent({ uri: "/about", userAgent: "   " }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 
 });
@@ -636,15 +642,15 @@ describe("null or empty user-agent blocking", () => {
 // =====================================================
 describe("percent-encoded URI handling", () => {
   it("returns 404 for a .php file with an encoded dot (%2E)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-login%2Ephp" })));
+    expectGone(handler(makeEvent({ uri: "/wp-login%2Ephp" })));
   });
 
   it("returns 404 for a bad folder with an encoded character (%77p-includes)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/%77p-includes/load.php" })));
+    expectGone(handler(makeEvent({ uri: "/%77p-includes/load.php" })));
   });
 
   it("returns 404 for cgi-bin with an encoded hyphen (%2D)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/cgi%2Dbin/test" })));
+    expectGone(handler(makeEvent({ uri: "/cgi%2Dbin/test" })));
   });
 
   it("returns 404 for a malformed percent-encoded URI", () => {
@@ -653,7 +659,7 @@ describe("percent-encoded URI handling", () => {
   });
 
   it("returns 404 for a double-encoded dotfile path (%252F hiding the / from a single decode)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/admin%252F.env" })));
+    expectGone(handler(makeEvent({ uri: "/admin%252F.env" })));
   });
 });
 
@@ -684,11 +690,11 @@ describe("dotfile path blocking", () => {
   ];
 
   it.each(dotfileCases)("returns 404 for %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it("returns 404 for /.well-known/ paths (no exceptions, no ACME challenge on this site)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.well-known/security.txt" })));
+    expectGone(handler(makeEvent({ uri: "/.well-known/security.txt" })));
   });
 });
 
@@ -697,19 +703,19 @@ describe("dotfile path blocking", () => {
 // =====================================================
 describe(".sql and .bak file blocking", () => {
   it("returns 404 for a .sql file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/dump.sql" })));
+    expectGone(handler(makeEvent({ uri: "/dump.sql" })));
   });
 
   it("returns 404 for a .bak file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/config.bak" })));
+    expectGone(handler(makeEvent({ uri: "/config.bak" })));
   });
 
   it("returns 404 for a .swp file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-config.php.swp" })));
+    expectGone(handler(makeEvent({ uri: "/wp-config.php.swp" })));
   });
 
   it("returns 404 for a trailing ~ editor backup", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-config.php~" })));
+    expectGone(handler(makeEvent({ uri: "/wp-config.php~" })));
   });
 });
 
@@ -718,21 +724,21 @@ describe(".sql and .bak file blocking", () => {
 // =====================================================
 describe("wp-content and wp-json blocking", () => {
   it("returns 404 for /wp-content/ paths (no trailing slash)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads" })));
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore" })));
+    expectGone(handler(makeEvent({ uri: "/wp-content/uploads" })));
+    expectGone(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore" })));
   });
 
   it("returns 404 for /wp-content/ paths with trailing slash", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads/" })));
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
+    expectGone(handler(makeEvent({ uri: "/wp-content/uploads/" })));
+    expectGone(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
   });
 
   it("returns 404 for /wp-json/ (no trailing slash)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-json" })));
+    expectGone(handler(makeEvent({ uri: "/wp-json" })));
   });
 
   it("returns 404 for /wp-json/ (trailing slash)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-json/" })));
+    expectGone(handler(makeEvent({ uri: "/wp-json/" })));
   });
 });
 
@@ -757,11 +763,11 @@ describe("credential and config file scanning", () => {
   ];
 
   it.each(extensionCases)("returns 404 for %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it("returns 404 for /.docker/config.json", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.docker/config.json" })));
+    expectGone(handler(makeEvent({ uri: "/.docker/config.json" })));
   });
 
   const secretJsonCases = [
@@ -783,7 +789,7 @@ describe("credential and config file scanning", () => {
   ];
 
   it.each(secretJsonCases)("returns 404 for root-level %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 
   it("does not block legitimate nested .json data files", () => {
@@ -810,7 +816,7 @@ describe("admin folder blocking", () => {
   ];
 
   it.each(cases)("returns 404 for %s (%s)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    expectGone(handler(makeEvent({ uri })));
   });
 });
 
@@ -824,7 +830,7 @@ describe("ads.txt allowlisted; llms.txt follows normal UA blocking", () => {
 
   it("blocks /llms.txt for a blocked user-agent", () => {
     const result = handler(makeEvent({ uri: "/llms.txt", userAgent: "CCBot/2.0" }));
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(410);
   });
 });
 
@@ -855,7 +861,7 @@ describe("json allowlist", () => {
   });
 
   it("blocks a bad user-agent on an allowed json file", () => {
-    expect(handler(makeEvent({ uri: "/human.json", userAgent: "Scrapy/2.0" })).statusCode).toBe(404);
+    expect(handler(makeEvent({ uri: "/human.json", userAgent: "Scrapy/2.0" })).statusCode).toBe(410);
   });
 });
 
@@ -882,13 +888,16 @@ describe("js allowlist", () => {
     "/x/pagefind/pagefind.js",
     "/pagefind/pagefind.js.js",
     "/%61pp.js",
-    "/JAVASCRIPT/../app.js",
   ])("blocks %s", (uri) => {
     expect(handler(makeEvent({ uri })).statusCode).toBe(404);
   });
 
+  it("blocks /JAVASCRIPT/../app.js as a bad actor", () => {
+    expect(handler(makeEvent({ uri: "/JAVASCRIPT/../app.js" })).statusCode).toBe(410);
+  });
+
   it("blocks a bad user-agent on an allowed js file", () => {
-    expect(handler(makeEvent({ uri: "/pagefind/pagefind.js", userAgent: "Scrapy/2.0" })).statusCode).toBe(404);
+    expect(handler(makeEvent({ uri: "/pagefind/pagefind.js", userAgent: "Scrapy/2.0" })).statusCode).toBe(410);
   });
 });
 

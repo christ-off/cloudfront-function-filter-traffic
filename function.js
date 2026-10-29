@@ -10,7 +10,7 @@ function handler(event) {
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createNotFoundResponse();
+        return createGoneResponse();
     }
 
     const uri = decodeUri(request.uri || '');
@@ -25,7 +25,7 @@ function handler(event) {
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) || isBlockedIpRange(viewerIp) ||
         isBlockedAsn(request.headers['cloudfront-viewer-asn'], ua) || isBlockedBot(ua, uriLower)) {
-        return createNotFoundResponse();
+        return createGoneResponse();
     }
 
     if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
@@ -132,7 +132,7 @@ function isBlockedIpRange(ip) {
 }
 
 // rationale: README.md#asn-blocking
-const blockedAsnRegex = /^(16509|14618|215125|29222|396982)$/;
+const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299)$/;
 
 const allowedAsnBotRegex = /birchfeed\/|claude-searchbot\//;
 
@@ -140,13 +140,22 @@ function isBlockedAsn(asnHeader, ua) {
     return !!asnHeader && blockedAsnRegex.test(asnHeader.value) && !allowedAsnBotRegex.test(ua);
 }
 
-// rationale: README.md#bad-actor-response-mapping
 function createNotFoundResponse() {
     return {
         statusCode: 404,
         statusDescription: 'Not Found',
         headers: {"content-type": {value: "text/plain"}},
         body: 'Not Found'
+    };
+}
+
+// rationale: README.md#bad-actor-response-mapping
+function createGoneResponse() {
+    return {
+        statusCode: 410,
+        statusDescription: 'Gone',
+        headers: {"content-type": {value: "text/plain"}},
+        body: 'Gone'
     };
 }
 

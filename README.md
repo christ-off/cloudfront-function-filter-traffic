@@ -12,29 +12,29 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 A short list of exact paths (currently `/backup.zip`, `/robots.txt`, `/ads.txt`) always pass through
 to the origin, checked before every other rule — nothing below can block them.
 
-### 1. Missing user-agent blocking (404)
-Requests with no `User-Agent` header, an empty value, or whitespace-only value return `404`. This check runs first, before URI decoding, and cannot be bypassed.
+### 1. Missing user-agent blocking (410)
+Requests with no `User-Agent` header, an empty value, or whitespace-only value return `410`. This check runs first, before URI decoding, and cannot be bypassed.
 
-### 2. Security scan blocking (404)
-Requests matching automated-scan patterns return `404`:
+### 2. Security scan blocking (410)
+Requests matching automated-scan patterns return `410`:
 - URI extensions: `.php*`, `.sql`, `.bak`, `.phtml`, `.config`, `.ya?ml`, `.toml`, `.conf`, `.key`, `.pem`, `.axd`, `.boto`, `.s3cfg`, `.npmrc`, `.htpasswd`, `.tfstate`, `.old`, `.env`, `.map`, `.webmanifest` (backup copies, env files, source maps; the static site has no PWA manifest and no `.map` files)
 - Common scanner folders: `/userfiles`, Laravel/Go/Apache debug endpoints (`/telescope`, `/horizon`, `/storage`, `/debug`, `/console`, `/server-status`, `/server-info`, `/manage`), `/graphql`, `/v1`, `/health`, `/proc`, `/var`, `/Dockerfile`, `/admin`, `/wp-admin`, `/phpmyadmin`, `/backup`, `/wp-content`, `/wp-json`, `/api` (all `/api/*` paths are security scans against this static site), etc.
 - Any dotfile/dot-directory path (`/.env`, `/.git`, `/.docker/`, `/.netrc`, `/.yarnrc`, `/.aws/credentials`, `/.ssh/id_rsa`, `/.well-known/...`, etc. — this site serves no content under a dot-prefixed path, no exceptions), known credential-scan filenames (`/secrets.json`, `/config.json`, `/service-account.json`, etc.), and `/ip`
 
-### 3. Spoofed / malformed Chrome UA blocking (404)
+### 3. Spoofed / malformed Chrome UA blocking (410)
 - A truncated Windows UA that stops right after `AppleWebKit/537.36` instead of continuing with the real Chrome/Safari tail
 - Any UA containing `chrome/` without `applewebkit` immediately before it — every real Chromium browser emits `AppleWebKit/537.36 (KHTML, like Gecko)` right before the `Chrome/` token, so its absence marks a hand-built UA
 
-### 4. IP range blocking (404)
-Requests from known-malicious IP ranges return `404` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
+### 4. IP range blocking (410)
+Requests from known-malicious IP ranges return `410` on every path, regardless of User-Agent — same as bad actors and blocked bots below. Currently blocks Techoff SRV Limited's ranges: `45.148.10.0/24`, `93.123.109.0/24`, `195.178.110.0/24`; Feo Prest SRL (AS208137, Aachen DE): `213.209.159.0/24`, `213.177.179.0/24`, `62.60.131.0/24`; TC Datacenter Limited (AS218785, Warsaw PL): `45.138.12.0/24`, `185.218.86.0/24`.
 
 **Pending (not yet blocked):** `31.57.216.50` — AS197769, VPS Dedicated LLC, Ljubljana, SI.
 
-### 5. ASN blocking (404)
-Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — or `396982` (Google Cloud, NL) — return `404` on every path, regardless of User-Agent. A missing header fails open. Exception: the Birchfeed and Claude-SearchBot user agents are allowlisted and pass even from a blocked ASN.
+### 5. ASN blocking (410)
+Requests whose `CloudFront-Viewer-ASN` header (added by the `Viewer-ASN` origin request policy) is a blocked AS — `16509` (AMAZON-02) or `14618` (AMAZON-AES) — `215125` (Church of Cyberology, NL scraper) — `29222` (Infomaniak, CH feed scraper) — `396982` (Google Cloud, NL) — or `1299` (Arelion Sweden AB) — return `410` on every path, regardless of User-Agent. A missing header fails open. Exception: the Birchfeed and Claude-SearchBot user agents are allowlisted and pass even from a blocked ASN.
 
 ### 6. Bot / scraper blocking
-Requests matching 60+ known bot/scraper user-agent patterns return `404` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
+Requests matching 60+ known bot/scraper user-agent patterns return `410` on every path — no exceptions. Same for any other bad actor (security-scan URI or truncated/malformed Chrome UA).
 
 **Blocked patterns include:** scrapers (Scrapy, DataForSEO, Bytespider, etc.), old browser tokens (Trident, Presto), generic HTTP clients (`python-requests`, `aiohttp`, `got`), and more, matched case-insensitively against the User-Agent header.
 
@@ -99,9 +99,12 @@ single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
-Bad actors and blocked bots get a plain 404 on every path except the
+Bad actors and blocked bots get a plain `410 Gone` on every path except the
 `allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
-disallows everything and allowlists specific bots.
+disallows everything and allowlists specific bots. `410` (permanent) rather
+than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
+allowlists, the cover referer check and undecodable URIs stay `404`, as those
+are ordinary missing resources, not blocked clients.
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
@@ -373,10 +376,10 @@ us-east-1 IPs (one IP per request), so [ip-range-blocking](#ip-range-blocking)
 is useless against it. Blocking the network instead covers the whole pool and
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
-and `blockedAsnRegex` matches the header value exactly (`^(16509|14618|215125|29222|396982)$`).
+and `blockedAsnRegex` matches the header value exactly (`^(16509|14618|215125|29222|396982|1299)$`).
 Folded into the same condition as
 [bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
-the usual 404. The URI allowlist runs first, so
+the usual 410. The URI allowlist runs first, so
 `/robots.txt`, `/ads.txt` and `/backup.zip` stay reachable. If the header is
 absent (policy not attached) nothing matches: fails open.
 
@@ -449,7 +452,7 @@ sample to the `blockedIps` fixture in `function.test.js`.
 Scanners probe for `.json` files (`/package.json`, `/composer.json`,
 `/config.json`, ...). Only the five real JSON files the site serves are
 allowed; every other `.json` path gets `404`. The check runs last, after the
-bad-actor/bot/IP checks, so a blocked bot gets its `404` from those rules
+bad-actor/bot/IP checks, so a blocked bot gets its `410` from those rules
 first and only a legitimate-looking client can reach a real JSON file. It
 matches the decoded, lowercased `uriLower` exactly (no query string is part
 of `uri`).
@@ -519,7 +522,7 @@ npm run test:watch # watch mode (re-runs on file save)
 | Scrapper bot blocking by user-agent | 60+ bot/scraper patterns, matched case-insensitively |
 | IP range blocking | Known-malicious `/24` ranges blocked regardless of UA; boundary IPs just outside a range pass through |
 | robots.txt for blocked bots | Allowlisted: always passes through, even for blocked bots and bad actors |
-| sitemap.xml for blocked bots | Blocked bots get a plain 404 on `/sitemap.xml`; normal browsers pass through untouched |
+| sitemap.xml for blocked bots | Blocked bots get a plain 410 on `/sitemap.xml`; normal browsers pass through untouched |
 | Null / empty user-agent blocking | Missing/empty/whitespace user-agent |
 | Percent-encoded URI handling | URI decoding before pattern matching |
 | ads.txt and llms.txt | `/ads.txt` is allowlisted; `/llms.txt` follows normal UA blocking |
