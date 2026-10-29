@@ -149,14 +149,21 @@ function createNotFoundResponse() {
     };
 }
 
+// rationale: README.md#fake-empty-feed
+const emptyAtomFeed = '<?xml version="1.0" encoding="utf-8"?>' +
+    '<feed xmlns="http://www.w3.org/2005/Atom"><title>Feed</title>' +
+    '<id>urn:uuid:00000000-0000-0000-0000-000000000000</id>' +
+    '<updated>2000-01-01T00:00:00Z</updated></feed>';
+
 // rationale: README.md#bad-actor-response-mapping
 function createGoneResponse(uri) {
-    // rationale: README.md#feed-not-modified
+    // rationale: README.md#fake-empty-feed
     if (uri.toLowerCase() === '/feed.xml') {
         return {
-            statusCode: 304,
-            statusDescription: 'Not Modified',
-            headers: {"content-type": {value: "application/atom+xml"}}
+            statusCode: 200,
+            statusDescription: 'OK',
+            headers: {"content-type": {value: "application/atom+xml; charset=utf-8"}},
+            body: emptyAtomFeed
         };
     }
     return {

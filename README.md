@@ -106,12 +106,13 @@ than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
 allowlists, the cover referer check and undecodable URIs stay `404`, as those
 are ordinary missing resources, not blocked clients.
 
-### feed-not-modified
+### fake-empty-feed
 Whenever the function would answer `410` and the URI is `/feed.xml` (case-insensitive), it
-replies a bodyless `304 Not Modified` with `Content-Type: application/atom+xml` instead. Feed
-readers treat it as "feed unchanged" and keep their cached copy, so they stop retrying instead
-of treating the 410 as an error; an earlier `301` to `/backup.zip` was useless. This covers every
-410 rule (missing UA, bad actor, IP, ASN, bot).
+replies `200` with a valid but empty Atom feed (`application/atom+xml`, no entries, fixed
+`updated` date) instead. Feed readers treat it as a feed with nothing new and keep polling
+quietly, rather than treating the 410 as an error. A `301` to `/backup.zip` and a bodyless
+`304` were both tried and rejected: the 301 was useless and a 304 is only valid as an answer
+to a conditional request. This covers every 410 rule (missing UA, bad actor, IP, ASN, bot).
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
