@@ -500,6 +500,7 @@ describe("ASN blocking", () => {
     "Mozilla/5.0 (compatible; Birchfeed/1.0; https://birchfeed.app; 1 subscribers)",
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; searchbot@anthropic.com)",
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
+    "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)",
   ])("lets allowlisted bot through a blocked ASN: %s", (userAgent) => {
     const event = makeEvent({ extraHeaders: asn("16509"), userAgent });
     expect(handler(event)).toEqual(event.request);
