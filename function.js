@@ -126,7 +126,7 @@ function isBlockedBot(normalizedUserAgent, uri) {
 // rationale: README.md#asn-blocking
 const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230)$/;
 
-const allowedAsnBotRegex = /birchfeed\/|claude-searchbot\/|bingbot\/|mastodon\//;
+const allowedAsnBotRegex = /birchfeed\/|claude-searchbot\/|bingbot\/|mastodon\/|duckduckbot\//;
 
 function isBlockedAsn(asnHeader, ua) {
     return !!asnHeader && blockedAsnRegex.test(asnHeader.value) && !allowedAsnBotRegex.test(ua);
