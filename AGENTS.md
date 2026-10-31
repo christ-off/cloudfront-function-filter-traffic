@@ -28,6 +28,10 @@ Size: function.js must stay below 10kB.
 # Comments vs README.md
 function.js keeps only short `// rationale: README.md#anchor` pointer comments — the full reasoning lives under "## Blocking rules — rationale" in README.md, keyed by anchor to the const/function it explains. Whenever you rename an identifier a pointer references, add a new rule, or change the reasoning behind one, update both sides together and check they still match — a stale anchor or an orphaned README section is a bug.
 
+# When blocking provider by their ASN number
+
+Check if the provider is a hosting provider only. Warn if it's a consumer or business ISP 
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 
