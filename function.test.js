@@ -470,7 +470,7 @@ describe("scrapper bot blocking by user-agent", () => {
 describe("ASN blocking", () => {
   const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
 
-  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238"])("blocks AS%s", (value) => {
+  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238", "20326", "51167"])("blocks AS%s", (value) => {
     expectGone(handler(makeEvent({ extraHeaders: asn(value) })));
   });
 
