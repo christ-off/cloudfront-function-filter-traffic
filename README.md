@@ -259,6 +259,7 @@ Blocked ASNs (all at the user's request):
 | 51167 | Contabo GmbH, Lauterbourg FR |
 | 53667 | FranTech Solutions, New York City US |
 | 218785 | TC DATACENTER LIMITED, Warsaw PL |
+| 213438 | ColocaTel Inc., Utrecht NL |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
