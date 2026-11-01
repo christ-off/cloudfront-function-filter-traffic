@@ -262,6 +262,7 @@ Blocked ASNs (all at the user's request):
 | 213438 | ColocaTel Inc., Utrecht NL |
 | 132203 | Tencent Cloud (Tencent Building, Kejizhongyi Avenue), Singapore SG |
 | 201738 | UFO Technologies Limited, Erith GB |
+| 45102 | Alibaba (US) Technology Co., Ltd. (Alibaba Cloud), Singapore SG |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
