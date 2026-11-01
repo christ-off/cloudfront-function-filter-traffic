@@ -189,7 +189,7 @@ fixture in `function.test.js`.
 
 **Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
 `hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
-`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `tiktokspider` (no
+`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `tiktokspider` (no
 `/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
 `rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
 `publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
@@ -261,6 +261,7 @@ Blocked ASNs (all at the user's request):
 | 218785 | TC DATACENTER LIMITED, Warsaw PL |
 | 213438 | ColocaTel Inc., Utrecht NL |
 | 132203 | Tencent Cloud (Tencent Building, Kejizhongyi Avenue), Singapore SG |
+| 201738 | UFO Technologies Limited, Erith GB |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token

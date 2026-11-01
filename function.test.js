@@ -399,6 +399,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["NewsletterFormResearchBot/1.3.1 ( read-only public-web research; no form submissions)", "NewsletterFormResearchBot"],
     ["Mozilla/5.0 (compatible; srchs-research-bot/0.1; public small-business domain research; contact: smashcarlito@gmail.com)", "srchs-research-bot"],
     ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 (compatible; AionBot/1.0)", "AionBot"],
+    ["Mozilla/5.0 (compatible; SQLSpider/1.7.0)", "SQLSpider"],
     ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; TikTokSpider; ttspider-feedback@tiktok.com)", "TikTokSpider"],
     ["OpenTheBoxBot/1.0", "OpenTheBoxBot"],
     ["Brightbot 1.0", "Brightbot"],
@@ -470,7 +471,7 @@ describe("scrapper bot blocking by user-agent", () => {
 describe("ASN blocking", () => {
   const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
 
-  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238", "20326", "51167", "53667", "218785", "213438", "132203"])("blocks AS%s", (value) => {
+  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238", "20326", "51167", "53667", "218785", "213438", "132203", "201738"])("blocks AS%s", (value) => {
     expectGone(handler(makeEvent({ extraHeaders: asn(value) })));
   });
 
