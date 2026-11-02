@@ -267,7 +267,7 @@ Blocked ASNs (all at the user's request):
 | 24940 | Hetzner Online GmbH, Helsinki FI |
 | 197540 | netcup GmbH, Vienna AT |
 
-`allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot) that happen to be hosted in a blocked ASN; a match skips
+`allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
 
