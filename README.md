@@ -189,7 +189,7 @@ fixture in `function.test.js`.
 
 **Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
 `hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
-`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `storebot-google/` (Google Merchant Center crawler), `tiktokspider` (no
+`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `storebot-google/` (Google Merchant Center crawler), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
 `/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
 `rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
 `publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
