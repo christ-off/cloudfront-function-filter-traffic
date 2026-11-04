@@ -271,6 +271,7 @@ Blocked ASNs (all at the user's request):
 | 197540 | netcup GmbH, Vienna AT |
 | 211619 | MAXKO d.o.o. (maxko-hosting.net), Sofia BG |
 | 56655 | Gigahost AS, Sandefjord NO |
+| 14593 | Space Exploration Technologies Corporation (Starlink), Harare ZW — consumer satellite ISP |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
