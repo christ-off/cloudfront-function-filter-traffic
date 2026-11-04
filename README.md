@@ -13,7 +13,7 @@ Checks run in this order; the first match wins. Reasoning is under
 
 | # | Rule | Response |
 |---|---|---|
-| 0 | URI allowlist: `/backup.zip`, `/robots.txt`, `/ads.txt` bypass everything below | pass-through |
+| 0 | URI allowlist: `/backup.zip` bypasses everything below | pass-through |
 | 1 | Missing, empty or whitespace-only `User-Agent` | `410` |
 | 2 | Bad actor: path traversal, dotfile paths, security-scan URIs, truncated/malformed Chrome UA | `410` |
 | 3 | Blocked ASN ([asn-blocking](#asn-blocking)) | `410` |
@@ -63,8 +63,6 @@ including the bot-UA checks. Case-insensitive exact-path match.
   against the deployed function (e.g. `aws cloudfront test-function`); verify
   it with the unit tests only.
 
-- `/robots.txt`, `/ads.txt` — always served, even to blocked UAs/IPs.
-
 To add a URI: add `|your-path` (escape `.`) inside the group of `allowlistedUriRegex`.
 
 ### uri-decoding
@@ -76,11 +74,16 @@ dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
 Bad actors, ASNs and bots get a plain `410 Gone` on every path except the
-`allowlisted-uris`. `/robots.txt` is not faked: the origin's robots.txt already
-disallows everything and allowlists specific bots. `410` (permanent) rather
+`allowlisted-uris`, except `/robots.txt` and `/feed.xml`, which get a fake 200
+([fake-robots-txt](#fake-robots-txt), [fake-empty-feed](#fake-empty-feed)). `410` (permanent) rather
 than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
 allowlists, the cover referer check and undecodable URIs stay `404`, as those
 are ordinary missing resources, not blocked clients.
+
+### fake-robots-txt
+A blocked client requesting `/robots.txt` gets `200` with `User-agent: *` /
+`Disallow: /` instead of a 410, so crawlers that honour it stop on their own.
+It is not allowlisted: allowed clients still reach the origin's robots.txt.
 
 ### fake-empty-feed
 Whenever the function would answer `410` and the URI is `/feed.xml` (case-insensitive), it
@@ -234,7 +237,7 @@ and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
 Folded into the same condition as
 [bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
 the usual 410. The URI allowlist runs first, so
-`/robots.txt`, `/ads.txt` and `/backup.zip` stay reachable. If the header is
+`/backup.zip` stays reachable. If the header is
 absent (policy not attached) nothing matches: fails open.
 
 Blocked ASNs (all at the user's request):

@@ -20,6 +20,12 @@ function expectNotFound(result) {
   expect(result.body).toBe("Not Found");
 }
 
+function expectDenyAllRobots(result) {
+  expect(result.statusCode).toBe(200);
+  expect(result.headers["content-type"].value).toContain("text/plain");
+  expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+}
+
 function expectNotBlocked(result) {
   expect(result.statusCode).not.toBe(404);
   expect(result.statusCode).not.toBe(410);
@@ -37,10 +43,6 @@ describe("URI allowlist", () => {
     expectNotBlocked(
       handler(makeEvent({ uri: "/backup.zip", userAgent: "Scrapy/1.0" }))
     );
-  });
-
-  it.each(["/robots.txt", "/ads.txt"])("allows %s through for blocked UA", (uri) => {
-    expectNotBlocked(handler(makeEvent({ uri, userAgent: "Scrapy/1.0" })));
   });
 
   it("is case-insensitive", () => {
@@ -512,13 +514,30 @@ describe("ASN blocking", () => {
     expect(handler(event)).toEqual(event.request);
   });
 
-  it("lets /robots.txt through for a blocked ASN", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
+  it("serves the deny-all robots.txt to a blocked ASN", () => {
+    expectDenyAllRobots(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
   });
 });
 
 // =====================================================
-// /robots.txt is allowlisted (always passes through, even for blocked bots/IPs)
+// /robots.txt: 410 becomes a deny-all robots.txt (200)
+// =====================================================
+describe("robots.txt for blocked bots", () => {
+  it("serves a blocked bot the deny-all robots.txt", () => {
+    expectDenyAllRobots(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
+  });
+
+  it("serves it case-insensitively and when the user-agent is missing", () => {
+    expectDenyAllRobots(handler(makeEvent({ uri: "/Robots.TXT", userAgent: "Scrapy/2.16.0" })));
+    expectDenyAllRobots(handler(makeEvent({ uri: "/robots.txt", userAgent: "" })));
+  });
+
+  it("still lets a normal browser's /robots.txt through untouched", () => {
+    const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
+    expect(handler(event)).toEqual(event.request);
+  });
+});
+
 // =====================================================
 describe("robots.txt for blocked bots", () => {
   it("lets a blocked bot's /robots.txt through", () => {
@@ -777,9 +796,10 @@ describe("admin folder blocking", () => {
 // =====================================================
 // ads.txt / llms.txt with blocked user-agents
 // =====================================================
-describe("ads.txt allowlisted; llms.txt follows normal UA blocking", () => {
-  it("lets /ads.txt through for a blocked user-agent", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" })));
+describe("ads.txt and llms.txt follow normal UA blocking", () => {
+  it("blocks /ads.txt for a blocked user-agent", () => {
+    const result = handler(makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" }));
+    expect(result.statusCode).toBe(410);
   });
 
   it("blocks /llms.txt for a blocked user-agent", () => {

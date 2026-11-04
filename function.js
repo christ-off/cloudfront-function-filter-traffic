@@ -69,7 +69,7 @@ const COVER_REFERER_PREFIX = 'https://post-tenebras-lire.net/';
 const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|human|pagefind\/pagefind-entry)\.json$/;
 
 // rationale: README.md#allowlisted-uris
-const allowlistedUriRegex = /^\/(backup\.zip|robots\.txt|ads\.txt)$/i;
+const allowlistedUriRegex = /^\/(backup\.zip)$/i;
 
 // rationale: README.md#js-allowlist
 const allowedJsRegex = /^\/(javascript\/(recommended-blogs|chart\.umd\.min|bootstrap\.bundle\.min)|pagefind\/pagefind(-worker|-ui)?)\.js$/;
@@ -147,8 +147,20 @@ const emptyAtomFeed = '<?xml version="1.0" encoding="utf-8"?>' +
     '<id>urn:uuid:00000000-0000-0000-0000-000000000000</id>' +
     '<updated>2000-01-01T00:00:00Z</updated></feed>';
 
+// rationale: README.md#fake-robots-txt
+const denyAllRobotsTxt = 'User-agent: *\nDisallow: /\n';
+
 // rationale: README.md#bad-actor-response-mapping
 function createGoneResponse(uri) {
+    // rationale: README.md#fake-robots-txt
+    if (uri.toLowerCase() === '/robots.txt') {
+        return {
+            statusCode: 200,
+            statusDescription: 'OK',
+            headers: {"content-type": {value: "text/plain; charset=utf-8"}},
+            body: denyAllRobotsTxt
+        };
+    }
     // rationale: README.md#fake-empty-feed
     if (uri.toLowerCase() === '/feed.xml') {
         return {
