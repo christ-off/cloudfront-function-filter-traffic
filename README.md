@@ -273,6 +273,9 @@ Blocked ASNs (all at the user's request):
 | 14593 | Space Exploration Technologies Corporation (Starlink), Harare ZW — consumer satellite ISP |
 | 18779 | EGIHosting (Electronic Group International), Santa Clara US |
 | 57043 | HOSTKEY B.V., Amsterdam NL — hosting provider (dedicated servers, VPS) |
+| 60404 | Liteserver, Dronten NL — hosting provider (VPS, dedicated servers) |
+| 7979 | Servers.com, Inc., Dallas US — hosting provider (dedicated servers, cloud) |
+| 62874 | Web2Objects LLC, Dallas US — hosting provider (VPS, dedicated servers) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
