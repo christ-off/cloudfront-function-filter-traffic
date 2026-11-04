@@ -14,14 +14,14 @@ Checks run in this order; the first match wins. Reasoning is under
 | # | Rule | Response |
 |---|---|---|
 | 0 | URI allowlist: `/backup.zip` bypasses everything below | pass-through |
-| 1 | Missing, empty or whitespace-only `User-Agent` | `410` |
-| 2 | Bad actor: path traversal, dotfile paths, security-scan URIs, truncated/malformed Chrome UA | `410` |
-| 3 | Blocked ASN ([asn-blocking](#asn-blocking)) | `410` |
-| 4 | Blocked bot/scraper user-agent ([blocked-bot-regex](#blocked-bot-regex)) | `410` |
+| 1 | Missing, empty or whitespace-only `User-Agent` | `404` |
+| 2 | Bad actor: path traversal, dotfile paths, security-scan URIs, truncated/malformed Chrome UA | `404` |
+| 3 | Blocked ASN ([asn-blocking](#asn-blocking)) | `404` |
+| 4 | Blocked bot/scraper user-agent ([blocked-bot-regex](#blocked-bot-regex)) | `404` |
 | 5 | `.json` / `.js` not on the allowlists, post covers without the site `Referer` | `404` |
 | 6 | Anything else | pass-through |
 
-Every `410` for `/feed.xml` becomes a `200` with an empty Atom feed
+Every `404` for `/feed.xml` becomes a `200` with an empty Atom feed
 ([fake-empty-feed](#fake-empty-feed)). A directory-style path without a trailing slash
 (e.g. `/about`) is not rewritten: the origin replies `301` to `/about/`, which shows the
 path **exists**, whereas a missing path gets a `404`.
@@ -73,25 +73,24 @@ single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
 
 ### bad-actor-response-mapping
-Bad actors, ASNs and bots get a plain `410 Gone` on every path except the
+Bad actors, ASNs and bots get a plain `404 Not Found` on every path except the
 `allowlisted-uris`, except `/robots.txt` and `/feed.xml`, which get a fake 200
-([fake-robots-txt](#fake-robots-txt), [fake-empty-feed](#fake-empty-feed)). `410` (permanent) rather
-than `404` tells well-behaved crawlers to drop the URL; the `.json`/`.js`
-allowlists, the cover referer check and undecodable URIs stay `404`, as those
-are ordinary missing resources, not blocked clients.
+([fake-robots-txt](#fake-robots-txt), [fake-empty-feed](#fake-empty-feed)). Every
+other rejection (`.json`/`.js` allowlists, cover referer check, undecodable URIs) uses the same
+`404`, so blocked clients cannot tell which rule matched.
 
 ### fake-robots-txt
 A blocked client requesting `/robots.txt` gets `200` with `User-agent: *` /
-`Disallow: /` instead of a 410, so crawlers that honour it stop on their own.
+`Disallow: /` instead of a 404, so crawlers that honour it stop on their own.
 It is not allowlisted: allowed clients still reach the origin's robots.txt.
 
 ### fake-empty-feed
-Whenever the function would answer `410` and the URI is `/feed.xml` (case-insensitive), it
+Whenever the function would answer `404` and the URI is `/feed.xml` (case-insensitive), it
 replies `200` with a valid but empty Atom feed (`application/atom+xml`, no entries, fixed
 `updated` date) instead. Feed readers treat it as a feed with nothing new and keep polling
-quietly, rather than treating the 410 as an error. A `301` to `/backup.zip` and a bodyless
+quietly, rather than treating the 404 as an error. A `301` to `/backup.zip` and a bodyless
 `304` were both tried and rejected: the 301 was useless and a 304 is only valid as an answer
-to a conditional request. This covers every 410 rule (missing UA, bad actor, ASN, bot).
+to a conditional request. This covers every 404 rule (missing UA, bad actor, ASN, bot).
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
@@ -236,7 +235,7 @@ origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
 and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
 Folded into the same condition as
 [bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
-the usual 410. The URI allowlist runs first, so
+the usual 404. The URI allowlist runs first, so
 `/backup.zip` stays reachable. If the header is
 absent (policy not attached) nothing matches: fails open.
 
@@ -317,7 +316,7 @@ announced from other ASNs (e.g. AS8987 EU): check bgp.he.net before extending.
 Scanners probe for `.json` files (`/package.json`, `/composer.json`,
 `/config.json`, ...). Only the five real JSON files the site serves are
 allowed; every other `.json` path gets `404`. The check runs last, after the
-bad-actor/bot checks, so a blocked bot gets its `410` from those rules
+bad-actor/bot checks, so a blocked bot gets its `404` from those rules
 first and only a legitimate-looking client can reach a real JSON file. It
 matches the decoded, lowercased `uriLower` exactly (no query string is part
 of `uri`).

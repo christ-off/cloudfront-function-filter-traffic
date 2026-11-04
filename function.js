@@ -9,7 +9,7 @@ function handler(event) {
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createGoneResponse(request.uri || '');
+        return createBlockedResponse(request.uri || '');
     }
 
     const uri = decodeUri(request.uri || '');
@@ -24,7 +24,7 @@ function handler(event) {
     // rationale: README.md#bad-actor-response-mapping
     if (isBadActor(uriLower, ua) ||
         isBlockedAsn(request.headers['cloudfront-viewer-asn'], ua) || isBlockedBot(ua, uriLower)) {
-        return createGoneResponse(uriLower);
+        return createBlockedResponse(uriLower);
     }
 
     if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
@@ -132,13 +132,17 @@ function isBlockedAsn(asnHeader, ua) {
     return !!asnHeader && blockedAsnRegex.test(asnHeader.value) && !allowedAsnBotRegex.test(ua);
 }
 
-function createNotFoundResponse() {
+function createResponse(statusCode, statusDescription, contentType, body) {
     return {
-        statusCode: 404,
-        statusDescription: 'Not Found',
-        headers: {"content-type": {value: "text/plain"}},
-        body: 'Not Found'
+        statusCode: statusCode,
+        statusDescription: statusDescription,
+        headers: {"content-type": {value: contentType}},
+        body: body
     };
+}
+
+function createNotFoundResponse() {
+    return createResponse(404, 'Not Found', 'text/plain', 'Not Found');
 }
 
 // rationale: README.md#fake-empty-feed
@@ -151,31 +155,17 @@ const emptyAtomFeed = '<?xml version="1.0" encoding="utf-8"?>' +
 const denyAllRobotsTxt = 'User-agent: *\nDisallow: /\n';
 
 // rationale: README.md#bad-actor-response-mapping
-function createGoneResponse(uri) {
+function createBlockedResponse(uri) {
+    const path = uri.toLowerCase();
     // rationale: README.md#fake-robots-txt
-    if (uri.toLowerCase() === '/robots.txt') {
-        return {
-            statusCode: 200,
-            statusDescription: 'OK',
-            headers: {"content-type": {value: "text/plain; charset=utf-8"}},
-            body: denyAllRobotsTxt
-        };
+    if (path === '/robots.txt') {
+        return createResponse(200, 'OK', 'text/plain; charset=utf-8', denyAllRobotsTxt);
     }
     // rationale: README.md#fake-empty-feed
-    if (uri.toLowerCase() === '/feed.xml') {
-        return {
-            statusCode: 200,
-            statusDescription: 'OK',
-            headers: {"content-type": {value: "application/atom+xml; charset=utf-8"}},
-            body: emptyAtomFeed
-        };
+    if (path === '/feed.xml') {
+        return createResponse(200, 'OK', 'application/atom+xml; charset=utf-8', emptyAtomFeed);
     }
-    return {
-        statusCode: 410,
-        statusDescription: 'Gone',
-        headers: {"content-type": {value: "text/plain"}},
-        body: 'Gone'
-    };
+    return createNotFoundResponse();
 }
 
 export {handler};
