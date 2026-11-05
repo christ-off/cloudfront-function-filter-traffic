@@ -279,6 +279,7 @@ Blocked ASNs (all at the user's request):
 | 200651 | FlokiNET ehf, Bucharest RO — hosting provider (VPS, dedicated servers) |
 | 213790 | Limited Network LTD, Vilnius LT — hosting provider (VPS, dedicated servers) |
 | 62044 | Zscaler Switzerland GmbH, Zürich CH — cloud security proxy (not a hosting provider) |
+| 136907 | Huawei Clouds, Singapore SG — hosting provider (cloud compute) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
