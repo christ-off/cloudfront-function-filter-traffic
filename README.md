@@ -277,6 +277,7 @@ Blocked ASNs (all at the user's request):
 | 7979 | Servers.com, Inc., Dallas US — hosting provider (dedicated servers, cloud) |
 | 62874 | Web2Objects LLC, Dallas US — hosting provider (VPS, dedicated servers) |
 | 200651 | FlokiNET ehf, Bucharest RO — hosting provider (VPS, dedicated servers) |
+| 213790 | Limited Network LTD, Vilnius LT — hosting provider (VPS, dedicated servers) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
