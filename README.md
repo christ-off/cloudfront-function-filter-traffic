@@ -191,7 +191,7 @@ fixture in `function.test.js`.
 
 **Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
 `hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
-`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `storebot-google/` (Google Merchant Center crawler), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
+`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `googlebot` (all Google search crawlers, incl. `Googlebot-Image`; the site must not be indexed by Google), `storebot-google/` (Google Merchant Center crawler), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
 `/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
 `rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
 `publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
@@ -280,6 +280,7 @@ Blocked ASNs (all at the user's request):
 | 213790 | Limited Network LTD, Vilnius LT — hosting provider (VPS, dedicated servers) |
 | 62044 | Zscaler Switzerland GmbH, Zürich CH — cloud security proxy (not a hosting provider) |
 | 136907 | Huawei Clouds, Singapore SG — hosting provider (cloud compute) |
+| 9009 | M247 Europe SRL, Secaucus US — hosting provider (VPS, dedicated servers; also VPN exit infrastructure) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
