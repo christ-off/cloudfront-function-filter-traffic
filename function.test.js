@@ -358,6 +358,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Welley/1.0", "Welley/1.0 (no bot suffix)"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
     ["Googlebot-Image/1.0", "Googlebot-Image"],
+    ["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Googlebot"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
     ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
@@ -890,13 +891,6 @@ describe("pass-through", () => {
 
   it("returns the request object unchanged for a file path with no trailing slash", () => {
     const event = makeEvent({ uri: "/about.html" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows real Googlebot through", () => {
-    const event = makeEvent({
-      userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-    });
     expect(handler(event)).toEqual(event.request);
   });
 
