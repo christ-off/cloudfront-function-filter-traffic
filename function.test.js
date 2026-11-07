@@ -358,6 +358,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["Welley/1.0", "Welley/1.0 (no bot suffix)"],
     ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
     ["Googlebot-Image/1.0", "Googlebot-Image"],
+    ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "GoogleImageProxy"],
     ["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Googlebot"],
     ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
     ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
