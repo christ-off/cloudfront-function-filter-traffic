@@ -286,6 +286,8 @@ Blocked ASNs (all at the user's request):
 | 26548 | PureVoltage Hosting Inc., Seattle US — hosting provider (dedicated servers, VPS, DDoS-protected hosting) |
 | 210906 | UAB "Bite Lietuva" (BITE-US), Dallas US — datacenter IP space (~23k IPv4) behind Psychz Networks (AS40676); not the Lithuanian consumer network (AS13194) |
 | 46475 | Limestone Networks, Inc., Frankfurt DE — hosting provider (dedicated servers, colocation, cloud) |
+| 12876 | Scaleway SAS, Milan IT — hosting provider (cloud instances, dedicated servers; formerly Online.net) |
+| 212286 | LonConnect Ltd, London GB — small hosting/VPS provider (not verified against a registry in-session) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
