@@ -284,6 +284,7 @@ Blocked ASNs (all at the user's request):
 | 213954 | Global Transit Systems LLC, Helsinki FI — shell hosting / IP-leasing network |
 | 35830, 43444 | Fast Servers (Pty) Ltd, São Paulo BR / New York City US — hosting provider (VPS, dedicated servers) |
 | 26548 | PureVoltage Hosting Inc., Seattle US — hosting provider (dedicated servers, VPS, DDoS-protected hosting) |
+| 210906 | UAB "Bite Lietuva" (BITE-US), Dallas US — datacenter IP space (~23k IPv4) behind Psychz Networks (AS40676); not the Lithuanian consumer network (AS13194) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
