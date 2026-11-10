@@ -191,7 +191,7 @@ fixture in `function.test.js`.
 
 **Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
 `hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
-`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `googlebot` (all Google search crawlers, incl. `Googlebot-Image`; the site must not be indexed by Google), `storebot-google/` (Google Merchant Center crawler), `googleimageproxy` (Gmail/Google image proxy, UA `... (via ggpht.com GoogleImageProxy)`; also fetches images embedded in emails, so blocking it hides images in Gmail), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
+`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `googlebot` (all Google search crawlers, incl. `Googlebot-Image`; the site must not be indexed by Google), `storebot-google/` (Google Merchant Center crawler), `feedfetcher-google` (Google RSS/Atom feed fetcher, UA `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)`, no `/` version; blocking it stops Google fetching the site's feeds), `googleimageproxy` (Gmail/Google image proxy, UA `... (via ggpht.com GoogleImageProxy)`; also fetches images embedded in emails, so blocking it hides images in Gmail), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
 `/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
 `rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
 `publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
