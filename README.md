@@ -290,6 +290,7 @@ Blocked ASNs (all at the user's request):
 | 212286 | LonConnect Ltd, London GB — small hosting/VPS provider (not verified against a registry in-session) |
 | 216014 | BestDC Limited, Amsterdam NL — hosting/datacenter provider (not verified against a registry in-session) |
 | 59651 | QualityNetwork, hosting provider (registered IL, geolocated Vantaa FI; not verified against a registry in-session) |
+| 19148 | Leaseweb USA, Inc., Phoenix US — hosting provider (dedicated servers, cloud, CDN; not a consumer/business ISP; not verified against a registry in-session) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
