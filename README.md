@@ -295,6 +295,7 @@ Blocked ASNs (all at the user's request):
 | 64249 | Charles River Operation (AS name ENDOFFICE), Boston US — classified as hosting by some sources and ISP by others; unclear, not verified against a registry in-session |
 | 136258 | BrainStorm Network, Inc., Miami US — hosting provider (dedicated servers/VPS/colocation; not a consumer/business ISP; not verified against a registry in-session) |
 | 30900 | Sternforth Ltd. t/a WebWorld, Dublin IE — believed to be an Irish web hosting/domain provider (hosting, VPS, colocation); could also serve business connectivity customers, so possibly not hosting-only; not verified against a registry in-session |
+| 62387 | meerfarbig GmbH & Co. KG, Frankfurt am Main DE — hosting provider (web hosting, servers/colocation; not a consumer ISP; not verified against a registry in-session) |
 
 `allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey, FreshRSS) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
