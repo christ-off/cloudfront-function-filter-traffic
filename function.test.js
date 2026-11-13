@@ -472,7 +472,7 @@ describe("scrapper bot blocking by user-agent", () => {
 describe("ASN blocking", () => {
   const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
 
-  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238", "20326", "51167", "53667", "218785", "213438", "132203", "201738", "45102", "9534", "24940", "197540", "211619", "56655", "14593", "18779", "57043", "60404", "7979", "62874", "200651", "213790", "62044", "136907", "9009", "213954", "35830", "43444", "26548", "210906", "46475", "12876", "212286", "216014", "59651", "138915"])("blocks AS%s", (value) => {
+  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238", "20326", "51167", "53667", "218785", "213438", "132203", "201738", "45102", "9534", "24940", "197540", "211619", "56655", "14593", "18779", "57043", "60404", "7979", "62874", "200651", "213790", "62044", "136907", "9009", "213954", "35830", "43444", "26548", "210906", "46475", "12876", "212286", "216014", "59651", "138915", "60729"])("blocks AS%s", (value) => {
     expectNotFound(handler(makeEvent({ extraHeaders: asn(value) })));
   });
 
@@ -499,15 +499,31 @@ describe("ASN blocking", () => {
   });
 
   it.each([
-    "Mozilla/5.0 (compatible; Birchfeed/1.0; https://birchfeed.app; 1 subscribers)",
-    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; searchbot@anthropic.com)",
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
     "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)",
+    "Iceshrimp.NET/2024.1 (https://iceshrimp.example/)",
     "DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)",
     "humanjson-survey/0.3 ( https://github.com/wasabipesto-bot/humanjson; maps the human.json vouch graph; honours robots.txt)",
   ])("lets allowlisted bot through a blocked ASN: %s", (userAgent) => {
     const event = makeEvent({ extraHeaders: asn("16509"), userAgent });
     expect(handler(event)).toEqual(event.request);
+  });
+
+  it.each(["/feed.xml", "/rss.xml", "/Feed.xml"])("lets any UA fetch %s from a blocked ASN", (uri) => {
+    const event = makeEvent({
+      uri,
+      extraHeaders: asn("16509"),
+      userAgent: "SomeFeedReader/2.0 (+https://reader.example)",
+    });
+    expect(handler(event)).toEqual(event.request);
+  });
+
+  it("still blocks a blocked ASN on other paths next to the feed", () => {
+    expectNotFound(handler(makeEvent({
+      uri: "/feed.xml.bak",
+      extraHeaders: asn("16509"),
+      userAgent: "SomeFeedReader/2.0 (+https://reader.example)",
+    })));
   });
 
   it("serves the deny-all robots.txt to a blocked ASN", () => {

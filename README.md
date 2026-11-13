@@ -297,10 +297,18 @@ Blocked ASNs (all at the user's request):
 | 30900 | Sternforth Ltd. t/a WebWorld, Dublin IE — believed to be an Irish web hosting/domain provider (hosting, VPS, colocation); could also serve business connectivity customers, so possibly not hosting-only; not verified against a registry in-session |
 | 62387 | meerfarbig GmbH & Co. KG, Frankfurt am Main DE — hosting provider (web hosting, servers/colocation; not a consumer ISP; not verified against a registry in-session) |
 | 138915 | Kaopu Cloud HK Limited (KAOPU-HK), Wan Chai HK — cloud/hosting provider (~185k IPv4 addresses; APNIC and quantcdn `hosting`; not a consumer/business ISP); seen scanning from a single IP, 367 requests all 404 |
+| 60729 | Stiftung Erneuerbare Freiheit (TORSERVERS-NET), Berlin DE — runs the torservers.net / artikel10.org Tor exit relays (e.g. `berlin01.tor-exit.artikel10.org`); anonymising-proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session (`asn_info` has no category for it) |
 
-`allowedAsnBotRegex` is an allowlist of legitimate bots (Birchfeed, Claude-SearchBot, Bingbot, Mastodon, DuckDuckBot, humanjson-survey, FreshRSS) that happen to be hosted in a blocked ASN; a match skips
+`allowedAsnBotRegex` is an allowlist of legitimate bots (Bingbot, Mastodon, Iceshrimp, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
 only the ASN check, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
+
+### asn-feed-exemption
+Hosted feed readers (Birchfeed, FreshRSS, Flus, …) run from blocked cloud ASNs. Rather than
+list every reader in `allowedAsnBotRegex`, `/feed.xml` and `/rss.xml` skip the ASN check (`isAsnExemptUri`, exact path match on the
+decoded, lowercased URI). Only the ASN check is skipped: bad-actor rules, the bot blocklist and the
+`feedfetcher-google` rule still apply. A scraper from a blocked ASN can therefore still fetch the feed
+itself, which is public anyway.
 
 **Setup — getting the ASN header in AWS.** The function only sees
 `CloudFront-Viewer-ASN` if the distribution requests it. This is done once per
