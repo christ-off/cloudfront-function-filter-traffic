@@ -299,13 +299,17 @@ Blocked ASNs (all at the user's request):
 | 138915 | Kaopu Cloud HK Limited (KAOPU-HK), Wan Chai HK — cloud/hosting provider (~185k IPv4 addresses; APNIC and quantcdn `hosting`; not a consumer/business ISP); seen scanning from a single IP, 367 requests all 404 |
 | 60729 | Stiftung Erneuerbare Freiheit (TORSERVERS-NET), Berlin DE — runs the torservers.net / artikel10.org Tor exit relays (e.g. `berlin01.tor-exit.artikel10.org`); anonymising-proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session (`asn_info` has no category for it) |
 
-`allowedAsnBotRegex` is an allowlist of legitimate bots (Bingbot, Mastodon, Iceshrimp, DuckDuckBot, humanjson-survey) that happen to be hosted in a blocked ASN; a match skips
+### asn-allowed-hosted-software
+`allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
+run by third parties (Bingbot, Mastodon, Iceshrimp, DuckDuckBot, humanjson-survey, SummalyBot link
+previews) that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
+what it holds: software that is acceptable even though its host is not. A match skips
 only the ASN check, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
 
 ### asn-feed-exemption
 Hosted feed readers (Birchfeed, FreshRSS, Flus, …) run from blocked cloud ASNs. Rather than
-list every reader in `allowedAsnBotRegex`, `/feed.xml` and `/rss.xml` skip the ASN check (`isAsnExemptUri`, exact path match on the
+list every reader in `allowedHostedSoftwareRegex`, `/feed.xml` and `/rss.xml` skip the ASN check (`isAsnExemptUri`, exact path match on the
 decoded, lowercased URI). Only the ASN check is skipped: bad-actor rules, the bot blocklist and the
 `feedfetcher-google` rule still apply. A scraper from a blocked ASN can therefore still fetch the feed
 itself, which is public anyway.

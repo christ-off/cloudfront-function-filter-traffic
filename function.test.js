@@ -504,6 +504,8 @@ describe("ASN blocking", () => {
     "Iceshrimp.NET/2024.1 (https://iceshrimp.example/)",
     "DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)",
     "humanjson-survey/0.3 ( https://github.com/wasabipesto-bot/humanjson; maps the human.json vouch graph; honours robots.txt)",
+    "SummalyBot/5.2.2",
+    "Mozilla/5.0 (compatible; SummalyBot/5.2.5-io.3)",
   ])("lets allowlisted bot through a blocked ASN: %s", (userAgent) => {
     const event = makeEvent({ extraHeaders: asn("16509"), userAgent });
     expect(handler(event)).toEqual(event.request);
