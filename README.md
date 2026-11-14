@@ -299,6 +299,7 @@ Blocked ASNs (all at the user's request):
 | 62387 | meerfarbig GmbH & Co. KG, Frankfurt am Main DE — hosting provider (web hosting, servers/colocation; not a consumer ISP; not verified against a registry in-session) |
 | 138915 | Kaopu Cloud HK Limited (KAOPU-HK), Wan Chai HK — cloud/hosting provider (~185k IPv4 addresses; APNIC and quantcdn `hosting`; not a consumer/business ISP); seen scanning from a single IP, 367 requests all 404 |
 | 60729 | Stiftung Erneuerbare Freiheit (TORSERVERS-NET), Berlin DE — runs the torservers.net / artikel10.org Tor exit relays (e.g. `berlin01.tor-exit.artikel10.org`); anonymising-proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session (`asn_info` has no category for it) |
+| 201341 | trafficforce, UAB (AS name Centurion-Internet-services), Lithuania, geolocated London GB — hosting network (RIPE, ASN type hosting; ~66k IPv4; peers with other hosting providers; not a consumer/business ISP; not verified against a registry in-session) |
 | 216014 | BestDC Limited — hosting/VPS provider; the "business" tag comes from the ASN classification, not an indication of a business ISP (not verified against a registry in-session) |
 
 ### asn-allowed-hosted-software
