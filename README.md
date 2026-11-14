@@ -304,7 +304,7 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Mastodon, Iceshrimp, DuckDuckBot, humanjson-survey, SummalyBot link
+run by third parties (Bingbot, Mastodon, Iceshrimp, Misskey, DuckDuckBot, humanjson-survey, SummalyBot link
 previews) that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
 what it holds: software that is acceptable even though its host is not. A match skips
 only the ASN check, all other rules still apply. Matched on the name token

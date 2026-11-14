@@ -127,7 +127,7 @@ function isBlockedBot(normalizedUserAgent, uri) {
 const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230|212238|20326|51167|53667|218785|213438|132203|201738|45102|9534|24940|197540|211619|56655|14593|18779|57043|60404|7979|62874|200651|213790|62044|136907|9009|213954|35830|43444|26548|210906|46475|12876|212286|216014|59651|19148|3257|64249|136258|30900|62387|138915|60729|201341)$/;
 
 // rationale: README.md#asn-allowed-hosted-software
-const allowedHostedSoftwareRegex = /bingbot\/|mastodon\/|iceshrimp|duckduckbot\/|humanjson-survey\/|summalybot\//;
+const allowedHostedSoftwareRegex = /bingbot\/|mastodon\/|iceshrimp|duckduckbot\/|humanjson-survey\/|summalybot\/|misskey\//;
 
 // rationale: README.md#asn-feed-exemption
 function isAsnExemptUri(uri) {

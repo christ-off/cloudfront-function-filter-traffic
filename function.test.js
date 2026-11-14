@@ -505,6 +505,7 @@ describe("ASN blocking", () => {
     "DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)",
     "humanjson-survey/0.3 ( https://github.com/wasabipesto-bot/humanjson; maps the human.json vouch graph; honours robots.txt)",
     "SummalyBot/5.2.2",
+    "Misskey/2025.4.0 (https://misskey.example)",
     "Mozilla/5.0 (compatible; SummalyBot/5.2.5-io.3)",
   ])("lets allowlisted bot through a blocked ASN: %s", (userAgent) => {
     const event = makeEvent({ extraHeaders: asn("16509"), userAgent });
