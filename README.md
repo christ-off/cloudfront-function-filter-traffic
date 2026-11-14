@@ -289,6 +289,7 @@ Blocked ASNs (all at the user's request):
 | 12876 | Scaleway SAS, Milan IT — hosting provider (cloud instances, dedicated servers; formerly Online.net) |
 | 212286 | LonConnect Ltd, London GB — small hosting/VPS provider (not verified against a registry in-session) |
 | 216014 | BestDC Limited, Amsterdam NL — hosting/datacenter provider (not verified against a registry in-session) |
+| 213954 | Global Transit Systems LLC (GTS-AS), registered Miami US — new AS (created 2025-10-29), ~14.6k IPv4 addresses geolocated mostly across Europe (not New York), no customers or direct peering, upstream is a Finnish hosting company; one aggregator (ipregistry) classes it as hosting, another as ISP; likely hosting/proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session |
 | 59651 | QualityNetwork, hosting provider (registered IL, geolocated Vantaa FI; not verified against a registry in-session) |
 | 19148 | Leaseweb USA, Inc., Phoenix US — hosting provider (dedicated servers, cloud, CDN; not a consumer/business ISP; not verified against a registry in-session) |
 | 3257 | GTT Communications Inc., Ashburn US — Tier-1 IP transit carrier / business ISP (not hosting-only; also serves enterprise customers; not verified against a registry in-session) |
