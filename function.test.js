@@ -501,6 +501,7 @@ describe("ASN blocking", () => {
   it.each([
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
     "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)",
+    "Friendica 'Interrupted Fern' 2024.03; https://friendica.example",
     "Iceshrimp.NET/2024.1 (https://iceshrimp.example/)",
     "DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)",
     "humanjson-survey/0.3 ( https://github.com/wasabipesto-bot/humanjson; maps the human.json vouch graph; honours robots.txt)",
