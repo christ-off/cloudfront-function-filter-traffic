@@ -1,15 +1,16 @@
-function handler(event) {
-    const request = event.request;
+import cf from 'cloudfront';
 
-    // rationale: README.md#allowlisted-uris
-    if (allowlistedUriRegex.test(request.uri || '')) {
-        return request;
-    }
+// rationale: README.md#asn-kvs
+const kvsHandle = cf.kvs();
+
+// rationale: README.md#filtering-sequence
+async function handler(event) {
+    const request = event.request;
 
     // Block requests with no user agent (cheap check, done before any URI decoding)
     const userAgentHeader = request.headers['user-agent'];
     if (!userAgentHeader || !userAgentHeader.value || !userAgentHeader.value.trim()) {
-        return createBlockedResponse(request.uri || '');
+        return createNotFoundResponse();
     }
 
     const uri = decodeUri(request.uri || '');
@@ -21,17 +22,37 @@ function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // rationale: README.md#bad-actor-response-mapping
-    if (isBadActor(uriLower, ua) ||
-        isBlockedAsn(request.headers['cloudfront-viewer-asn'], ua, uriLower) || isBlockedBot(ua, uriLower)) {
-        return createBlockedResponse(uriLower);
+    if (isBadActor(uriLower, ua) || blockedBotRegex.test(ua) ||
+        isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
+        return createNotFoundResponse();
     }
 
-    if (isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
+    // The ASN decision comes last: it may cost a KeyValueStore read
+    const asnHeader = request.headers['cloudfront-viewer-asn'];
+    if (!await isAsnAllowed(asnHeader && asnHeader.value ? asnHeader.value : '', ua)) {
         return createNotFoundResponse();
     }
 
     return request;
+}
+
+// rationale: README.md#filtering-sequence
+async function isAsnAllowed(asn, ua) {
+    if (asnWhitelistRegex.test(asn) || allowedHostedSoftwareRegex.test(ua)) {
+        return true;
+    }
+    if (blockedAsnRegex.test(asn)) {
+        return false;
+    }
+    // Fail open: no (or unusable) ASN header, or the KeyValueStore read fails
+    if (!/^\d+$/.test(asn)) {
+        return true;
+    }
+    try {
+        return await kvsHandle.exists(asn);
+    } catch (_e) {
+        return true;
+    }
 }
 
 // rationale: README.md#uri-decoding
@@ -66,10 +87,7 @@ const coverUriRegex = /^\/assets\/posts(_640)?\/.+\.webp$/;
 const COVER_REFERER_PREFIX = 'https://post-tenebras-lire.net/';
 
 // rationale: README.md#json-allowlist
-const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|human|pagefind\/pagefind-entry)\.json$/;
-
-// rationale: README.md#allowlisted-uris
-const allowlistedUriRegex = /^\/(backup\.zip)$/i;
+const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|pagefind\/pagefind-entry)\.json$/;
 
 // rationale: README.md#js-allowlist
 const allowedJsRegex = /^\/(javascript\/(recommended-blogs|chart\.umd\.min|bootstrap\.bundle\.min)|pagefind\/pagefind(-worker|-ui)?)\.js$/;
@@ -115,64 +133,22 @@ function isMalformedChromeClaim(ua) {
 // rationale: README.md#blocked-bot-regex
 const blockedBotRegex = /linkupbot\/|sleepbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|trident|amzn-searchbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|analyseseonet\/|scrapy|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|navcrawl\/|wellknownbot|siteauditbot\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|wpbot\/|googlebot|dataforseobot|imagebot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|domain-intel\/|screaming frog seo spider|openclaw|discordbot\/|sharkey \(like|reflectionbot\/|lightpanda\/|forestengine\/|seojuice-searchbot\/|coccocbot|hubspot crawler|domain-harvester\/|mapthenetbot\/|expansel-monitor\/|fogbot\/|newsletterformresearchbot\/|srchs-research-bot\/|aionbot\/|tiktokspider|opentheboxbot\/|veryhip\/|cms-security-auditor\/|censysinspect\/|publicwwwbot\/|wp2shell|webatlabot|ssi-nutch\/|variableratio-publicassetresearch\/|halobot\/|flowb0t-contentengine\/|claritybot\/|undici|serpex-index\/|compatible; crawler\)|webapp-mapper\/|ironfountain-leads\/|what10bot\/|konqueror\/|brightbot|rust-scrape\/|crawl-engine\/|keenablebot\/|wordpress\/|curl\/|tphotobot\/|websiteresearch\/|surdotlybot\/|aonsightmetabot\/|giantcrawler\/|baiduspider|sqlspider\/|goscan-mini\/|storebot-google\/|feedfetcher-google|googleimageproxy|app::jupiter\/|httpx - open-source project/;
 
-function isBlockedBot(normalizedUserAgent, uri) {
-    // rationale: README.md#feedfetcher-google
-    if (normalizedUserAgent.indexOf('feedfetcher-google') !== -1) {
-        return uri !== '/feed.xml';
-    }
-    return blockedBotRegex.test(normalizedUserAgent);
-}
-
 // rationale: README.md#asn-blocking
-const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230|212238|20326|51167|53667|218785|213438|132203|201738|45102|9534|24940|197540|211619|56655|14593|18779|57043|60404|7979|62874|200651|213790|62044|136907|9009|213954|35830|43444|26548|210906|46475|12876|212286|216014|59651|19148|3257|64249|136258|30900|62387|138915|60729|201341)$/;
+const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230|212238|20326|51167|53667|218785|213438|132203|201738|45102|9534|24940|197540|211619|56655|14593|18779|57043|60404|7979|62874|200651|213790|62044|136907|9009|213954|35830|43444|26548|210906|46475|12876|212286|216014|59651|19148|3257|64249|136258|30900|62387|138915|60729|201341|15169|4837)$/;
+
+// rationale: README.md#asn-whitelist
+const asnWhitelistRegex = /^(60653|199064|714)$/;
 
 // rationale: README.md#asn-allowed-hosted-software
-const allowedHostedSoftwareRegex = /bingbot\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|humanjson-survey\/|summalybot\/|misskey\//;
-
-// rationale: README.md#asn-feed-exemption
-function isAsnExemptUri(uri) {
-    return uri === '/feed.xml' || uri === '/rss.xml';
-}
-
-function isBlockedAsn(asnHeader, ua, uri) {
-    return !!asnHeader && blockedAsnRegex.test(asnHeader.value) &&
-        !allowedHostedSoftwareRegex.test(ua) && !isAsnExemptUri(uri);
-}
-
-function createResponse(statusCode, statusDescription, contentType, body) {
-    return {
-        statusCode: statusCode,
-        statusDescription: statusDescription,
-        headers: {"content-type": {value: contentType}},
-        body: body
-    };
-}
+const allowedHostedSoftwareRegex = /bingbot\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|miniflux/;
 
 function createNotFoundResponse() {
-    return createResponse(404, 'Not Found', 'text/plain', 'Not Found');
-}
-
-// rationale: README.md#fake-empty-feed
-const emptyAtomFeed = '<?xml version="1.0" encoding="utf-8"?>' +
-    '<feed xmlns="http://www.w3.org/2005/Atom"><title>Feed</title>' +
-    '<id>urn:uuid:00000000-0000-0000-0000-000000000000</id>' +
-    '<updated>2000-01-01T00:00:00Z</updated></feed>';
-
-// rationale: README.md#fake-robots-txt
-const denyAllRobotsTxt = 'User-agent: *\nDisallow: /\n';
-
-// rationale: README.md#bad-actor-response-mapping
-function createBlockedResponse(uri) {
-    const path = uri.toLowerCase();
-    // rationale: README.md#fake-robots-txt
-    if (path === '/robots.txt') {
-        return createResponse(200, 'OK', 'text/plain; charset=utf-8', denyAllRobotsTxt);
-    }
-    // rationale: README.md#fake-empty-feed
-    if (path === '/feed.xml') {
-        return createResponse(200, 'OK', 'application/atom+xml; charset=utf-8', emptyAtomFeed);
-    }
-    return createNotFoundResponse();
+    return {
+        statusCode: 404,
+        statusDescription: 'Not Found',
+        headers: {"content-type": {value: 'text/plain'}},
+        body: 'Not Found'
+    };
 }
 
 export {handler};

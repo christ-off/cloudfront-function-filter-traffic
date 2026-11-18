@@ -1,1026 +1,145 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect } from "vitest";
 import { handler } from "./function.js";
+import { kvs } from "./test-support/cloudfront-stub.js";
 
-function makeEvent({ uri = "/", userAgent = "Mozilla/5.0", extraHeaders = {} } = {}) {
+const BROWSER = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36";
+
+function makeEvent({ uri = "/", userAgent = BROWSER, asn, referer } = {}) {
   const headers = {};
-  if (userAgent !== null) {
-    headers["user-agent"] = { value: userAgent };
-  }
-  Object.assign(headers, extraHeaders);
+  if (userAgent !== null) headers["user-agent"] = { value: userAgent };
+  if (asn !== undefined) headers["cloudfront-viewer-asn"] = { value: asn };
+  if (referer !== undefined) headers.referer = { value: referer };
   return { request: { uri, headers } };
 }
 
-function expectNotFound(result) {
+async function expectBlocked(event) {
+  const result = await handler(event);
   expect(result.statusCode).toBe(404);
   expect(result.body).toBe("Not Found");
 }
 
-function expectDenyAllRobots(result) {
-  expect(result.statusCode).toBe(200);
-  expect(result.headers["content-type"].value).toContain("text/plain");
-  expect(result.body).toBe("User-agent: *\nDisallow: /\n");
+async function expectPassed(event) {
+  expect(await handler(event)).toBe(event.request);
 }
 
-function expectNotBlocked(result) {
-  expect(result.statusCode).not.toBe(404);
-}
-
-// =====================================================
-// URI allowlist — passes through no matter what else would block it
-// =====================================================
-describe("URI allowlist", () => {
-  it("allows /backup.zip through with no user agent", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/backup.zip", userAgent: null })));
-  });
-
-  it("allows /backup.zip through for a blocked bot UA", () => {
-    expectNotBlocked(
-      handler(makeEvent({ uri: "/backup.zip", userAgent: "Scrapy/1.0" }))
-    );
-  });
-
-  it("is case-insensitive", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/Backup.ZIP" })));
-  });
-
-  it("does not allowlist a similarly-named path", () => {
-    expectNotFound(handler(makeEvent({ uri: "/backup.zip.php" })));
-  });
+let kvsLookups;
+beforeEach(() => {
+  kvsLookups = [];
+  kvs.exists = async (key) => {
+    kvsLookups.push(key);
+    return key === "3215"; // the only ISP in the fake store
+  };
 });
 
-// =====================================================
-// Scanner probes — backups, env, source maps, debug/admin endpoints
-// =====================================================
-describe("scanner probe blocking", () => {
-  it.each([
-    "/wp-config.old", "/wp-config.php.old", "/secrets.env", "/manifest.webmanifest",
-    "/pages/index.astro.mjs.map", "/_astro/pages/index.astro.mjs.map",
-    "/storage/logs/laravel.log",
-  ])("returns 404 for %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
+// Steps 1-4: cheap checks, no KeyValueStore read
+describe("cheap checks", () => {
+  it.each([null, "", "   "])("blocks a missing or empty user agent (%j)", (userAgent) =>
+    expectBlocked(makeEvent({ userAgent })));
+
+  it("blocks an undecodable URI", () => expectBlocked(makeEvent({ uri: "/%E0%A4%A" })));
 
   it.each([
-    "/userfiles/", "/userfiles/x/", "/_ignition/health-check/", "/__debug__/",
-    "/_debugbar/open/", "/_profiler/latest/", "/telescope/requests/",
-    "/horizon/api/stats/", "/debug/vars/", "/debug/pprof/", "/console/",
-    "/server-status/", "/server-info/", "/manage/env/", "/graphql/",
-    "/graphql/console/", "/v1/graphql/", "/v1/onboarding/config/", "/health/",
-    "/proc/self/cmdline/",
-    "/var/run/secrets/kubernetes.io/serviceaccount/token/", "/Dockerfile/",
-  ])("returns 404 for %s (trailing slash)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
+    "/wp-login.php", "/.env", "/a/../b", "/wp-content/x", "/id_rsa", "/backup/db.sql", "/backup.zip.php",
+  ])("blocks the scanner URI %s", (uri) => expectBlocked(makeEvent({ uri })));
+
+  it.each([
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+  ])("blocks the fake Chrome UA %s", (userAgent) => expectBlocked(makeEvent({ userAgent })));
+
+  it.each([
+    "Scrapy/2.16.0", "python-requests/2.31", "curl/8.0", "Baiduspider/2.0",
+    "Mozilla/5.0 (compatible; Googlebot/2.1)", "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)",
+  ])("blocks the bot UA %s", (userAgent) => expectBlocked(makeEvent({ userAgent })));
+
+  it("blocks bots and scanners on the feed and robots.txt too (plain 404, no fake answer)", async () => {
+    await expectBlocked(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
+    await expectBlocked(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" }));
+    await expectBlocked(makeEvent({ uri: "/feed.xml", userAgent: null }));
   });
 
-  it.each(["/id_rsa", "/id_ed25519", "/id_rsa.pub", "/id_dsa"])("returns 404 for ssh key probe %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it.each(["/_next/static/x", "/_nuxt/x", "/_anything"])("returns 404 for underscore-prefixed %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it("does not block similarly-prefixed legitimate paths", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/variables-explained/" })));
-    expectNotBlocked(handler(makeEvent({ uri: "/healthy-eating/" })));
-  });
-});
-
-// =====================================================
-// Security scan blocking — PHP files → 404
-// =====================================================
-describe("PHP file blocking", () => {
-  it("returns 404 for a .php file at the root", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-login.php" })));
-  });
-
-  it("returns 404 for a .php file in a sub-directory", () => {
-    expectNotFound(handler(makeEvent({ uri: "/path/to/script.php" })));
-  });
-
-  it("PHP block is case-insensitive due to URI normalisation", () => {
-    expectNotFound(handler(makeEvent({ uri: "/Shell.PHP" })));
-  });
-
-    it("does not block a path that merely contains 'php' as a substring", () => {
-      expectNotBlocked(handler(makeEvent({ uri: "/php-info" })));
-    });
-
-  it("returns 404 for a .php5 file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/shell.php5" })));
-  });
-
-  it("returns 404 for a .php7 file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/shell.php7" })));
-  });
-
-  it("returns 404 for a .phtml file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/page.phtml" })));
-  });
-
-  it("returns 404 for a multi-digit .phpNN suffix", () => {
-    expectNotFound(handler(makeEvent({ uri: "/zup.php73" })));
-    expectNotFound(handler(makeEvent({ uri: "/about.php525" })));
+  it("blocks cheap-check failures without reading the KeyValueStore", async () => {
+    await expectBlocked(makeEvent({ uri: "/wp-login.php", asn: "3215" }));
+    expect(kvsLookups).toEqual([]);
   });
 });
 
-// =====================================================
-// Bad actors (security-scan URIs, truncated/malformed Chrome UAs) get a 404 like everything else.
-// =====================================================
-describe("404 response for bad actors", () => {
-  it("returns 404 for a security scan URI", () => {
-    const result = handler(makeEvent({ uri: "/wp-login.php" }));
-    expectNotFound(result);
-    expect(result.headers["content-type"].value).toBe("text/plain");
+// Step 5: .json / .js allowlists and cover referer apply to everyone, whitelisted ASN included
+describe("asset rules", () => {
+  it("allows the listed json and js files, blocks the others", async () => {
+    await expectPassed(makeEvent({ uri: "/about/data/visitors.json" }));
+    await expectPassed(makeEvent({ uri: "/pagefind/pagefind.js" }));
+    await expectBlocked(makeEvent({ uri: "/human.json" }));
+    await expectBlocked(makeEvent({ uri: "/other.json" }));
+    await expectBlocked(makeEvent({ uri: "/other.js" }));
   });
 
-  it("does not affect non-security-scan URIs", () => {
-    const event = makeEvent({ uri: "/" });
-    expect(handler(event)).toEqual(event.request);
+  it("only serves covers with the site referer", async () => {
+    await expectBlocked(makeEvent({ uri: "/assets/posts/a.webp" }));
+    await expectBlocked(makeEvent({ uri: "/assets/posts/a.webp", referer: "https://evil.example/" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", referer: "https://post-tenebras-lire.net/x/" }));
   });
 
-  const badActorAgents = [
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      "truncated Windows UA missing KHTML/Chrome/Safari tail",
-    ],
-    [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-      "malformed Chrome claim missing AppleWebKit/KHTML entirely",
-    ],
-  ];
-
-  it.each(badActorAgents)("returns 404 for '%s' (%s)", (userAgent) => {
-    expectNotFound(handler(makeEvent({ userAgent })));
-  });
-
-  // No browser has a version floor: a version number alone is not a reliable
-  // spoof signal (see AGENTS.md), so current and old majors all pass through.
-  const browserAgents = [
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 macOS"],
-    ["Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36", "Chrome/151 Linux aarch64"],
-    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36", "Chrome/152 Linux x86_64 (blocked by ASN instead, not by UA)"],
-    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36", "Chrome/153 Linux x86_64"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Chrome/120"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0", "Edg/152"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0", "Edg/144"],
-    ["Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/28.0 Chrome/150.0.7444.86 Mobile Safari/537.36", "Samsung Internet 28 with a full Chrome build/patch number (Samsung doesn't apply Chrome's UA-Reduction freeze)"],
-    ["Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36", "Samsung Internet 27"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0", "Firefox 138"],
-    ["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0", "Firefox 72"],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15", "Safari/16.6"],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", "Mobile Safari/16.0"],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Mobile Safari/26.0 (post-renumbering)"],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 EdgiOS/117.0.2045.60 Mobile/15E148 Safari/604.1", "EdgiOS"],
-  ];
-
-  it.each(browserAgents)("passes through '%s' (%s)", (userAgent) => {
-    const event = makeEvent({ uri: "/", userAgent });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Misskey/Sharkey federation UA", () => {
-    const event = makeEvent({ uri: "/", userAgent: "Misskey/2025.4.7 (https://sharkey.vhack.eu/)" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Outlook/MS Office UA", () => {
-    const event = makeEvent({ uri: "/", userAgent: "Mozilla/4.0 (compatible; ms-office; MSOffice 16)" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through PetalBot (obeys robots.txt, no longer blocked)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (compatible;PetalBot; https://webmaster.petalsearch.com/site/petalbot)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through PerplexityBot (allowed to index)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (compatible; PerplexityBot/1.0; https://perplexity.ai/perplexitybot)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through SummalyBot (fediverse link previews)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "SummalyBot/5.5.1 (https://mi.kyanos.one; https://github.com/misskey-dev/summaly/blob/master/README.md)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through GPTBot (allowed to index)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.3; https://openai.com/gptbot)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Amazonbot (allowed to index)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through ExaSearchBot (allowed to learn from the blog)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (compatible; ExaSearchBot/1.0; +https://crawler.exa.ai/)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
+  it("applies to a whitelisted ASN as well", () =>
+    expectBlocked(makeEvent({ uri: "/other.json", asn: "714" })));
 });
 
-// =====================================================
-// Security scan blocking — bad folder prefixes → 404
-// =====================================================
-describe("bad folder blocking", () => {
-  const cases404 = [
-    ["/images/logo.png", "images"],
-    ["/image/logo.png", "image (singular)"],
-    ["/img/logo.png", "img"],
-    ["/wp-includes/js/jquery.js", "wp-includes"],
-    ["/static/app.js", "static"],
-    ["/wp/xmlrpc.php", "wp"],
-    ["/wordpress/index.php", "wordpress"],
-    ["/old/site/index.html", "old"],
-    ["/new/site/index.html", "new"],
-    ["/blog/post/1", "blog"],
-    ["/backup/db.sql", "backup"],
-    ["/cgi-bin/test.cgi", "cgi-bin"],
-    ["/vendor/autoload.php", "vendor"],
-    ["/uploads/shell.php", "uploads"],
-    ["/plugins/malicious.php", "plugins"],
-    ["/login", "login (bare)"],
-    ["/api/v2/config", "api (security scan)"],
-    ["/@fs/home/ec2-user/.aws/credentials", "@fs"],
-    ["/@vite/client", "@vite"],
-    ["/__vite_ping", "__vite prefix (no trailing slash)"],
-  ];
-
-  const casesTrailingSlash = [
-    ["/login/", "login (trailing slash)"],
-    ["/webmail/", "webmail"],
-    ["/roundcube/", "roundcube"],
-    ["/mail/", "mail"],
-    ["/rc/", "rc"],
-    ["/__vite_rsc_findSourceMapURL/", "__vite prefix (trailing slash)"],
-  ];
-
-  it.each(cases404)("returns 404 for %s (%s)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it.each(casesTrailingSlash)("returns 404 for %s (%s, trailing slash)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it("returns 404 for a bad folder path with no trailing content (bare folder)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/cgi-bin" })));
-  });
-
-  it("does not block a path that shares a prefix but is a different folder", () => {
-    // /images2 or /blog-post should NOT be caught — regex anchors with (\/|$)
-    const event = makeEvent({ uri: "/images2/logo.png" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not block a path that merely shares a prefix with 'login' or 'uploads'", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/loginpage" })));
-    expectNotBlocked(handler(makeEvent({ uri: "/uploads2/x" })));
-  });
-
-  it("does not block a path that merely shares a prefix with 'mail' or 'rc'", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/mailing-list" })));
-    expectNotBlocked(handler(makeEvent({ uri: "/rcfiles/x" })));
-  });
-
-  it("blocking is case-insensitive due to URI normalisation", () => {
-    expectNotFound(handler(makeEvent({ uri: "/WP-INCLUDES/load.php" })));
-  });
-
-  it("returns 404 for /ip (server IP disclosure probe)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/ip" })));
-  });
-});
-
-
-// =====================================================
-// Scrapper bot user-agent blocking → 404
-// =====================================================
-describe("scrapper bot blocking by user-agent", () => {
-  const blockedAgents = [
-    ["Mozilla/5.0 (compatible; Amzn-SearchBot/1.0; https://developer.amazon.com/support/amazonbot)", "Amzn-SearchBot"],
-    ["Mozilla/5.0 (compatible; LoadedBot/1.0; https://loaded.ai/bot)", "LoadedBot (ignores robots.txt)"],
-    ["DataForSEOBot/1.0", "DataForSEO bot"],
-    ["ev-crawler/1.0", "ev-crawler"],
-    ["Mozilla/5.0 (compatible; xAI-SearchBot/1.0; https://x.ai)", "xAI-SearchBot token"],
-    ["Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko", "Internet Explorer (Trident)"],
-    ["Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.18", "Opera legacy (Presto)"],
-    ["pimeyes-downloader-api/0.1", "PiMeyes downloader API"],
-    ["SleepBot/1.0 (http://sleepbot.com/)", "SleepBot scraper"],
-    ["got (https://github.com/sindresorhus/got)", "got HTTP client"],
-    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BuiltWith/1.4; rb.gy/xprgqj) Chrome/124.0.0.0 Safari/537.36", "BuiltWith scraper"],
-    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ShapBot/0.1.0", "ShapBot scraper"],
-    ["rust-scrape/0.1.0", "rust-scrape"],
-    ["crawl-engine/0.1 ( https://abuse.creasource.dev/; abuse-report@creasource.dev)", "crawl-engine"],
-    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; KeenableBot/1.0; https://keenable.ai/)", "KeenableBot"],
-    ["WordPress/6.4.3", "WordPress"],
-    ["curl/8.6.0", "curl"],
-    ["tphotobot/0.1 (+http://crawler.estidraft.com/)", "tphotobot"],
-    ["Mozilla/5.0 (compatible; WebsiteResearch/1.0)", "WebsiteResearch"],
-    ["Mozilla/5.0 (compatible; SurdotlyBot/1.0; http://sur.ly/bot.html)", "SurdotlyBot"],
-    ["Mozilla/5.0 (compatible; AonsightMetaBot/1.0; https://aonsight.com/bot)", "AonsightMetaBot"],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider-render"],
-    ["Mozilla/5.0 (compatible; Baiduspider/2.0; http://www.baidu.com/search/spider.html)", "Baiduspider"],
-    ["Baiduspider-image+(+http://www.baidu.com/search/spider.htm)", "Baiduspider-image"],
-    ["Scrapy/2.16.0 ( https://scrapy.org)", "Scrapy scraper"],
-    ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "Bytespider"],
-    ["Timpibot/1.0 ( http://timpi.io/crawler)", "Timpibot/1.0 scraper"],
-    ["Mozilla/5.0 (compatible; Timpibot/0.8; http://www.timpi.io)", "Timpibot/0.8 scraper"],
-    ["Mozilla/5.0 (compatible; StackyEnrich/1.0)", "StackyEnrich"],
-    ["fyndbot (robots; https://fynd.bot)", "FyndBot (robots)"],
-    ["fyndbot (recrawler; https://fynd.bot)", "FyndBot (recrawler)"],
-    ["Mozilla/5.0 (compatible; WellKnownBot/0.1;  https://well-known.dev/about/#bot)", "WellKnownBot"],
-    ["Mozilla/5.0 (compatible; wpbot/1.4; https://forms.gle/ajBaxygz9jSR8p8G9)", "wpbot"],
-    ["python-httpx/0.28.1", "Python httpx"],
-    ["httpx - Open-source project (github.com/projectdiscovery/httpx)", "ProjectDiscovery httpx"],
-    ["python-requests/2.32.5", "Python requests"],
-    ["Python/3.14 aiohttp/3.14.1", "Python aiohttp"],
-    ["Welley/1.0 bot", "Welley/1.0 bot"],
-    ["Welley/1.0", "Welley/1.0 (no bot suffix)"],
-    ["LinkupBot/1.0 (LinkupBot for web indexing; https://linkup.so/bot; bot@linkup.so)", "LinkupBot"],
-    ["Googlebot-Image/1.0", "Googlebot-Image"],
-    ["Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)", "GoogleImageProxy"],
-    ["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Googlebot"],
-    ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot"],
-    ["Aranea Web-Crawled Corpora Project ( http://aranea.juls.savba.sk/guest (Frenchch 2026 Summer Crawl))", "Aranea"],
-    ["Mozilla/5.0 (compatible; intelx.io_bot https://intelx.io)", "intelx.io_bot"],
-    ["Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.4a) Gecko/20030401", "PPC Mach-O"],
-    ["TestSearchSpider/0.1", "TestSearchSpider"],
-    ["TestSearchSpider/2.0", "TestSearchSpider (any version)"],
-    ["NavCrawl/0.4 ( https://example.com/bot)", "NavCrawl"],
-    ["Mozilla/5.0 CMS-Detector/1.0", "CMS-Detector"],
-    ["atlas-enrich/1.0", "atlas-enrich"],
-    ["Mozilla/5.0 (compatible; SiteScan/1.0; free-tier enrichment; respects robots)", "SiteScan"],
-    ["LivelapBot/0.2 (http://site.livelap.com/crawler)", "LivelapBot"],
-    ["DatabankMetasearchProduction/0.2", "DatabankMetasearchProduction"],
-    ["DatabankMetasearchExperiment/0.2", "DatabankMetasearchExperiment"],
-    ["SearchEngineBot/0.1", "SearchEngineBot"],
-    ["URL/Emacs Emacs/30.1 (X11; x86_64-pc-linux-gnu)", "Emacs URL/Emacs scraper"],
-    [
-      "ImageBot/1.0 (compatible; research crawler; https://github.com/rom1504/img2dataset; opt-out: abuse.notification.dcomp12b@gmail.com;",
-      "ImageBot/img2dataset scraper",
-    ],
-    ["Mozilla/5.0 (compatible; Google-CloudVertexBot; https://cloud.google.com/vertex-ai-bot)", "Google-CloudVertexBot"],
-    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "GoogleOther"],
-    ["koofie.net/1.0 ( https://koofie.net/bot)", "koofie.net bot"],
-    ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "FeedFetcher-Google"],
-    ["domain-intel/0.1", "domain-intel bot"],
-    ["Screaming Frog SEO Spider/19.2", "Screaming Frog SEO Spider"],
-    ["Mozilla/5.0 (compatible; OpenClaw-CN-Reach/1.0)", "OpenClaw-CN-Reach"],
-    ["Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/bots)", "Discordbot"],
-    ["Sharkey (like Discordbot)", "Sharkey"],
-    ["Mozilla/5.0 (compatible; Reflectionbot/1.0; https://reflection.ai/bot)", "Reflectionbot"],
-    ["Lightpanda/1.0 internal-testing-crawler", "Lightpanda"],
-    ["Mozilla/5.0 (compatible; ForestEngine/1.0; +https://forestengine.net/)", "ForestEngine"],
-    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; SEOJuice-SearchBot/1.0; https://seojuice.io/bot", "SEOJuice-SearchBot"],
-    ["Mozilla/5.0 (compatible; coccocbot-web/1.0; http://help.coccoc.com/searchengine)", "coccocbot-web"],
-    ["FogBot/0.3 ( m85953909@gmail.com)", "FogBot"],
-    ["NewsletterFormResearchBot/1.3.1 ( read-only public-web research; no form submissions)", "NewsletterFormResearchBot"],
-    ["Mozilla/5.0 (compatible; srchs-research-bot/0.1; public small-business domain research; contact: smashcarlito@gmail.com)", "srchs-research-bot"],
-    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 (compatible; AionBot/1.0)", "AionBot"],
-    ["Mozilla/5.0 (compatible; SQLSpider/1.7.0)", "SQLSpider"],
-    ["Mozilla/5.0 (compatible; goscan-mini/0.1)", "goscan-mini"],
-    ["App::jupiter/1", "app-jupiter"],
-    ["Mozilla/5.0 (X11; Linux x86_64; Storebot-Google/1.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", "Storebot-Google"],
-    ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; TikTokSpider; ttspider-feedback@tiktok.com)", "TikTokSpider"],
-    ["OpenTheBoxBot/1.0", "OpenTheBoxBot"],
-    ["Brightbot 1.0", "Brightbot"],
-    ["webapp-mapper/0.1 (public technical analysis)", "webapp-mapper"],
-    ["IronFountain-Leads/1.0 ( https://www.ironfountain.com)", "IronFountain-Leads"],
-    ["What10Bot/2.0 ( https://what10.com/bot)", "What10Bot"],
-    ["Mozilla/5.0 (compatible; Konqueror/3; Linux)", "Konqueror"],
-    ["Mozilla/5.0 (compatible; VeryHip/0.1; https://veryhip.com/bot.html)", "VeryHip"],
-    ["CMS-Security-Auditor/1.0 ( authorized self-check; contact: local-admin)", "CMS-Security-Auditor"],
-    ["Mozilla/5.0 (compatible; CensysInspect/1.1; https://about.censys.io/)", "CensysInspect"],
-    ["Mozilla/5.0 (compatible; PublicWWWBot/1.0; https://publicwww.com/bot.html)", "PublicWWWBot"],
-    ["wp2shell/2.0", "wp2shell scanner"],
-    ["Mozilla/5.0 (compatible; WebAtlaBot/1.0)", "WebAtlaBot"],
-    ["SSI-Nutch/1.23 (SSI broad web crawler; https://ssi.inc/; adi@ssi.inc)", "SSI-Nutch"],
-    ["VariableRatio-PublicAssetResearch/1.0", "VariableRatio-PublicAssetResearch"],
-    ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
-    ["undici", "undici"],
-    ["Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)", "serpex-index"],
-    ["GiantCrawler/1.0 ( https://giantcrawler.com)", "GiantCrawler"],
-    ["Mozilla/5.0 (compatible; crawler)", "generic crawler"],
-  ];
-
-  it.each(blockedAgents)("blocks '%s' (%s)", (userAgent) => {
-    const result = handler(makeEvent({ userAgent }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("lets FeedFetcher-Google fetch /feed.xml but blocks it elsewhere", () => {
-    const userAgent = "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)";
-    const event = makeEvent({ uri: "/feed.xml", userAgent });
-    expect(handler(event)).toEqual(event.request);
-    expect(handler(makeEvent({ uri: "/other", userAgent })).statusCode).toBe(404);
-  });
-
-  it("scrapper bot matching is case-insensitive (BuiltWith)", () => {
-    const result = handler(makeEvent({ userAgent: "BuiltWith/1.4" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  // /rss.xml gets no special treatment; /feed.xml has its own describe block below.
-  const feedPaths = ["/rss.xml"];
-
-  it.each(feedPaths)("blocks a blocked bot on %s with a plain 404", (uri) => {
-    const result = handler(makeEvent({ uri, userAgent: "Scrapy/2.16.0" }));
-    expect(result.statusCode).toBe(404);
-    expect(result.body).toBe("Not Found");
-  });
-
-  it.each(feedPaths)("ignores conditional request headers on %s", (uri) => {
-    const result = handler(makeEvent({
-      uri,
-      userAgent: "Scrapy/2.16.0",
-      extraHeaders: {
-        "if-none-match": { value: '"empty-feed-v1"' },
-        "if-modified-since": { value: "Mon, 01 Jan 2024 00:00:00 GMT" },
-      }
-    }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it.each(feedPaths)("still lets a normal browser through on %s", (uri) => {
-    const event = makeEvent({ uri, userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
-// ASN blocking (CloudFront-Viewer-ASN header)
-// =====================================================
-describe("ASN blocking", () => {
-  const asn = (value) => ({ "cloudfront-viewer-asn": { value } });
-
-  it.each(["16509", "14618", "215125", "29222", "396982", "1299", "48090", "8075", "4134", "23724", "271315", "209334", "41608", "213230", "212238", "20326", "51167", "53667", "218785", "213438", "132203", "201738", "45102", "9534", "24940", "197540", "211619", "56655", "14593", "18779", "57043", "60404", "7979", "62874", "200651", "213790", "62044", "136907", "9009", "213954", "35830", "43444", "26548", "210906", "46475", "12876", "212286", "216014", "59651", "138915", "60729", "201341"])("blocks AS%s", (value) => {
-    expectNotFound(handler(makeEvent({ extraHeaders: asn(value) })));
-  });
-
-  it("does not block another ASN", () => {
-    const event = makeEvent({ extraHeaders: asn("3215") });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("does not match an ASN merely containing a blocked number", () => {
-    const event = makeEvent({ extraHeaders: asn("165091") });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("fails open when the header is absent", () => {
-    const event = makeEvent({});
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("blocks a blocked ASN even with a normal browser UA", () => {
-    expectNotFound(handler(makeEvent({
-      extraHeaders: asn("16509"),
-      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
-    })));
+// Steps 6-9: ASN whitelist, hosted software, blocklist, fail open
+describe("ASN rules", () => {
+  it.each(["60653", "199064", "714"])("passes whitelisted AS%s without a KeyValueStore read", async (asn) => {
+    await expectPassed(makeEvent({ asn }));
+    expect(kvsLookups).toEqual([]);
   });
 
   it.each([
-    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm)",
     "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)",
-    "Friendica 'Interrupted Fern' 2024.03; https://friendica.example",
-    "Iceshrimp.NET/2024.1 (https://iceshrimp.example/)",
-    "DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)",
-    "humanjson-survey/0.3 ( https://github.com/wasabipesto-bot/humanjson; maps the human.json vouch graph; honours robots.txt)",
-    "SummalyBot/5.2.2",
-    "Misskey/2025.4.0 (https://misskey.example)",
-    "Mozilla/5.0 (compatible; SummalyBot/5.2.5-io.3)",
-  ])("lets allowlisted bot through a blocked ASN: %s", (userAgent) => {
-    const event = makeEvent({ extraHeaders: asn("16509"), userAgent });
-    expect(handler(event)).toEqual(event.request);
+    "Feedbin feed-id:1 - 1 subscribers",
+    "FreshRSS/1.30.0 (Linux; https://freshrss.org)",
+  ])("passes hosted software on a blocked ASN: %s", async (userAgent) => {
+    await expectPassed(makeEvent({ asn: "8075", userAgent }));
+    expect(kvsLookups).toEqual([]);
   });
 
-  it.each(["/feed.xml", "/rss.xml", "/Feed.xml"])("lets any UA fetch %s from a blocked ASN", (uri) => {
-    const event = makeEvent({
-      uri,
-      extraHeaders: asn("16509"),
-      userAgent: "SomeFeedReader/2.0 (+https://reader.example)",
-    });
-    expect(handler(event)).toEqual(event.request);
+  it.each(["16509", "8075", "4134", "4837", "15169"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
+    await expectBlocked(makeEvent({ asn }));
+    expect(kvsLookups).toEqual([]);
   });
 
-  it("still blocks a blocked ASN on other paths next to the feed", () => {
-    expectNotFound(handler(makeEvent({
-      uri: "/feed.xml.bak",
-      extraHeaders: asn("16509"),
-      userAgent: "SomeFeedReader/2.0 (+https://reader.example)",
-    })));
-  });
+  it("blocks the blocklisted ASN on the feed too (no feed exemption)", () =>
+    expectBlocked(makeEvent({ uri: "/feed.xml", asn: "16509" })));
 
-  it("serves the deny-all robots.txt to a blocked ASN", () => {
-    expectDenyAllRobots(handler(makeEvent({ uri: "/robots.txt", extraHeaders: asn("16509") })));
+  it("does not match an ASN that merely contains a blocklisted number", () =>
+    expectPassed(makeEvent({ asn: "3215" })));
+
+  it.each([undefined, "", "-"])("fails open without a usable ASN header (%j)", async (asn) => {
+    await expectPassed(makeEvent({ asn }));
+    expect(kvsLookups).toEqual([]);
   });
 });
 
-// =====================================================
-// /robots.txt: 404 becomes a deny-all robots.txt (200)
-// =====================================================
-describe("robots.txt for blocked bots", () => {
-  it("serves a blocked bot the deny-all robots.txt", () => {
-    expectDenyAllRobots(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
+// Step 10: KeyValueStore
+describe("KeyValueStore lookup", () => {
+  it("passes an ASN found in the store", async () => {
+    await expectPassed(makeEvent({ asn: "3215" }));
+    expect(kvsLookups).toEqual(["3215"]);
   });
 
-  it("serves it case-insensitively and when the user-agent is missing", () => {
-    expectDenyAllRobots(handler(makeEvent({ uri: "/Robots.TXT", userAgent: "Scrapy/2.16.0" })));
-    expectDenyAllRobots(handler(makeEvent({ uri: "/robots.txt", userAgent: "" })));
-  });
+  it("blocks an ASN missing from the store", () => expectBlocked(makeEvent({ asn: "99999" })));
 
-  it("still lets a normal browser's /robots.txt through untouched", () => {
-    const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
+  it("passes feeds like any other request (reader on an ISP)", () =>
+    expectPassed(makeEvent({ uri: "/feed.xml", asn: "3215", userAgent: "Reeder/5060003 CFNetwork/3896" })));
 
-// =====================================================
-describe("robots.txt for blocked bots", () => {
-  it("lets a blocked bot's /robots.txt through", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" })));
-  });
+  it("blocks a feed reader on an unknown ASN without a whitelisted UA", () =>
+    expectBlocked(makeEvent({ uri: "/feed.xml", asn: "99999", userAgent: "SomeReader/1.0" })));
 
-  it("still lets a normal browser's /robots.txt through untouched", () => {
-    const event = makeEvent({ uri: "/robots.txt", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
+  it("fails open when the store read throws", async () => {
+    kvs.exists = async () => { throw new Error("KVS unavailable"); };
+    await expectPassed(makeEvent({ asn: "99999" }));
   });
 });
 
-// =====================================================
-// feed.xml: 404 becomes a fake empty Atom feed (200)
-// =====================================================
-describe("feed.xml for blocked bots", () => {
-  function expectFakeFeed(result) {
-    expect(result.statusCode).toBe(200);
-    expect(result.headers["content-type"].value).toContain("application/atom+xml");
-    expect(result.body).toContain("<feed xmlns=\"http://www.w3.org/2005/Atom\">");
-    expect(result.body).not.toContain("<entry>");
-  }
-
-  it("answers a blocked bot's /feed.xml with an empty Atom feed", () => {
-    expectFakeFeed(handler(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" })));
-  });
-
-  it("answers a no-user-agent /feed.xml with an empty Atom feed", () => {
-    expectFakeFeed(handler(makeEvent({ uri: "/feed.xml", userAgent: null })));
-  });
-
-  it("still lets a normal browser's /feed.xml through untouched", () => {
-    const event = makeEvent({ uri: "/feed.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
-// sitemap.xml gets no special treatment
-// =====================================================
-describe("sitemap.xml for blocked bots", () => {
-  it("answers a blocked bot's /sitemap.xml with a plain 404", () => {
-    expectNotFound(handler(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" })));
-  });
-
-  it("still lets a normal browser's /sitemap.xml through untouched", () => {
-    const event = makeEvent({ uri: "/sitemap.xml", userAgent: "Mozilla/5.0 (Macintosh) Safari/604.1" });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-// =====================================================
-// Null or empty user-agent → 404
-// =====================================================
-describe("null or empty user-agent blocking", () => {
-  it("blocks a request with no user-agent header", () => {
-    const result = handler(makeEvent({ uri: "/about", userAgent: null }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("blocks a request with an empty user-agent value", () => {
-    const result = handler(makeEvent({ uri: "/about", userAgent: "" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("blocks a request with a whitespace-only user-agent value", () => {
-    const result = handler(makeEvent({ uri: "/about", userAgent: "   " }));
-    expect(result.statusCode).toBe(404);
-  });
-
-});
-
-// =====================================================
-// Percent-encoded URI bypass prevention
-// =====================================================
-describe("percent-encoded URI handling", () => {
-  it("returns 404 for a .php file with an encoded dot (%2E)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-login%2Ephp" })));
-  });
-
-  it("returns 404 for a bad folder with an encoded character (%77p-includes)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/%77p-includes/load.php" })));
-  });
-
-  it("returns 404 for cgi-bin with an encoded hyphen (%2D)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/cgi%2Dbin/test" })));
-  });
-
-  it("returns 404 for a malformed percent-encoded URI", () => {
-    const result = handler(makeEvent({ uri: "/%zz/path" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("returns 404 for a double-encoded dotfile path (%252F hiding the / from a single decode)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/admin%252F.env" })));
-  });
-});
-
-
-// =====================================================
-// Dotfile / dot-directory path blocking → 404
-// =====================================================
-describe("dotfile path blocking", () => {
-  const dotfileCases = [
-    "/.env",
-    "/.env.local",
-    "/config/.env",
-    "/.git/config",
-    "/.git",
-    "/.docker/config.json",
-    "/.netrc",
-    "/.yarnrc",
-    "/.aws/config",
-    "/.aws/credentials",
-    "/.ssh/id_rsa",
-    "/.ssh/authorized_keys",
-    "/.ssh/known_hosts",
-    "/.svn/entries",
-    "/.profile",
-    "/.zshrc",
-    "/.bashrc",
-    "/.bash_history",
-  ];
-
-  it.each(dotfileCases)("returns 404 for %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it("returns 404 for /.well-known/ paths (no exceptions, no ACME challenge on this site)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.well-known/security.txt" })));
-  });
-});
-
-// =====================================================
-// Security scan blocking — .sql and .bak extensions → 404
-// =====================================================
-describe(".sql and .bak file blocking", () => {
-  it("returns 404 for a .sql file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/dump.sql" })));
-  });
-
-  it("returns 404 for a .bak file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/config.bak" })));
-  });
-
-  it("returns 404 for a .swp file", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-config.php.swp" })));
-  });
-
-  it("returns 404 for a trailing ~ editor backup", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-config.php~" })));
-  });
-});
-
-// =====================================================
-// Security scan blocking — WordPress content/API probing → 404
-// =====================================================
-describe("wp-content and wp-json blocking", () => {
-  it("returns 404 for /wp-content/ paths (no trailing slash)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads" })));
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore" })));
-  });
-
-  it("returns 404 for /wp-content/ paths with trailing slash", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/uploads/" })));
-    expectNotFound(handler(makeEvent({ uri: "/wp-content/plugins/WordPressCore/" })));
-  });
-
-  it("returns 404 for /wp-json/ (no trailing slash)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-json" })));
-  });
-
-  it("returns 404 for /wp-json/ (trailing slash)", () => {
-    expectNotFound(handler(makeEvent({ uri: "/wp-json/" })));
-  });
-});
-
-// =====================================================
-// Security scan blocking — credential/config file scanning → 404
-// =====================================================
-describe("credential and config file scanning", () => {
-  const extensionCases = [
-    "/web.config",
-    "/docker-compose.yaml",
-    "/.gitlab-ci.yml",
-    "/.aider.conf.yml",
-    "/rclone.conf",
-    "/server.key",
-    "/key.pem",
-    "/trace.axd",
-    "/.boto",
-    "/.s3cfg",
-    "/.npmrc",
-    "/.htpasswd",
-    "/terraform.tfstate",
-  ];
-
-  it.each(extensionCases)("returns 404 for %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it("returns 404 for /.docker/config.json", () => {
-    expectNotFound(handler(makeEvent({ uri: "/.docker/config.json" })));
-  });
-
-  const secretJsonCases = [
-    "/secrets.json",
-    "/config.json",
-    "/credentials.json",
-    "/service-account.json",
-    "/service_account.json",
-    "/firebase-adminsdk.json",
-    "/serviceAccountKey.json",
-    "/settings.json",
-    "/env.json",
-    "/auth.json",
-    "/app-config.json",
-    "/appsettings.json",
-    "/openapi.json",
-    "/swagger.json",
-    "/amplifyconfiguration.json",
-  ];
-
-  it.each(secretJsonCases)("returns 404 for root-level %s", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-
-  it("does not block legitimate nested .json data files", () => {
-    const event = makeEvent({ uri: "/about/data/blogs.json" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("blocks /manifest.json (not in the json allowlist)", () => {
-    expect(handler(makeEvent({ uri: "/manifest.json" })).statusCode).toBe(404);
-  });
-});
-
-// =====================================================
-// Security scan blocking — admin folder variants → 404
-// =====================================================
-describe("admin folder blocking", () => {
-  const cases = [
-    ["/admin/login", "admin"],
-    ["/administrator/index.php", "administrator"],
-    ["/wp-admin/admin-ajax.php", "wp-admin"],
-    ["/phpmyadmin/index.php", "phpmyadmin"],
-    ["/actuator/configprops", "actuator"],
-    ["/actuator/env", "actuator"],
-  ];
-
-  it.each(cases)("returns 404 for %s (%s)", (uri) => {
-    expectNotFound(handler(makeEvent({ uri })));
-  });
-});
-
-// =====================================================
-// ads.txt / llms.txt with blocked user-agents
-// =====================================================
-describe("ads.txt and llms.txt follow normal UA blocking", () => {
-  it("blocks /ads.txt for a blocked user-agent", () => {
-    const result = handler(makeEvent({ uri: "/ads.txt", userAgent: "CCBot/2.0" }));
-    expect(result.statusCode).toBe(404);
-  });
-
-  it("blocks /llms.txt for a blocked user-agent", () => {
-    const result = handler(makeEvent({ uri: "/llms.txt", userAgent: "CCBot/2.0" }));
-    expect(result.statusCode).toBe(404);
-  });
-});
-
-// =====================================================
-// .json allowlist
-// =====================================================
-describe("json allowlist", () => {
-  it.each([
-    "/about/data/blogs.json",
-    "/human.json",
-    "/about/data/pages.json",
-    "/about/data/visitors.json",
-    "/pagefind/pagefind-entry.json",
-  ])("allows %s", (uri) => {
-    const event = makeEvent({ uri });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it.each([
-    "/package.json",
-    "/composer.json",
-    "/about/data/other.json",
-    "/x/human.json",
-    "/human.json.json",
-    "/%70ackage.json",
-  ])("blocks %s", (uri) => {
-    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
-  });
-
-  it("blocks a bad user-agent on an allowed json file", () => {
-    expect(handler(makeEvent({ uri: "/human.json", userAgent: "Scrapy/2.0" })).statusCode).toBe(404);
-  });
-});
-
-// =====================================================
-// .js allowlist
-// =====================================================
-describe("js allowlist", () => {
-  it.each([
-    "/javascript/recommended-blogs.js",
-    "/javascript/chart.umd.min.js",
-    "/javascript/bootstrap.bundle.min.js",
-    "/pagefind/pagefind.js",
-    "/pagefind/pagefind-worker.js",
-    "/pagefind/pagefind-ui.js",
-  ])("allows %s", (uri) => {
-    const event = makeEvent({ uri });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it.each([
-    "/app.js",
-    "/main.js",
-    "/javascript/other.js",
-    "/x/pagefind/pagefind.js",
-    "/pagefind/pagefind.js.js",
-    "/%61pp.js",
-  ])("blocks %s", (uri) => {
-    expect(handler(makeEvent({ uri })).statusCode).toBe(404);
-  });
-
-  it("blocks /JAVASCRIPT/../app.js as a bad actor", () => {
-    expect(handler(makeEvent({ uri: "/JAVASCRIPT/../app.js" })).statusCode).toBe(404);
-  });
-
-  it("blocks a bad user-agent on an allowed js file", () => {
-    expect(handler(makeEvent({ uri: "/pagefind/pagefind.js", userAgent: "Scrapy/2.0" })).statusCode).toBe(404);
-  });
-});
-
-// =====================================================
-// Pass-through for normal traffic
-// =====================================================
 describe("pass-through", () => {
-  it("returns the request object unchanged for a normal path", () => {
-    const event = makeEvent({ uri: "/about/", userAgent: "Mozilla/5.0" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("returns the request object unchanged for the root path", () => {
-    const event = makeEvent({ uri: "/" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("returns the request object unchanged for a directory-style path with no trailing slash", () => {
-    const event = makeEvent({ uri: "/about" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("returns the request object unchanged for a file path with no trailing slash", () => {
-    const event = makeEvent({ uri: "/about.html" });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through iPhone Safari iOS 18.6 / Safari 26 on Mobile", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through current Firefox on Linux", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Tor Browser (Firefox ESR 140)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; rv:140.0) Gecko/20100101 Firefox/140.0",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through real Firefox 140 with its frozen rv:109.0 (Mozilla's IE11-workaround UA freeze)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/140.0",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows Gemini-Deep-Research through", () => {
-    const event = makeEvent({
-      userAgent: "Mozilla/5.0 (compatible; Gemini-Deep-Research; https://google.com/bot.html)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Chrome/150 on macOS", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows real Bingbot through", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through Chrome/150 on Windows", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("passes through a real current Chrome on Linux x86_64 (aarch64 desktop Chrome would be unusual but is no longer specially blocked)", () => {
-    const event = makeEvent({
-      uri: "/",
-      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-
-  it("allows Google-InspectionTool through", () => {
-    const event = makeEvent({
-      userAgent: "Mozilla/5.0 (compatible; Google-InspectionTool/1.0)",
-    });
-    expect(handler(event)).toEqual(event.request);
-  });
-});
-
-
-
-// =====================================================
-// Cover referer check
-// =====================================================
-describe("Cover referer check", () => {
-  const ref = (v) => ({ referer: { value: v } });
-  const site = "https://post-tenebras-lire.net/blog/x/";
-
-  for (const uri of ["/assets/posts/a.webp", "/assets/posts_640/a.webp"]) {
-    it(`allows ${uri} with site referer`, () => {
-      expectNotBlocked(handler(makeEvent({ uri, extraHeaders: ref(site) })));
-    });
-    it(`blocks ${uri} without referer`, () => {
-      expectNotFound(handler(makeEvent({ uri })));
-    });
-    it(`blocks ${uri} with foreign referer`, () => {
-      expectNotFound(
-        handler(makeEvent({ uri, extraHeaders: ref("https://evil.example/?https://post-tenebras-lire.net/") }))
-      );
-    });
-  }
-
-  it("does not filter other assets", () => {
-    expectNotBlocked(handler(makeEvent({ uri: "/assets/svgs/ecrit-par-un-humain.svg" })));
-    expectNotBlocked(handler(makeEvent({ uri: "/assets/posts_other/no_drm.avif" })));
-    expectNotBlocked(handler(makeEvent({ uri: "/assets/posts/a.avif" })));
-  });
+  it.each(["/", "/about/", "/about", "/backup.zip", "/robots.txt", "/feed.xml"])("returns the request for %s", (uri) =>
+    expectPassed(makeEvent({ uri })));
 });

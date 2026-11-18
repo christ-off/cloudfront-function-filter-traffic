@@ -8,23 +8,102 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
-Checks run in this order; the first match wins. Reasoning is under
+Checks run in this order; the first match wins. Every block is a plain `404` (no fake
+`robots.txt` or empty feed). Reasoning is under
 [Blocking rules — rationale](#blocking-rules--rationale).
 
-| # | Rule | Response |
-|---|---|---|
-| 0 | URI allowlist: `/backup.zip` bypasses everything below | pass-through |
-| 1 | Missing, empty or whitespace-only `User-Agent` | `404` |
-| 2 | Bad actor: path traversal, dotfile paths, security-scan URIs, truncated/malformed Chrome UA | `404` |
-| 3 | Blocked ASN ([asn-blocking](#asn-blocking)) | `404` |
-| 4 | Blocked bot/scraper user-agent ([blocked-bot-regex](#blocked-bot-regex)) | `404` |
-| 5 | `.json` / `.js` not on the allowlists, post covers without the site `Referer` | `404` |
-| 6 | Anything else | pass-through |
+```
+request
+ │
+ ├─ no user agent ─────────────────────────────▶ 404
+ ├─ URI undecodable ───────────────────────────▶ 404
+ │
+ ├─ security scan: traversal, dotfile, ────────▶ 404
+ │    php/wp/env/… URI, bad Chrome UA
+ ├─ bad-UA regex ──────────────────────────────▶ 404
+ ├─ .json/.js not allowlisted, cover referer ──▶ 404
+ │
+ ├─ ASN in function whitelist ─────────────────▶ pass
+ ├─ hosted-software UA (mastodon, bingbot, ────▶ pass
+ │    feed readers…)
+ ├─ ASN in function blocklist ─────────────────▶ 404
+ ├─ no ASN header ─────────────────────────────▶ pass (fail open)
+ │
+ └─ KV: exists(asn)?
+        ├─ yes (ISP / research) ───────────────▶ pass
+        ├─ no ─────────────────────────────────▶ 404
+        └─ KV error ───────────────────────────▶ pass (fail open)
+```
 
-Every `404` for `/feed.xml` becomes a `200` with an empty Atom feed
-([fake-empty-feed](#fake-empty-feed)). A directory-style path without a trailing slash
-(e.g. `/about`) is not rewritten: the origin replies `301` to `/about/`, which shows the
-path **exists**, whereas a missing path gets a `404`.
+The ASN decision comes last so that the KeyValueStore is read only for requests that
+survived every cheap check. The store is filled weekly by
+[`asn-kvs-sync`](../asn-kvs-sync/) with the `isp` and `education_research` ASNs (about 34.4k
+keys): **an ASN missing from the store is blocked**. Plan and history:
+`asn-kvs-sync/docs/ASN blocking — consolidated plan.md`.
+
+**Google is excluded on purpose.** Blocking Google (indexing, FeedFetcher, image fetcher)
+is a voluntary decision to exclude Google tools from the blog: `googlebot`,
+`google-cloudvertexbot`, `googleother`, `storebot-google`, `feedfetcher-google` and
+`googleimageproxy` are in the bad-UA regex, and AS15169 is on the ASN blocklist. Do not
+add a Google exception (for search ranking, the feed or images) without revisiting this
+decision.
+
+Rules behind the order:
+
+- **"pass" before the KV only skips the lookup.** The `.json`/`.js` allowlist and the
+  cover-referer check run earlier and apply to every request, whitelisted ASN or not.
+- **The ASN whitelist** holds three ASNs: AS60653 (Feedly, used only by Feedly although
+  the KV category is `business`), AS199064 (Qwant) and AS714 (Apple, Applebot). It runs after
+  the bad-UA regex, so a blocked bot UA from a whitelisted ASN is still blocked.
+- **The hosted-software UA check sits before the ASN blocklist.** Bingbot comes from AS8075
+  (Microsoft), which is blocklisted on purpose because the network hosts other tools we do not
+  want; only the UA tokens (`bingbot/`, Mastodon, feed readers…) get through it.
+  AS8075 is never whitelisted by ASN.
+- **The ASN blocklist stays** next to the KV. It stops the lookup for known bad ASNs and blocks
+  ASNs the KV marks `isp` that we still refuse (e.g. Chinese ISPs 4134, 23724). Hosting-only
+  verification still applies before adding an ASN.
+- **Fail open** when the `CloudFront-Viewer-ASN` header is absent or not a number, or when the
+  KV read fails (`kvs.exists` inside `try/catch`).
+- **Feeds are ordinary requests**: no ASN exemption and no `feedfetcher-google` exception.
+- **The handler is `async`** and the KV must be associated with the function: the deploy
+  workflow passes it from the `CLOUDFRONT_KVS_ARN` secret (`KeyValueStoreAssociations`).
+
+**Size.** `function.js` is about 7.4 KB (limit 10 KB). The bad-UA regex (1.6 KB) stays: it saves
+KV reads and catches scrapers on ISP ASNs that the KV lets through.
+
+### Feed readers
+
+The feed is a normal request, so a reader hosted on an ASN missing from the KV
+gets `404` unless its user agent (or ASN) is whitelisted. `logs.db` (`/feed.xml` and `/rss.xml`,
+Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
+
+| Reader (UA token) | Hits | ASN | Outcome without a UA whitelist |
+|---|---|---|---|
+| `feedly` | 1,289 | 60653 (business, used only by Feedly) | passes via the ASN whitelist |
+| `feedbin` | 572 | 6939 (Hurricane Electric) | blocked |
+| `birchfeed` | 152 | 400940, 16509 (AWS, blocklisted) | blocked |
+| `feeder.co` | 81 | 16276 (OVH), 14061 (DigitalOcean) | blocked |
+| `miniflux` | 74 | 12322 (`isp` in the KV) | passes via the KV |
+| `freshrss` | 42 | 16276, 24940 (blocklisted), 8560 (not in the KV), 12322 (`isp`) | blocked on 16276, 24940, 8560 |
+| `newsblur` | 35 | 24940 (Hetzner, blocklisted) | blocked |
+| `flus/` | 16 | 24940 | blocked |
+| `inoreader` | 8 | 8717 (`isp` in the KV) | passes via the KV |
+| `kriss` | 1 | 50474 (not in the KV) | blocked |
+| `reeder` | 39 | 3215 (`isp` in the KV) | passes via the KV |
+| `ms-office` (Outlook) | 50 | 62044 (Zscaler, blocklisted) | blocked |
+| `feedfetcher-google` | 42 | 15169 | blocked (exception removed) |
+
+Feedly is covered by the ASN whitelist (below), not by a UA token. The UA whitelist
+contains at least `feedbin`, `birchfeed`, `feeder.co`,
+`newsblur`, `freshrss`, `flus/`, `kriss` (name tokens only, no versions). `miniflux` and
+`inoreader` pass through the KV today, but self-hosted instances on a VPS would not, so
+whitelisting `miniflux` is cheap insurance. Not recoverable by a UA token: one Chrome-UA client polling from AS29222 (152
+hits, blocklisted, UA identical to a normal browser), Outlook behind Zscaler, and unnamed
+clients on hosting ASNs. `app::jupiter/` and `emacs/` are already in `blockedBotRegex`.
+
+KV membership was checked on Nov 18 with `aws cloudfront-keyvaluestore get-key` against
+`asn-allowed-categories`: 3215, 5410, 8717, 12322 and 18403 are `isp`; 60653, 6939, 16509,
+16276, 14061, 24940, 8560, 12574, 62044, 15169, 29222 and 50474 are absent.
 
 ## Compute utilization baseline
 
@@ -54,43 +133,12 @@ the way it is) lives here instead, to keep the deployed file under
 CloudFront's 10 KB function-size limit. Each heading below matches the
 identifier the code points at.
 
-### allowlisted-uris
-Requests for these exact URIs pass straight through to the origin, before
-even the missing-user-agent check — nothing below this point can block them,
-including the bot-UA checks. Case-insensitive exact-path match.
-
-- `/backup.zip` — allowed at the user's request. Do not live-test this rule
-  against the deployed function (e.g. `aws cloudfront test-function`); verify
-  it with the unit tests only.
-
-To add a URI: add `|your-path` (escape `.`) inside the group of `allowlistedUriRegex`.
-
 ### uri-decoding
 Only ~3% of URIs contain a `%`-escape (per `logs.db`); the rest skip the
 `decodeURIComponent` call entirely. Decoding loops (capped at 3 rounds) rather
 than running once, so a double-encoded probe like `/admin%252F.env` — which a
 single decode only turns into `/admin%2F.env`, leaving the `/` hidden from the
 dotfile/prefix checks — still ends up fully decoded before matching.
-
-### bad-actor-response-mapping
-Bad actors, ASNs and bots get a plain `404 Not Found` on every path except the
-`allowlisted-uris`, except `/robots.txt` and `/feed.xml`, which get a fake 200
-([fake-robots-txt](#fake-robots-txt), [fake-empty-feed](#fake-empty-feed)). Every
-other rejection (`.json`/`.js` allowlists, cover referer check, undecodable URIs) uses the same
-`404`, so blocked clients cannot tell which rule matched.
-
-### fake-robots-txt
-A blocked client requesting `/robots.txt` gets `200` with `User-agent: *` /
-`Disallow: /` instead of a 404, so crawlers that honour it stop on their own.
-It is not allowlisted: allowed clients still reach the origin's robots.txt.
-
-### fake-empty-feed
-Whenever the function would answer `404` and the URI is `/feed.xml` (case-insensitive), it
-replies `200` with a valid but empty Atom feed (`application/atom+xml`, no entries, fixed
-`updated` date) instead. Feed readers treat it as a feed with nothing new and keep polling
-quietly, rather than treating the 404 as an error. A `301` to `/backup.zip` and a bodyless
-`304` were both tried and rejected: the 301 was useless and a 304 is only valid as an answer
-to a conditional request. This covers every 404 rule (missing UA, bad actor, ASN, bot).
 
 ### bad-actor-check-order
 `isBadActor` runs path traversal, then dotfile paths, then security scans,
@@ -222,10 +270,22 @@ its UA has no `/`-separated version, so the name phrase is matched).
 - `PetalBot` (Huawei): honors the `robots.txt` disallow list.
 - `SummalyBot` (Misskey link previews), `Linkwarden (Server-Side Fetch)` (self-hosted link manager), `Synapse (bot; ...)` (Matrix URL previews): legitimate server-side fetchers on behalf of users. Synapse isn't matched anyway (no generic `bot` substring); noted so it stays excluded if the regex is ever extended.
 
-### feedfetcher-google
-`FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)` (Google's feed reader) is allowed on
-`/feed.xml` only and blocked everywhere else. It is handled in `isBlockedBot` rather than in
-[blocked-bot-regex](#blocked-bot-regex), so it is not in the regex.
+### filtering-sequence
+The order is in [What the function does](#what-the-function-does). Principle: cheapest checks first, the
+ASN decision last because it can cost a KeyValueStore read (2M reads/month free, then $0.03 per million).
+Responses are all a plain `404`: a blocked client cannot tell which rule matched, and there is no
+fake robots.txt or fake feed (removed Nov 18, 2026, together with the `/backup.zip` allowlist and the
+feed exemption from the ASN blocklist).
+
+### asn-kvs
+`kvsHandle.exists(asn)` answers "is this ASN an ISP or research network". The store is filled by
+`asn-kvs-sync` and holds only the allowed categories, so absence means block. `exists` is used rather
+than `get` because `get` throws on a missing key and the value is not needed. Any error fails open.
+
+### asn-whitelist
+ASNs that skip the blocklist and the KV: 60653 (Feedly: used only by Feedly, although the ipverse
+category is `business`), 199064 (Qwant), 714 (Apple). Not whitelisted on purpose: 8075 (Microsoft,
+Bingbot passes by UA) and 15169 (Google, blocklisted).
 
 ### asn-blocking
 A scraper with a frozen Chrome 152 UA (`Chrome/152.0.0.0` on `X11; Linux x86_64`) crawls from a rotating pool of AWS
@@ -233,24 +293,25 @@ us-east-1 IPs (one IP per request), so blocking by IP is useless against it. Blo
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
 and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
-Folded into the same condition as
-[bad-actor-response-mapping](#bad-actor-response-mapping), so blocked ASNs get
-the usual 404. The URI allowlist runs first, so
-`/backup.zip` stays reachable. If the header is
+Blocked ASNs get the usual 404. The check runs after the
+cheap URI/UA checks and the ASN whitelist, and before the KeyValueStore lookup
+([filtering-sequence](#filtering-sequence)). If the header is
 absent (policy not attached) nothing matches: fails open.
 
 Blocked ASNs (all at the user's request):
 
 | ASN | Network |
 |---|---|
+| 15169 | Google LLC — Google's own network (Googlebot, FeedFetcher…); excluded on purpose, see "Google is excluded on purpose" above |
 | 16509, 14618 | AMAZON-02, AMAZON-AES |
 | 215125 | Church of Cyberology, NL scraper |
 | 29222 | Infomaniak, CH feed scraper |
 | 396982 | Google Cloud, NL |
 | 1299 | Arelion Sweden AB |
 | 48090 | Techoff SRV Limited, Amsterdam NL |
-| 8075 | Microsoft Corporation, HK |
+| 8075 | Microsoft Corporation, HK — hosts other tools we do not want; Bingbot gets through by UA token only, never by ASN |
 | 4134 | CHINANET BACKBONE, Shijiazhuang CN |
+| 4837 | CHINA UNICOM China169 Backbone, Beijing CN — consumer ISP (in the KV as `isp`); added Nov 18, 2026: the only traffic seen since Nov 11 is Baiduspider (95 hits, 74 IPs) and a few scanners with malformed UAs |
 | 23724 | IDC China Telecommunications, Beijing CN |
 | 271315 | Netfusion Internet LTDA, Rio de Janeiro BR |
 | 209334 | Modat B.V., security scanner, CA |
@@ -304,19 +365,14 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Mastodon, Friendica, Iceshrimp, Misskey, DuckDuckBot, humanjson-survey, SummalyBot link
-previews) that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
+run by third parties (Bingbot, Mastodon, Friendica, Iceshrimp, Misskey, DuckDuckBot, SummalyBot link
+previews) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux)
+that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
 what it holds: software that is acceptable even though its host is not. A match skips
-only the ASN check, all other rules still apply. Matched on the name token
+the ASN blocklist and the KV lookup, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
 
-### asn-feed-exemption
-Hosted feed readers (Birchfeed, FreshRSS, Flus, …) run from blocked cloud ASNs. Rather than
-list every reader in `allowedHostedSoftwareRegex`, `/feed.xml` and `/rss.xml` skip the ASN check (`isAsnExemptUri`, exact path match on the
-decoded, lowercased URI). Only the ASN check is skipped: bad-actor rules, the bot blocklist and the
-`feedfetcher-google` rule still apply. A scraper from a blocked ASN can therefore still fetch the feed
-itself, which is public anyway.
-
+### asn-header-setup
 **Setup — getting the ASN header in AWS.** The function only sees
 `CloudFront-Viewer-ASN` if the distribution requests it. This is done once per
 distribution, and the header is not part of the cache key.
@@ -349,7 +405,7 @@ is not attached.
 
 **Trade-off:** this blocks everything hosted on AWS, including Amazonbot and
 any AWS-hosted SummalyBot / Linkwarden / Synapse instance. If such traffic
-shows up, exempt those UA tokens inside `isBlockedAsn`. Some Amazon ranges are
+shows up, add those UA tokens to `allowedHostedSoftwareRegex`. Some Amazon ranges are
 announced from other ASNs (e.g. AS8987 EU): check bgp.he.net before extending.
 
 ### json-allowlist
@@ -392,7 +448,9 @@ CloudFront Functions run at **every edge location** with sub-millisecond startup
 
 Copy the body of `function.js` into the CloudFront Functions editor in the AWS Console (or deploy via AWS CLI / CDK / Terraform) and associate it with the **viewer request** event of your distribution.
 
-> **Important:** remove the `export { handler }` line before deploying — the JS 2.0 runtime does not support ES module `export`. It exists only so Vitest can import the function.
+> **Important:** remove the `export { handler }` line before deploying — the JS 2.0 runtime does not support ES module `export`. It exists only so Vitest can import the function. The `import cf from 'cloudfront'` line stays: it is the runtime module that gives access to the KeyValueStore (Vitest replaces it with `test-support/cloudfront-stub.js`).
+
+The function reads the ASN KeyValueStore, so the store must be associated with it. The GitHub Action does this on every deploy (`KeyValueStoreAssociations` in `update-function`) from the repository secret `CLOUDFRONT_KVS_ARN` (output `KeyValueStoreArn` of the `asn-kvs-sync` stack). Set that secret before the first push, and make sure the deploy IAM user may associate the store. The distribution also needs the `CloudFront-Viewer-ASN` header ([asn-header-setup](#asn-header-setup)).
 
 ---
 
@@ -405,4 +463,4 @@ npm test           # run once
 npm run test:watch # watch mode
 ```
 
-`function.test.js` builds a minimal CloudFront event (`{ request: { uri, headers } }`) and asserts on the return value: the original `request` (pass-through) or a synthetic response with `statusCode`, `headers` and `body`. It covers every rule above: scanner URIs, bot UAs, ASNs, the allowlisted URIs, the fake `/feed.xml`, empty UAs, percent-encoded URIs and pass-through.
+`function.test.js` builds a minimal CloudFront event (`{ request: { uri, headers } }`) and asserts on the return value: the original `request` (pass-through) or a synthetic response with `statusCode`, `headers` and `body`. It stays small on purpose: one or a few representative cases per rule (cheap checks, asset rules, ASN whitelist / hosted software / blocklist / fail-open, KeyValueStore hit / miss / error, pass-through). The `cloudfront` module only exists in the CloudFront runtime, so Vitest aliases it to `test-support/cloudfront-stub.js`, whose `kvs.exists` each test can override.

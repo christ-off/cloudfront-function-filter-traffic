@@ -40,6 +40,8 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Update CloudFront function
+        env:
+          KVS_ARN: ${{ secrets.CLOUDFRONT_KVS_ARN }}
         run: |
           grep -v 'export {' function.js > function.deploy.js
 
@@ -47,10 +49,11 @@ jobs:
             --name "${{ secrets.CLOUDFRONT_FUNCTION_NAME }}" \
             --query 'ETag' --output text)
 
+          # The function reads the ASN KeyValueStore, so it must stay associated with it
           aws cloudfront update-function \
             --name "${{ secrets.CLOUDFRONT_FUNCTION_NAME }}" \
             --function-code fileb://function.deploy.js \
-            --function-config Runtime=cloudfront-js-2.0,Comment="" \
+            --function-config "{\"Comment\":\"\",\"Runtime\":\"cloudfront-js-2.0\",\"KeyValueStoreAssociations\":{\"Quantity\":1,\"Items\":[{\"KeyValueStoreARN\":\"$KVS_ARN\"}]}}" \
             --if-match "$ETAG"
 
       - name: Publish CloudFront function
