@@ -77,7 +77,7 @@ The feed is a normal request, so a reader hosted on an ASN missing from the KV
 gets `404` unless its user agent (or ASN) is whitelisted. `logs.db` (`/feed.xml` and `/rss.xml`,
 Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
 
-| Reader (UA token) | Hits | ASN | Outcome without a UA whitelist |
+| Reader (UA token) | Hits | ASN | Outcome without a UA token whitelist (historical, before Nov 18) |
 |---|---|---|---|
 | `feedly` | 1,289 | 60653 (business, used only by Feedly) | passes via the ASN whitelist |
 | `feedbin` | 572 | 6939 (Hurricane Electric) | blocked |
@@ -95,10 +95,10 @@ Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
 | `feedfetcher-google` | 42 | 15169 | blocked (exception removed) |
 
 Feedly is covered by the ASN whitelist (below), not by a UA token. The UA whitelist
-contains at least `feedbin`, `birchfeed`, `feeder.co`,
-`newsblur`, `freshrss`, `flus/`, `kriss` (name tokens only, no versions). `miniflux` and
-`inoreader` pass through the KV today, but self-hosted instances on a VPS would not, so
-whitelisting `miniflux` is cheap insurance. Not recoverable by a UA token: one Chrome-UA client polling from AS29222 (152
+(`allowedHostedSoftwareRegex`) contains `feedbin`, `birchfeed`, `feeder.co`,
+`newsblur`, `freshrss`, `flus/`, `kriss feed agent`, `rss-parser` and `miniflux` (name tokens only,
+no versions). `miniflux` passes through the KV from AS12322, but self-hosted instances on a VPS would
+not, so it is whitelisted anyway. `inoreader` passes through the KV and has no UA token. Not recoverable by a UA token: one Chrome-UA client polling from AS29222 (152
 hits, blocklisted, UA identical to a normal browser), Outlook behind Zscaler, and unnamed
 clients on hosting ASNs. `app::jupiter/` and `emacs/` are already in `blockedBotRegex`.
 
@@ -106,23 +106,13 @@ KV membership was checked on Nov 18 with `aws cloudfront-keyvaluestore get-key` 
 `asn-allowed-categories`: 3215, 5410, 8717, 12322 and 18403 are `isp`; 60653, 6939, 16509,
 16276, 14061, 24940, 8560, 12574, 62044, 15169, 29222 and 50474 are absent.
 
-## Compute utilization baseline
+## Compute utilization
 
-Measured 2026-09-23 at commit `2bc8248` (`function.js` 9,298 bytes) with
-`aws cloudfront test-function` on the DEVELOPMENT stage, using `test-event.json`
-(UA `Mozilla/5.0 (compatible; test)`) and only `request.uri` changed. Scale 0–100
-(hard limit 100, above which CloudFront throttles):
-
-| URI | Result | Utilization |
-|---|---|---|
-| `/index.html` | pass-through | 15 |
-| `/about/x/y/z/page.html` | pass-through | 15 |
-| `/id_rsa` | blocked | 11 |
-| `/wp-config.old` | blocked | 10 |
-
-Re-measure after adding rules and compare against this table; pass-through is
-the worst case since it runs every check. Note: `ComputeUtilization` is coarse
-and can vary by a point or two between runs.
+The 2026-09-23 baseline predates the KeyValueStore lookup and the `async` handler, so it was removed.
+To measure, run `aws cloudfront test-function` on the DEVELOPMENT stage with `test-event.json`
+(only `request.uri` changed; the event needs a `cloudfront-viewer-asn` header to exercise the KV read).
+Scale 0–100 (hard limit 100, above which CloudFront throttles). Pass-through is the worst case since
+it runs every check. `ComputeUtilization` is coarse and can vary by a point or two between runs.
 
 ---
 
@@ -346,15 +336,13 @@ Blocked ASNs (all at the user's request):
 | 62044 | Zscaler Switzerland GmbH, Zürich CH — cloud security proxy (not a hosting provider) |
 | 136907 | Huawei Clouds, Singapore SG — hosting provider (cloud compute) |
 | 9009 | M247 Europe SRL, Secaucus US — hosting provider (VPS, dedicated servers; also VPN exit infrastructure) |
-| 213954 | Global Transit Systems LLC, Helsinki FI — shell hosting / IP-leasing network |
 | 35830, 43444 | Fast Servers (Pty) Ltd, São Paulo BR / New York City US — hosting provider (VPS, dedicated servers) |
 | 26548 | PureVoltage Hosting Inc., Seattle US — hosting provider (dedicated servers, VPS, DDoS-protected hosting) |
 | 210906 | UAB "Bite Lietuva" (BITE-US), Dallas US — datacenter IP space (~23k IPv4) behind Psychz Networks (AS40676); not the Lithuanian consumer network (AS13194) |
 | 46475 | Limestone Networks, Inc., Frankfurt DE — hosting provider (dedicated servers, colocation, cloud) |
 | 12876 | Scaleway SAS, Milan IT — hosting provider (cloud instances, dedicated servers; formerly Online.net) |
 | 212286 | LonConnect Ltd, London GB — small hosting/VPS provider (not verified against a registry in-session) |
-| 216014 | BestDC Limited, Amsterdam NL — hosting/datacenter provider (not verified against a registry in-session) |
-| 213954 | Global Transit Systems LLC (GTS-AS), registered Miami US — new AS (created 2025-10-29), ~14.6k IPv4 addresses geolocated mostly across Europe (not New York), no customers or direct peering, upstream is a Finnish hosting company; one aggregator (ipregistry) classes it as hosting, another as ISP; likely hosting/proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session |
+| 213954 | Global Transit Systems LLC (GTS-AS), Helsinki FI / registered Miami US — shell hosting / IP-leasing network; new AS (created 2025-10-29), ~14.6k IPv4 addresses geolocated mostly across Europe (not New York), no customers or direct peering, upstream is a Finnish hosting company; one aggregator (ipregistry) classes it as hosting, another as ISP; likely hosting/proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session |
 | 59651 | QualityNetwork, hosting provider (registered IL, geolocated Vantaa FI; not verified against a registry in-session) |
 | 19148 | Leaseweb USA, Inc., Phoenix US — hosting provider (dedicated servers, cloud, CDN; not a consumer/business ISP; not verified against a registry in-session) |
 | 3257 | GTT Communications Inc., Ashburn US — Tier-1 IP transit carrier / business ISP (not hosting-only; also serves enterprise customers; not verified against a registry in-session) |
@@ -365,7 +353,7 @@ Blocked ASNs (all at the user's request):
 | 138915 | Kaopu Cloud HK Limited (KAOPU-HK), Wan Chai HK — cloud/hosting provider (~185k IPv4 addresses; APNIC and quantcdn `hosting`; not a consumer/business ISP); seen scanning from a single IP, 367 requests all 404 |
 | 60729 | Stiftung Erneuerbare Freiheit (TORSERVERS-NET), Berlin DE — runs the torservers.net / artikel10.org Tor exit relays (e.g. `berlin01.tor-exit.artikel10.org`); anonymising-proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session (`asn_info` has no category for it) |
 | 201341 | trafficforce, UAB (AS name Centurion-Internet-services), Lithuania, geolocated London GB — hosting network (RIPE, ASN type hosting; ~66k IPv4; peers with other hosting providers; not a consumer/business ISP; not verified against a registry in-session) |
-| 216014 | BestDC Limited — hosting/VPS provider; the "business" tag comes from the ASN classification, not an indication of a business ISP (not verified against a registry in-session) |
+| 216014 | BestDC Limited, Amsterdam NL — hosting/datacenter/VPS provider; the "business" tag comes from the ASN classification, not an indication of a business ISP (not verified against a registry in-session) |
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
@@ -408,13 +396,13 @@ unaffected). To check it works, temporarily log it from the function with
 is not attached.
 
 **Trade-off:** this blocks everything hosted on AWS, including Amazonbot and
-any AWS-hosted SummalyBot / Linkwarden / Synapse instance. If such traffic
+any AWS-hosted Linkwarden / Synapse instance (SummalyBot is already allowed by UA). If such traffic
 shows up, add those UA tokens to `allowedHostedSoftwareRegex`. Some Amazon ranges are
 announced from other ASNs (e.g. AS8987 EU): check bgp.he.net before extending.
 
 ### json-allowlist
 Scanners probe for `.json` files (`/package.json`, `/composer.json`,
-`/config.json`, ...). Only the five real JSON files the site serves are
+`/config.json`, ...). Only the four real JSON files the site serves are
 allowed; every other `.json` path gets `404`. The check runs last, after the
 bad-actor/bot checks, so a blocked bot gets its `404` from those rules
 first and only a legitimate-looking client can reach a real JSON file. It
@@ -444,15 +432,15 @@ casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
 
 ## Why a CloudFront Function (not Lambda@Edge)?
 
-CloudFront Functions run at **every edge location** with sub-millisecond startup and are ~6× cheaper than Lambda@Edge. They suit stateless, CPU-light request filtering with no network I/O. This filter is pure string matching, so it fits; the trade-off is a restricted runtime (no `setTimeout`, no `fetch`, no Node.js built-ins).
+CloudFront Functions run at **every edge location** with sub-millisecond startup and are ~6× cheaper than Lambda@Edge. They suit stateless, CPU-light request filtering with no network I/O. This filter is string matching plus one KeyValueStore read (the only I/O, a built-in sub-millisecond lookup), so it fits; the trade-off is a restricted runtime (no `setTimeout`, no `fetch`, no Node.js built-ins).
 
 ---
 
 ## Deployment
 
-Copy the body of `function.js` into the CloudFront Functions editor in the AWS Console (or deploy via AWS CLI / CDK / Terraform) and associate it with the **viewer request** event of your distribution.
+The GitHub Action (`.github/workflows/deploy.yml`) runs the tests, then updates and publishes the function with the AWS CLI on every push to `main`. The function must be associated with the **viewer request** event of the distribution. To deploy by hand instead (console editor, CLI), copy the body of `function.js`.
 
-> **Important:** remove the `export { handler }` line before deploying — the JS 2.0 runtime does not support ES module `export`. It exists only so Vitest can import the function. The `import cf from 'cloudfront'` line stays: it is the runtime module that gives access to the KeyValueStore (Vitest replaces it with `test-support/cloudfront-stub.js`).
+> **Important:** the `export { handler }` line must not be deployed — the JS 2.0 runtime does not support ES module `export`. The Action strips it (`grep -v 'export {'`); do the same by hand. It exists only so Vitest can import the function. The `import cf from 'cloudfront'` line stays: it is the runtime module that gives access to the KeyValueStore (Vitest replaces it with `test-support/cloudfront-stub.js`).
 
 The function reads the ASN KeyValueStore, so the store must be associated with it. The GitHub Action does this on every deploy (`KeyValueStoreAssociations` in `update-function`) from the repository secret `CLOUDFRONT_KVS_ARN` (output `KeyValueStoreArn` of the `asn-kvs-sync` stack). Set that secret before the first push, and make sure the deploy IAM user may associate the store. The distribution also needs the `CloudFront-Viewer-ASN` header ([asn-header-setup](#asn-header-setup)).
 
