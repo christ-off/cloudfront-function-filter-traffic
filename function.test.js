@@ -92,6 +92,7 @@ describe("ASN rules", () => {
   });
 
   it.each([
+    "Mozilla/5.0 (compatible; ibou-search/2.0;  https://ibou.com/crawlers.html)",
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm)",
     "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)",
     "Feedbin feed-id:1 - 1 subscribers",
@@ -101,7 +102,7 @@ describe("ASN rules", () => {
     expect(kvsLookups).toEqual([]);
   });
 
-  it.each(["16509", "8075", "4134", "4837", "15169"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
+  it.each(["16509", "8075", "4134", "4837", "4766", "15169"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
     await expectBlocked(makeEvent({ asn }));
     expect(kvsLookups).toEqual([]);
   });

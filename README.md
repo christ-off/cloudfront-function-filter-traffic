@@ -24,7 +24,7 @@ request
  ├─ .json/.js not allowlisted, cover referer ──▶ 404
  │
  ├─ ASN in function whitelist ─────────────────▶ pass
- ├─ hosted-software UA (mastodon, bingbot, ────▶ pass
+ ├─ hosted-software UA (mastodon, bingbot, ibou, ────▶ pass
  │    feed readers…)
  ├─ ASN in function blocklist ─────────────────▶ 404
  ├─ no ASN header ─────────────────────────────▶ pass (fail open)
@@ -57,7 +57,7 @@ Rules behind the order:
   the bad-UA regex, so a blocked bot UA from a whitelisted ASN is still blocked.
 - **The hosted-software UA check sits before the ASN blocklist.** Bingbot comes from AS8075
   (Microsoft), which is blocklisted on purpose because the network hosts other tools we do not
-  want; only the UA tokens (`bingbot/`, Mastodon, feed readers…) get through it.
+  want; only the UA tokens (`bingbot/`, `ibou-search/`, Mastodon, feed readers…) get through it.
   AS8075 is never whitelisted by ASN.
 - **The ASN blocklist stays** next to the KV. It stops the lookup for known bad ASNs and blocks
   ASNs the KV marks `isp` that we still refuse (e.g. Chinese ISPs 4134, 23724). Hosting-only
@@ -284,7 +284,8 @@ than `get` because `get` throws on a missing key and the value is not needed. An
 
 ### asn-whitelist
 ASNs that skip the blocklist and the KV: 60653 (Feedly: used only by Feedly, although the ipverse
-category is `business`), 199064 (Qwant), 714 (Apple). Not whitelisted on purpose: 8075 (Microsoft,
+category is `business`), 199064 (Qwant), 714 (Apple).
+Not whitelisted on purpose: 8075 (Microsoft,
 Bingbot passes by UA) and 15169 (Google, blocklisted).
 
 ### asn-blocking
@@ -312,6 +313,7 @@ Blocked ASNs (all at the user's request):
 | 8075 | Microsoft Corporation, HK — hosts other tools we do not want; Bingbot gets through by UA token only, never by ASN |
 | 4134 | CHINANET BACKBONE, Shijiazhuang CN |
 | 4837 | CHINA UNICOM China169 Backbone, Beijing CN — consumer ISP (in the KV as `isp`); added Nov 18, 2026: the only traffic seen since Nov 11 is Baiduspider (95 hits, 74 IPs) and a few scanners with malformed UAs |
+| 4766 | Korea Telecom, Seoul KR — consumer and business ISP (in the KV as `isp`); added Nov 18, 2026 on request: the only traffic seen is scrapers |
 | 23724 | IDC China Telecommunications, Beijing CN |
 | 271315 | Netfusion Internet LTDA, Rio de Janeiro BR |
 | 209334 | Modat B.V., security scanner, CA |
@@ -365,8 +367,8 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Mastodon, Friendica, Iceshrimp, Misskey, DuckDuckBot, SummalyBot link
-previews) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux)
+run by third parties (Bingbot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, DuckDuckBot, SummalyBot link
+previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux)
 that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
 what it holds: software that is acceptable even though its host is not. A match skips
 the ASN blocklist and the KV lookup, all other rules still apply. Matched on the name token
