@@ -83,6 +83,7 @@ Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
 | `feedbin` | 572 | 6939 (Hurricane Electric) | blocked |
 | `birchfeed` | 152 | 400940, 16509 (AWS, blocklisted) | blocked |
 | `feeder.co` | 81 | 16276 (OVH), 14061 (DigitalOcean) | blocked |
+| `rss-parser` | 62 | none (8 IPs, 6 hits from 16276 OVH, rest before ASN logging) | whitelisted Nov 18, 2026: Node library default UA, feed URLs only |
 | `miniflux` | 74 | 12322 (`isp` in the KV) | passes via the KV |
 | `freshrss` | 42 | 16276, 24940 (blocklisted), 8560 (not in the KV), 12322 (`isp`) | blocked on 16276, 24940, 8560 |
 | `newsblur` | 35 | 24940 (Hetzner, blocklisted) | blocked |
@@ -368,7 +369,7 @@ Blocked ASNs (all at the user's request):
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
 run by third parties (Bingbot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, DuckDuckBot, SummalyBot link
-previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux)
+previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux, rss-parser)
 that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
 what it holds: software that is acceptable even though its host is not. A match skips
 the ASN blocklist and the KV lookup, all other rules still apply. Matched on the name token

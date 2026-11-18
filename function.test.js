@@ -96,6 +96,7 @@ describe("ASN rules", () => {
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; http://www.bing.com/bingbot.htm)",
     "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)",
     "Feedbin feed-id:1 - 1 subscribers",
+    "rss-parser",
     "FreshRSS/1.30.0 (Linux; https://freshrss.org)",
   ])("passes hosted software on a blocked ASN: %s", async (userAgent) => {
     await expectPassed(makeEvent({ asn: "8075", userAgent }));

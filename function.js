@@ -140,7 +140,7 @@ const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|
 const asnWhitelistRegex = /^(60653|199064|714)$/;
 
 // rationale: README.md#asn-allowed-hosted-software
-const allowedHostedSoftwareRegex = /bingbot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|miniflux/;
+const allowedHostedSoftwareRegex = /bingbot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|rss-parser|miniflux/;
 
 function createNotFoundResponse() {
     return {
