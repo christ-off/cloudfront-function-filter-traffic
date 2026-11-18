@@ -103,7 +103,7 @@ describe("ASN rules", () => {
     expect(kvsLookups).toEqual([]);
   });
 
-  it.each(["16509", "8075", "4134", "4837", "4766", "15169"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
+  it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
     await expectBlocked(makeEvent({ asn }));
     expect(kvsLookups).toEqual([]);
   });

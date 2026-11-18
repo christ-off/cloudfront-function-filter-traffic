@@ -316,6 +316,7 @@ Blocked ASNs (all at the user's request):
 | 4837 | CHINA UNICOM China169 Backbone, Beijing CN — consumer ISP (in the KV as `isp`); added Nov 18, 2026: the only traffic seen since Nov 11 is Baiduspider (95 hits, 74 IPs) and a few scanners with malformed UAs |
 | 4766 | Korea Telecom, Seoul KR — consumer and business ISP (in the KV as `isp`); added Nov 18, 2026 on request: the only traffic seen is scrapers |
 | 23724 | IDC China Telecommunications, Beijing CN |
+| 199457 | SolidCore Hosting LTD, Kerkrade NL — hosting provider; added Nov 18, 2026 on request: scraper-only traffic (seen from 45.115.26.203) |
 | 271315 | Netfusion Internet LTDA, Rio de Janeiro BR |
 | 209334 | Modat B.V., security scanner, CA |
 | 41608 | NextGenWebs, S.L., Oude Meer NL |
