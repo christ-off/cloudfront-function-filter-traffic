@@ -196,7 +196,7 @@ fixture in `function.test.js`.
 `rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
 `publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
 `variableratio-publicassetresearch/`, `halobot/`, `flowb0t-contentengine/`, `tphotobot/`,
-`websiteresearch/`, `aonsightmetabot/`, `wordpress/` (pingback/XML-RPC UA), `curl/` (no
+`websiteresearch/`, `aonsightmetabot/`, `giantcrawler/`, `wordpress/` (pingback/XML-RPC UA), `curl/` (no
 legitimate need to curl the site), `httpx - open-source project` (ProjectDiscovery httpx;
 its UA has no `/`-separated version, so the name phrase is matched).
 

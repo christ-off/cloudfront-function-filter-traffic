@@ -419,6 +419,7 @@ describe("scrapper bot blocking by user-agent", () => {
     ["ClarityBot/0.1 ( https://clarity.surf/bot)", "ClarityBot"],
     ["undici", "undici"],
     ["Mozilla/5.0 (compatible; serpex-index/1.0; https://serpex.dev)", "serpex-index"],
+    ["GiantCrawler/1.0 ( https://giantcrawler.com)", "GiantCrawler"],
     ["Mozilla/5.0 (compatible; crawler)", "generic crawler"],
   ];
 
