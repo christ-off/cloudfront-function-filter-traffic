@@ -22,10 +22,11 @@ request
  │    php/wp/env/… URI, bad Chrome UA
  ├─ bad-UA regex ──────────────────────────────▶ 404
  ├─ .json/.js not allowlisted, cover referer ──▶ 404
+ │    (cover check exempts hosted-software UA)
  │
  ├─ ASN in function whitelist ─────────────────▶ pass
- ├─ hosted-software UA (mastodon, bingbot, ibou, ────▶ pass
- │    feed readers…)
+ ├─ hosted-software UA (mastodon, bingbot, ─────▶ pass
+ │    bravebot, ibou, feed readers…)
  ├─ ASN in function blocklist ─────────────────▶ 404
  ├─ no ASN header ─────────────────────────────▶ pass (fail open)
  │
@@ -51,7 +52,9 @@ decision.
 Rules behind the order:
 
 - **"pass" before the KV only skips the lookup.** The `.json`/`.js` allowlist and the
-  cover-referer check run earlier and apply to every request, whitelisted ASN or not.
+  cover-referer check run earlier and apply to every request, whitelisted ASN or not — the
+  cover check excepted for hosted-software UA ([asn-allowed-hosted-software](#asn-allowed-hosted-software)),
+  which fetches without a referer.
 - **The ASN whitelist** holds three ASNs: AS60653 (Feedly, used only by Feedly although
   the KV category is `business`), AS199064 (Qwant) and AS714 (Apple, Applebot). It runs after
   the bad-UA regex, so a blocked bot UA from a whitelisted ASN is still blocked.
@@ -321,7 +324,7 @@ Blocked ASNs (all at the user's request):
 | 201738 | UFO Technologies Limited, Erith GB |
 | 45102 | Alibaba (US) Technology Co., Ltd. (Alibaba Cloud), Singapore SG |
 | 9534 | Binariang Berhad (Maxis), Kuala Lumpur MY |
-| 24940 | Hetzner Online GmbH, Helsinki FI |
+| 24940 | Hetzner Online GmbH, Helsinki FI — Bravebot crawls from here and passes by UA token ([asn-allowed-hosted-software](#asn-allowed-hosted-software)) |
 | 197540 | netcup GmbH, Vienna AT |
 | 211619 | MAXKO d.o.o. (maxko-hosting.net), Sofia BG |
 | 56655 | Gigahost AS, Sandefjord NO |
@@ -357,7 +360,7 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, Catodon, Nextcloud Social, DuckDuckBot,
+run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, Catodon, Nextcloud Social, DuckDuckBot,
 SummalyBot link previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN; Catodon
 ships two UA forms (`Catodon/<version> ( <instance-url>)` and `Catodon (like Discordbot)`), so it is matched on the bare name token; Nextcloud
 Social is matched on the full name phrase — the bare `nextcloud` would also match the distinct `Nextcloud-Server-Crawler` UA, which is
@@ -366,6 +369,23 @@ that happens to be hosted in a blocked ASN, typically a cloud provider. The name
 what it holds: software that is acceptable even though its host is not. A match skips
 the ASN blocklist and the KV lookup, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
+
+Since Nov 19, 2026 the same tokens also skip the [cover-referer](#cover-referer) check: these
+fetchers are server-side and send no `Referer`, so the cover rule blocked exactly the traffic
+the UA allowlist exists to accept.
+
+**Bravebot (`bravebot\/`, name token only, added Nov 19, 2026).** Brave Search crawls from
+Hetzner AS24940, which is blocklisted, so without this token every Bravebot page fetch would
+get `404` and Brave's own index could never crawl the blog (its robots.txt fetches still pass —
+robots.txt/feed.xml are served by the separate custom-response function). Goal: be indexed by
+Brave on Brave's own index, not only through the Bing fallback. The genuine crawler UA is
+`Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Bravebot/1.0;
+https://search.brave.com/help/brave-search-crawler) Chrome/W.X.Y.Z Safari/537.36` — the
+placeholder version `Chrome/W.X.Y.Z` is Brave's own documented format. The probes spoofing the
+name (`Mozilla/5.0 (compatible; Bravebot/1.0; https://brave.com/search/)`, Google Cloud IPs,
+`.env`/`@fs` targets) are still stopped by the dotfile and scan-URI rules. Accepted caveat,
+same as Bingbot on AS8075: a scanner spoofing the token from a blocklisted ASN could reach a
+page.
 
 ### asn-header-setup
 **Setup — getting the ASN header in AWS.** The function only sees
@@ -430,6 +450,16 @@ meant to be embedded by the site itself, so hotlinked or direct requests
 lowercased `uriLower`; the referer is compared case-insensitively against
 `COVER_REFERER_PREFIX`. The `Referer` is client-supplied, so this only stops
 casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
+
+Exception since Nov 19, 2026: a UA matching `allowedHostedSoftwareRegex` skips this check
+([asn-allowed-hosted-software](#asn-allowed-hosted-software)). Fediverse and link-preview
+fetchers (Mastodon, Misskey, Friendica/Iceshrimp/Catodon, SummalyBot) fetch covers server-side
+and never send a `Referer`: `logs.db` (Aug 19 – Nov 19) counted 2,214 cover fetches without a
+site referer served before Nov 18 (1,546 Mastodon, 147 Misskey, 109 Friendica-family, 354
+browsers, 58 other) against 152 blocked after the Nov 18 deploy — without the exception, posts
+shared there lose their preview images. A *foreign* referer still gets `404` even with an
+allowlisted UA (fetchers send none, so a wrong one is suspicious), and browsers opening a cover
+directly stay blocked.
 
 ---
 

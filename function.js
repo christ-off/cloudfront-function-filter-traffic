@@ -23,7 +23,7 @@ async function handler(event) {
     const ua = userAgentHeader.value.toLowerCase();
 
     if (isBadActor(uriLower, ua) || blockedBotRegex.test(ua) ||
-        isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer)) {
+        isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer, ua)) {
         return createNotFoundResponse();
     }
 
@@ -77,9 +77,15 @@ function isDisallowedAsset(uri) {
 }
 
 // rationale: README.md#cover-referer
-function isCoverDenied(uri, referer) {
-    return coverUriRegex.test(uri) &&
-        (!referer || !referer.value || referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0);
+function isCoverDenied(uri, referer, ua) {
+    if (!coverUriRegex.test(uri)) {
+        return false;
+    }
+    if (referer && referer.value) {
+        return referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0;
+    }
+    // Refererless fetchers on the hosted-software allowlist are previews, not hotlinks
+    return !allowedHostedSoftwareRegex.test(ua);
 }
 
 // rationale: README.md#cover-referer
@@ -140,7 +146,7 @@ const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|
 const asnWhitelistRegex = /^(60653|199064|714)$/;
 
 // rationale: README.md#asn-allowed-hosted-software
-const allowedHostedSoftwareRegex = /bingbot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|catodon|nextcloud social|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|rss-parser|miniflux/;
+const allowedHostedSoftwareRegex = /bingbot\/|bravebot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|catodon|nextcloud social|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|rss-parser|miniflux/;
 
 function createNotFoundResponse() {
     return {

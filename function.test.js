@@ -80,6 +80,17 @@ describe("asset rules", () => {
     await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", referer: "https://post-tenebras-lire.net/x/" }));
   });
 
+  it("serves covers refererless to hosted software (preview fetchers)", async () => {
+    await expectPassed(makeEvent({ uri: "/assets/posts_640/a.webp", userAgent: "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Mastodon/4.7.3 (http.rb/5.3.1;  https://tuebingen.network/)" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Misskey/2026.6.0 (https://fuzzle.me.uk/)" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "SummalyBot/5.2.0" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Catodon (like Discordbot)" }));
+  });
+
+  it("still blocks covers when hosted software sends a foreign referer", async () =>
+    expectBlocked(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)", referer: "https://evil.example/" })));
+
   it("applies to a whitelisted ASN as well", () =>
     expectBlocked(makeEvent({ uri: "/other.json", asn: "714" })));
 });
@@ -105,6 +116,21 @@ describe("ASN rules", () => {
   ])("passes hosted software on a blocked ASN: %s", async (userAgent) => {
     await expectPassed(makeEvent({ asn: "8075", userAgent }));
     expect(kvsLookups).toEqual([]);
+  });
+
+  it("passes Bravebot from Hetzner AS24940 by UA token, without a KeyValueStore read", async () => {
+    await expectPassed(makeEvent({
+      asn: "24940",
+      userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Bravebot/1.0;  https://search.brave.com/help/brave-search-crawler) Chrome/W.X.Y.Z Safari/537.36",
+    }));
+    expect(kvsLookups).toEqual([]);
+  });
+
+  it("keeps blocking scanners that spoof the Bravebot name", async () => {
+    const spoof = "Mozilla/5.0 (compatible; Bravebot/1.0;  https://brave.com/search/)";
+    await expectBlocked(makeEvent({ uri: "/.env", asn: "396982", userAgent: spoof }));
+    await expectBlocked(makeEvent({ uri: "/@fs/app/.env", asn: "396982", userAgent: spoof }));
+    await expectBlocked(makeEvent({ uri: "/proc/self/environ", asn: "396982", userAgent: spoof }));
   });
 
   it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
