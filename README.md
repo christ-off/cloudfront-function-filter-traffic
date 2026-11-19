@@ -357,8 +357,11 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, DuckDuckBot, SummalyBot link
-previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux, rss-parser)
+run by third parties (Bingbot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, Catodon, Nextcloud Social, DuckDuckBot,
+SummalyBot link previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN; Catodon
+ships two UA forms (`Catodon/<version> ( <instance-url>)` and `Catodon (like Discordbot)`), so it is matched on the bare name token; Nextcloud
+Social is matched on the full name phrase — the bare `nextcloud` would also match the distinct `Nextcloud-Server-Crawler` UA, which is
+deliberately not allowlisted) and feed readers (Feedbin, Birchfeed, Feeder, NewsBlur, FreshRSS, Flus, KrISS, Miniflux, rss-parser)
 that happens to be hosted in a blocked ASN, typically a cloud provider. The name says
 what it holds: software that is acceptable even though its host is not. A match skips
 the ASN blocklist and the KV lookup, all other rules still apply. Matched on the name token

@@ -98,6 +98,10 @@ describe("ASN rules", () => {
     "Feedbin feed-id:1 - 1 subscribers",
     "rss-parser",
     "FreshRSS/1.30.0 (Linux; https://freshrss.org)",
+    // Catodon ships two UA forms: "<name>/<version> ( <instance-url>)" and "<name> (like Discordbot)"
+    "Catodon/26.10.0 ( https://catodon.rocks)",
+    "Catodon (like Discordbot)",
+    "Nextcloud Social 0.24.1",
   ])("passes hosted software on a blocked ASN: %s", async (userAgent) => {
     await expectPassed(makeEvent({ asn: "8075", userAgent }));
     expect(kvsLookups).toEqual([]);
