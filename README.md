@@ -303,8 +303,8 @@ client that sends no user agent is not going to read either file.
 Exact match on `/robots.txt`, after decoding and lowercasing, ahead of every filter except the two
 pre-decode exits. `robots.txt` is a signal file rather than content: the origin copy already
 disallows almost everything, so serving it to anyone costs nothing, while refusing it tells a
-compliant crawler nothing (a `404` is not a disallow) and tells a compliant feed reader, which
-usually fetch `robots.txt` first, that the blog is closed. A deny-all decoy for blocked clients was
+compliant crawler nothing: a `404` is not a disallow, so the paths the file excludes stay open to
+anyone who reads a dead end as permission. A deny-all decoy for blocked clients was
 tried and dropped: harvesters listed in [blocked-bot-regex](#blocked-bot-regex) ignore the file
 anyway, so it only ever reached the clients worth keeping honest.
 
