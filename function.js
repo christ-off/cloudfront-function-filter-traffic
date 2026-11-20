@@ -22,15 +22,20 @@ async function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
+    // rationale: README.md#robots-always-allowed
+    if (uriLower === '/robots.txt') {
+        return request;
+    }
+
     if (isBadActor(uriLower, ua) || blockedBotRegex.test(ua) ||
         isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer, ua)) {
-        return createNotFoundResponse();
+        return createBlockedResponse(uriLower);
     }
 
     // The ASN decision comes last: it may cost a KeyValueStore read
     const asnHeader = request.headers['cloudfront-viewer-asn'];
     if (!await isAsnAllowed(asnHeader && asnHeader.value ? asnHeader.value : '', ua)) {
-        return createNotFoundResponse();
+        return createBlockedResponse(uriLower);
     }
 
     return request;
@@ -148,6 +153,28 @@ const asnWhitelistRegex = /^(60653|199064|714)$/;
 // rationale: README.md#asn-allowed-hosted-software
 const allowedHostedSoftwareRegex = /bingbot\/|bravebot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|catodon|nextcloud social|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|rss-parser|miniflux/;
 
+// One-shot response builder for the decoy bodies, which are static.
+// rationale: README.md#blocked-responses
+function createResponse(statusCode, statusDescription, contentType, body, cacheControl) {
+    return {
+        statusCode: statusCode,
+        statusDescription: statusDescription,
+        headers: {"content-type": {value: contentType}, "cache-control": {value: cacheControl}},
+        body: body
+    };
+}
+
+// Body served instead of a 404 on /feed.xml: valid Atom with no entries, so a
+// blocked feed reader reports an empty blog rather than an error.
+// rationale: README.md#fake-empty-feed
+const emptyAtomFeed = '<?xml version="1.0" encoding="utf-8"?>\n' +
+  '<feed xmlns="http://www.w3.org/2005/Atom">\n' +
+  '  <id>https://perdu.com/</id>\n' +
+  '  <title>Perdu sur l\'Internet ?</title>\n' +
+  '  <updated>2025-01-01T00:00:00Z</updated>\n' +
+  '</feed>\n';
+
+// rationale: README.md#blocked-responses
 function createNotFoundResponse() {
     return {
         statusCode: 404,
@@ -155,6 +182,21 @@ function createNotFoundResponse() {
         headers: {"content-type": {value: 'text/plain'}},
         body: 'Not Found'
     };
+}
+
+// Path-dependent answer for a request some check already rejected. The feed gets
+// a decoy instead of a 404; the no-UA and undecodable-URI exits answer 404
+// because they run before the URI can be trusted. The decoy is never cached: it
+// shares its URL with the real feed, the edge cache keeps one answer per URL, so
+// a stored decoy would reach legitimate clients as well, and answering it costs
+// no origin fetch that caching could save.
+// rationale: README.md#blocked-responses
+function createBlockedResponse(uriLower) {
+    if (uriLower === '/feed.xml') {
+        return createResponse(200, 'OK', 'application/atom+xml; charset=UTF-8',
+            emptyAtomFeed, 'private, no-store');
+    }
+    return createNotFoundResponse();
 }
 
 export {handler};

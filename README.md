@@ -8,33 +8,42 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
-Checks run in this order; the first match wins. Every block is a plain `404` (no fake
-`robots.txt` or empty feed). Reasoning is under
+Checks run in this order; the first match wins. `/robots.txt` is always served as-is
+([robots-always-allowed](#robots-always-allowed)); a blocked request gets a `200` empty Atom feed
+on `/feed.xml` and a plain `404` everywhere else. Reasoning is under
 [Blocking rules — rationale](#blocking-rules--rationale).
 
 ```
 request
  │
- ├─ no user agent ─────────────────────────────▶ 404
- ├─ URI undecodable ───────────────────────────▶ 404
+ ├─ no user agent ─────────────────────────────▶ 404  (URI not decoded yet)
+ ├─ URI undecodable ───────────────────────────▶ 404  (no usable URI)
  │
- ├─ security scan: traversal, dotfile, ────────▶ 404
+ ├─ uriLower === '/robots.txt' ────────────────▶ pass (always served)
+ │
+ ├─ security scan: traversal, dotfile, ────────▶ blocked
  │    php/wp/env/… URI, bad Chrome UA
- ├─ bad-UA regex ──────────────────────────────▶ 404
- ├─ .json/.js not allowlisted, cover referer ──▶ 404
+ ├─ bad-UA regex ──────────────────────────────▶ blocked
+ ├─ .json/.js not allowlisted, cover referer ──▶ blocked
  │    (cover check exempts hosted-software UA)
  │
  ├─ ASN in function whitelist ─────────────────▶ pass
  ├─ hosted-software UA (mastodon, bingbot, ─────▶ pass
  │    bravebot, ibou, feed readers…)
- ├─ ASN in function blocklist ─────────────────▶ 404
+ ├─ ASN in function blocklist ─────────────────▶ blocked
  ├─ no ASN header ─────────────────────────────▶ pass (fail open)
  │
  └─ KV: exists(asn)?
         ├─ yes (ISP / research) ───────────────▶ pass
-        ├─ no ─────────────────────────────────▶ 404
+        ├─ no ─────────────────────────────────▶ blocked
         └─ KV error ───────────────────────────▶ pass (fail open)
 ```
+
+`blocked` is the answer mapping in [blocked-responses](#blocked-responses): the empty Atom feed on
+`/feed.xml`, `404` on everything else. The two checks above it answer a plain `404` because they run
+before the URI is decoded, so there is no reliable URI to route. The missing user agent exit also
+precedes the `robots.txt` pass on purpose: a client that sends no user agent was not going to read
+it anyway.
 
 The ASN decision comes last so that the KeyValueStore is read only for requests that
 survived every cheap check. The store is filled weekly by
@@ -76,9 +85,10 @@ KV reads and catches scrapers on ISP ASNs that the KV lets through.
 
 ### Feed readers
 
-The feed is a normal request, so a reader hosted on an ASN missing from the KV
-gets `404` unless its user agent (or ASN) is whitelisted. `logs.db` (`/feed.xml` and `/rss.xml`,
-Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
+The feed is a normal request, so a reader hosted on an ASN missing from the KV gets the
+[empty Atom feed](#fake-empty-feed): a valid feed with no entries, which it keeps polling instead
+of surfacing an error, unless its user agent (or ASN) is whitelisted. `logs.db` (`/feed.xml` and
+`/rss.xml`, Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
 
 | Reader (UA token) | Hits | ASN | Outcome without a UA token whitelist (historical, before Nov 18) |
 |---|---|---|---|
@@ -267,9 +277,50 @@ its UA has no `/`-separated version, so the name phrase is matched).
 ### filtering-sequence
 The order is in [What the function does](#what-the-function-does). Principle: cheapest checks first, the
 ASN decision last because it can cost a KeyValueStore read (2M reads/month free, then $0.03 per million).
-Responses are all a plain `404`: a blocked client cannot tell which rule matched, and there is no
-fake robots.txt or fake feed (removed Nov 18, 2026, together with the `/backup.zip` allowlist and the
-feed exemption from the ASN blocklist).
+The URI is decoded once, lowercased, for the [robots pass](#robots-always-allowed), the allowlist
+and the decoy path. There is no
+`/backup.zip` allowlist and no feed exemption from the ASN blocklist (both removed Nov 18, 2026).
+
+### blocked-responses
+A rejected request is answered here and never reaches the origin. Nothing in the answer says which
+rule matched: everything blocked gets `404`, except the one decoy path below, matched on the decoded
+and lowercased URI. The `404` carries no cache headers, so blocklisted traffic never accumulates
+cached entries. The decoy is answered with `private, no-store`, uncached for the same reason: it
+shares its URL with the real feed, the edge cache keeps one answer per URL, and a stored decoy would
+go on to answer clients that are allowed through. Caching it saves nothing, since the function
+replies from a constant without waiting on the origin. Varying the cache key per viewer would let
+the answer be cached and shred the hit rate on a public path instead.
+
+One limit worth stating: a cache hit is served without invoking the function at all, so a bot that
+arrives while the real feed is warm gets the real thing. A decoy answers the requests that reach the
+function, which is also where scraping of paths like `.env` and `backup.zip` lands.
+
+The two checks that run before URI decoding (no user agent, undecodable URI) answer a plain `404`
+even on the decoy path and on `robots.txt`: an undecodable URI is not a path worth trusting, and a
+client that sends no user agent is not going to read either file.
+
+### robots-always-allowed
+Exact match on `/robots.txt`, after decoding and lowercasing, ahead of every filter except the two
+pre-decode exits. `robots.txt` is a signal file rather than content: the origin copy already
+disallows almost everything, so serving it to anyone costs nothing, while refusing it tells a
+compliant crawler nothing (a `404` is not a disallow) and tells a compliant feed reader, which
+usually fetch `robots.txt` first, that the blog is closed. A deny-all decoy for blocked clients was
+tried and dropped: harvesters listed in [blocked-bot-regex](#blocked-bot-regex) ignore the file
+anyway, so it only ever reached the clients worth keeping honest.
+
+Matched exactly, not as a suffix: `/evil.com/robots.txt` stays blocked, the same shape the
+redirect-prefix rule rejects. `ads.txt` and `llms.txt` are deliberately not in here: they attract
+the same scanner traffic as every other path, and no honest client is harmed by a `404` on them.
+
+### fake-empty-feed
+`emptyAtomFeed` is a well-formed Atom document with no entries, served `application/atom+xml` and
+uncached. A scraper harvesting RSS sees an ordinary endpoint that happens to have nothing in it; a
+`404` on the other hand advertises that something is there and was withheld.
+
+The cost falls on real readers. A reader blocked by ASN or by a user agent detail not in
+[Feed readers](#feed-readers) gets a valid empty feed, so it reports an empty blog quietly and
+keeps polling instead of surfacing an error it could route around; the fix for an affected reader is
+a token in that list. `/rss.xml` is not covered: it keeps getting the plain `404`.
 
 ### asn-kvs
 `kvsHandle.exists(asn)` answers "is this ASN an ISP or research network". The store is filled by
@@ -288,10 +339,11 @@ us-east-1 IPs (one IP per request), so blocking by IP is useless against it. Blo
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
 and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
-Blocked ASNs get the usual 404. The check runs after the
+Blocked ASNs get the usual answer mapping ([blocked-responses](#blocked-responses)): a blocked feed
+reader or crawler from one of them sees the decoys on those two paths. The check runs after the
 cheap URI/UA checks and the ASN whitelist, and before the KeyValueStore lookup
-([filtering-sequence](#filtering-sequence)). If the header is
-absent (policy not attached) nothing matches: fails open.
+([filtering-sequence](#filtering-sequence)). If the header is absent (policy not attached) nothing
+matches: fails open.
 
 Blocked ASNs (all at the user's request):
 
