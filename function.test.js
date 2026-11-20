@@ -137,6 +137,8 @@ describe("ASN rules", () => {
     "Catodon/26.10.0 ( https://catodon.rocks)",
     "Catodon (like Discordbot)",
     "Nextcloud Social 0.24.1",
+    // Pleroma sends "Pleroma <version>; <instance-url> <admin-email>[; Bot]", with no slash after the name
+    "Pleroma 2.6.3-0-gee6ba27ed-develop; https://social.metadata.moe <pleroma@metadata.moe>; Bot",
   ])("passes hosted software on a blocked ASN: %s", async (userAgent) => {
     await expectPassed(makeEvent({ asn: "8075", userAgent }));
     expect(kvsLookups).toEqual([]);

@@ -412,7 +412,7 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Iceshrimp, Misskey, Catodon, Nextcloud Social, DuckDuckBot,
+run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Iceshrimp, Misskey, Catodon, Nextcloud Social, DuckDuckBot,
 SummalyBot link previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN; Catodon
 ships two UA forms (`Catodon/<version> ( <instance-url>)` and `Catodon (like Discordbot)`), so it is matched on the bare name token; Nextcloud
 Social is matched on the full name phrase — the bare `nextcloud` would also match the distinct `Nextcloud-Server-Crawler` UA, which is
@@ -421,6 +421,8 @@ that happens to be hosted in a blocked ASN, typically a cloud provider. The name
 what it holds: software that is acceptable even though its host is not. A match skips
 the ASN blocklist and the KV lookup, all other rules still apply. Matched on the name token
 without version, like the bot blocklist.
+
+**Pleroma (`pleroma`, bare name token).** Fediverse server software like Mastodon. It sends `Pleroma <version>; <instance-url>` with a space, not a slash, after the name, so the token has no trailing `\/`, like `friendica`. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 
 Since Nov 19, 2026 the same tokens also skip the [cover-referer](#cover-referer) check: these
 fetchers are server-side and send no `Referer`, so the cover rule blocked exactly the traffic
