@@ -153,17 +153,6 @@ const asnWhitelistRegex = /^(60653|199064|714)$/;
 // rationale: README.md#asn-allowed-hosted-software
 const allowedHostedSoftwareRegex = /bingbot\/|bravebot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|catodon|nextcloud social|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|rss-parser|miniflux/;
 
-// One-shot response builder for the decoy bodies, which are static.
-// rationale: README.md#blocked-responses
-function createResponse(statusCode, statusDescription, contentType, body, cacheControl) {
-    return {
-        statusCode: statusCode,
-        statusDescription: statusDescription,
-        headers: {"content-type": {value: contentType}, "cache-control": {value: cacheControl}},
-        body: body
-    };
-}
-
 // Body served instead of a 404 on /feed.xml: valid Atom with no entries, so a
 // blocked feed reader reports an empty blog rather than an error.
 // rationale: README.md#fake-empty-feed
@@ -193,8 +182,13 @@ function createNotFoundResponse() {
 // rationale: README.md#blocked-responses
 function createBlockedResponse(uriLower) {
     if (uriLower === '/feed.xml') {
-        return createResponse(200, 'OK', 'application/atom+xml; charset=UTF-8',
-            emptyAtomFeed, 'private, no-store');
+        return {
+            statusCode: 200,
+            statusDescription: 'OK',
+            headers: {"content-type": {value: 'application/atom+xml; charset=UTF-8'},
+                "cache-control": {value: 'private, no-store'}},
+            body: emptyAtomFeed
+        };
     }
     return createNotFoundResponse();
 }
