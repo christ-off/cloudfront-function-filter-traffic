@@ -8,9 +8,9 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
-Checks run in this order; the first match wins. `/robots.txt` is always served as-is
-([robots-always-allowed](#robots-always-allowed)); a blocked request gets a `200` empty Atom feed
-on `/feed.xml` and a plain `404` everywhere else. Reasoning is under
+Checks run in this order; the first match wins. `/robots.txt` and the feed paths are always served
+as-is ([robots-always-allowed](#robots-always-allowed),
+[feed-always-served](#feed-always-served)); a blocked request gets a plain `404`. Reasoning is under
 [Blocking rules — rationale](#blocking-rules--rationale).
 
 ```
@@ -20,6 +20,8 @@ request
  ├─ URI undecodable ───────────────────────────▶ 404  (no usable URI)
  │
  ├─ uriLower === '/robots.txt' ────────────────▶ pass (always served)
+ │
+ ├─ uriLower is '/feed.xml' or '/rss.xml' ─────▶ pass (always served)
  │
  ├─ security scan: traversal, dotfile, ────────▶ blocked
  │    php/wp/env/… URI, bad Chrome UA
@@ -39,24 +41,23 @@ request
         └─ KV error ───────────────────────────▶ pass (fail open)
 ```
 
-`blocked` is the answer mapping in [blocked-responses](#blocked-responses): the empty Atom feed on
-`/feed.xml`, `404` on everything else. The two checks above it answer a plain `404` because they run
-before the URI is decoded, so there is no reliable URI to route. The missing user agent exit also
-precedes the `robots.txt` pass on purpose: a client that sends no user agent was not going to read
-it anyway.
+`blocked` is the answer mapping in [blocked-responses](#blocked-responses): a plain `404`. The two
+checks above it answer a plain `404` because they run before the URI is decoded, so there is no
+reliable URI to route. The missing user agent exit also precedes the `robots.txt` and feed passes on
+purpose: a client that sends no user agent was not going to read either one.
 
 The ASN decision comes last so that the KeyValueStore is read only for requests that
 survived every cheap check. The store is filled weekly by
 [`asn-kvs-sync`](../asn-kvs-sync/) with the `isp` and `education_research` ASNs (about 34.4k
-keys): **an ASN missing from the store is blocked**. Plan and history:
-`asn-kvs-sync/docs/ASN blocking — consolidated plan.md`.
+keys): **an ASN missing from the store is blocked**.
 
 **Google is excluded on purpose.** Blocking Google (indexing, FeedFetcher, image fetcher)
 is a voluntary decision to exclude Google tools from the blog: `googlebot`,
 `google-cloudvertexbot`, `googleother`, `storebot-google`, `feedfetcher-google` and
 `googleimageproxy` are in the bad-UA regex, and AS15169 is on the ASN blocklist. Do not
-add a Google exception (for search ranking, the feed or images) without revisiting this
-decision.
+add a Google exception (for search ranking or images) without revisiting this
+decision. The feed paths are the one exception: they are served to everyone, FeedFetcher included
+([feed-always-served](#feed-always-served)).
 
 Rules behind the order:
 
@@ -76,7 +77,9 @@ Rules behind the order:
   verification still applies before adding an ASN.
 - **Fail open** when the `CloudFront-Viewer-ASN` header is absent or not a number, or when the
   KV read fails (`kvs.exists` inside `try/catch`).
-- **Feeds are ordinary requests**: no ASN exemption and no `feedfetcher-google` exception.
+- **Feeds are exempt from every filter**: `/feed.xml` and `/rss.xml` are served before the UA, ASN and
+  KV checks ([feed-always-served](#feed-always-served)); every other path gets no ASN exemption and no
+  `feedfetcher-google` exception.
 - **The handler is `async`** and the KV must be associated with the function: the deploy
   workflow passes it from the `CLOUDFRONT_KVS_ARN` secret (`KeyValueStoreAssociations`).
 
@@ -85,30 +88,30 @@ KV reads and catches scrapers on ISP ASNs that the KV lets through.
 
 ### Feed readers
 
-The feed is a normal request, so a reader hosted on an ASN missing from the KV gets the
-[empty Atom feed](#fake-empty-feed): a valid feed with no entries, which it keeps polling instead
-of surfacing an error, unless its user agent (or ASN) is whitelisted. `logs.db` (`/feed.xml` and
-`/rss.xml`, Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who is affected:
+Both feed paths are served before any filter runs ([feed-always-served](#feed-always-served)), so
+every reader below gets the real feed whatever its ASN or user agent. `logs.db` (`/feed.xml` and
+`/rss.xml`, Nov 11 22:00 UTC to Nov 18, ASN column populated) shows who reads them and from where:
 
-| Reader (UA token) | Hits | ASN | Outcome without a UA token whitelist (historical, before Nov 18) |
-|---|---|---|---|
-| `feedly` | 1,289 | 60653 (business, used only by Feedly) | passes via the ASN whitelist |
-| `feedbin` | 572 | 6939 (Hurricane Electric) | blocked |
-| `birchfeed` | 152 | 400940, 16509 (AWS, blocklisted) | blocked |
-| `feeder.co` | 81 | 16276 (OVH), 14061 (DigitalOcean) | blocked |
-| `rss-parser` | 62 | none (8 IPs, 6 hits from 16276 OVH, rest before ASN logging) | whitelisted Nov 18, 2026: Node library default UA, feed URLs only |
-| `miniflux` | 74 | 12322 (`isp` in the KV) | passes via the KV |
-| `freshrss` | 42 | 16276, 24940 (blocklisted), 8560 (not in the KV), 12322 (`isp`) | blocked on 16276, 24940, 8560 |
-| `newsblur` | 35 | 24940 (Hetzner, blocklisted) | blocked |
-| `flus/` | 16 | 24940 | blocked |
-| `inoreader` | 8 | 8717 (`isp` in the KV) | passes via the KV |
-| `kriss` | 1 | 50474 (not in the KV) | blocked |
-| `reeder` | 39 | 3215 (`isp` in the KV) | passes via the KV |
-| `ms-office` (Outlook) | 50 | 62044 (Zscaler, blocklisted) | blocked |
-| `feedfetcher-google` | 42 | 15169 | blocked (exception removed) |
+| Reader (UA token) | Hits | ASN |
+|---|---|---|
+| `feedly` | 1,289 | 60653 (business, used only by Feedly) |
+| `feedbin` | 572 | 6939 (Hurricane Electric) |
+| `birchfeed` | 152 | 400940, 16509 (AWS, blocklisted) |
+| `feeder.co` | 81 | 16276 (OVH), 14061 (DigitalOcean) |
+| `rss-parser` | 62 | none (8 IPs, 6 hits from 16276 OVH, rest before ASN logging) |
+| `miniflux` | 74 | 12322 (`isp` in the KV) |
+| `freshrss` | 42 | 16276, 24940 (blocklisted), 8560 (not in the KV), 12322 (`isp`) |
+| `newsblur` | 35 | 24940 (Hetzner, blocklisted) |
+| `flus/` | 16 | 24940 |
+| `inoreader` | 8 | 8717 (`isp` in the KV) |
+| `kriss` | 1 | 50474 (not in the KV) |
+| `reeder` | 39 | 3215 (`isp` in the KV) |
+| `ms-office` (Outlook) | 50 | 62044 (Zscaler, blocklisted) |
+| `feedfetcher-google` | 42 | 15169 |
 
-Feedly is covered by the ASN whitelist (below), not by a UA token. The UA whitelist
-(`allowedHostedSoftwareRegex`) contains `feedbin`, `birchfeed`, `feeder.co`,
+The feeds need none of this, but the same readers also fetch other paths, and there a UA token is
+what carries them past a blocklisted ASN. `allowedHostedSoftwareRegex` contains `feedbin`,
+`birchfeed`, `feeder.co`,
 `newsblur`, `freshrss`, `flus/`, `kriss feed agent`, `rss-parser` and `miniflux` (name tokens only,
 no versions). `miniflux` passes through the KV from AS12322, but self-hosted instances on a VPS would
 not, so it is whitelisted anyway. `inoreader` passes through the KV and has no UA token. Not recoverable by a UA token: one Chrome-UA client polling from AS29222 (152
@@ -121,11 +124,11 @@ KV membership was checked on Nov 18 with `aws cloudfront-keyvaluestore get-key` 
 
 ## Compute utilization
 
-The 2026-09-23 baseline predates the KeyValueStore lookup and the `async` handler, so it was removed.
-To measure, run `aws cloudfront test-function` on the DEVELOPMENT stage with `test-event.json`
+Measure with `aws cloudfront test-function` on the DEVELOPMENT stage, using `test-event.json`
 (only `request.uri` changed; the event needs a `cloudfront-viewer-asn` header to exercise the KV read).
-Scale 0–100 (hard limit 100, above which CloudFront throttles). Pass-through is the worst case since
-it runs every check. `ComputeUtilization` is coarse and can vary by a point or two between runs.
+Scale 0–100 (hard limit 100, above which CloudFront throttles). Requests that reach the
+KeyValueStore are the expensive path; `ComputeUtilization` is coarse and can vary by a point or two
+between runs.
 
 ---
 
@@ -243,7 +246,7 @@ fixture in `function.test.js`.
 
 **Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
 `hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
-`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `googlebot` (all Google search crawlers, incl. `Googlebot-Image`; the site must not be indexed by Google), `storebot-google/` (Google Merchant Center crawler), `feedfetcher-google` (Google RSS/Atom feed fetcher, UA `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)`, no `/` version; blocking it stops Google fetching the site's feeds), `googleimageproxy` (Gmail/Google image proxy, UA `... (via ggpht.com GoogleImageProxy)`; also fetches images embedded in emails, so blocking it hides images in Gmail), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
+`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `googlebot` (all Google search crawlers, incl. `Googlebot-Image`; the site must not be indexed by Google), `storebot-google/` (Google Merchant Center crawler), `feedfetcher-google` (Google RSS/Atom feed fetcher, UA `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)`, no `/` version; blocking it stops Google fetching every path except the feeds, which are always served), `googleimageproxy` (Gmail/Google image proxy, UA `... (via ggpht.com GoogleImageProxy)`; also fetches images embedded in emails, so blocking it hides images in Gmail), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
 `/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
 `rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
 `publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
@@ -277,26 +280,20 @@ its UA has no `/`-separated version, so the name phrase is matched).
 ### filtering-sequence
 The order is in [What the function does](#what-the-function-does). Principle: cheapest checks first, the
 ASN decision last because it can cost a KeyValueStore read (2M reads/month free, then $0.03 per million).
-The URI is decoded once, lowercased, for the [robots pass](#robots-always-allowed), the allowlist
-and the decoy path. There is no
-`/backup.zip` allowlist and no feed exemption from the ASN blocklist (both removed Nov 18, 2026).
+The URI is decoded once, lowercased, for the [robots pass](#robots-always-allowed), the
+[feed pass](#feed-always-served) and every other rule. There is no `/backup.zip` allowlist.
 
 ### blocked-responses
 A rejected request is answered here and never reaches the origin. Nothing in the answer says which
-rule matched: everything blocked gets `404`, except the one decoy path below, matched on the decoded
-and lowercased URI. The `404` carries no cache headers, so blocklisted traffic never accumulates
-cached entries. The decoy is answered with `private, no-store`, uncached for the same reason: it
-shares its URL with the real feed, the edge cache keeps one answer per URL, and a stored decoy would
-go on to answer clients that are allowed through. Caching it saves nothing, since the function
-replies from a constant without waiting on the origin. Varying the cache key per viewer would let
-the answer be cached and shred the hit rate on a public path instead.
+rule matched: everything blocked gets `404`, with no cache headers, so blocklisted traffic never
+accumulates cached entries.
 
-One limit worth stating: a cache hit is served without invoking the function at all, so a bot that
-arrives while the real feed is warm gets the real thing. A decoy answers the requests that reach the
+One limit worth stating: a cache hit is served without invoking the function at all, so whatever the
+origin has already cached reaches the client untouched. The filter only sees requests that reach the
 function, which is also where scraping of paths like `.env` and `backup.zip` lands.
 
 The two checks that run before URI decoding (no user agent, undecodable URI) answer a plain `404`
-even on the decoy path and on `robots.txt`: an undecodable URI is not a path worth trusting, and a
+even on the feed paths and on `robots.txt`: an undecodable URI is not a path worth trusting, and a
 client that sends no user agent is not going to read either file.
 
 ### robots-always-allowed
@@ -304,23 +301,29 @@ Exact match on `/robots.txt`, after decoding and lowercasing, ahead of every fil
 pre-decode exits. `robots.txt` is a signal file rather than content: the origin copy already
 disallows almost everything, so serving it to anyone costs nothing, while refusing it tells a
 compliant crawler nothing: a `404` is not a disallow, so the paths the file excludes stay open to
-anyone who reads a dead end as permission. A deny-all decoy for blocked clients was
-tried and dropped: harvesters listed in [blocked-bot-regex](#blocked-bot-regex) ignore the file
-anyway, so it only ever reached the clients worth keeping honest.
+anyone who reads a dead end as permission. Harvesters listed in
+[blocked-bot-regex](#blocked-bot-regex) ignore the file anyway.
 
 Matched exactly, not as a suffix: `/evil.com/robots.txt` stays blocked, the same shape the
 redirect-prefix rule rejects. `ads.txt` and `llms.txt` are deliberately not in here: they attract
 the same scanner traffic as every other path, and no honest client is harmed by a `404` on them.
 
-### fake-empty-feed
-`emptyAtomFeed` is a well-formed Atom document with no entries, served `application/atom+xml` and
-uncached. A scraper harvesting RSS sees an ordinary endpoint that happens to have nothing in it; a
-`404` on the other hand advertises that something is there and was withheld.
+### feed-always-served
+`/feed.xml` and `/rss.xml` are passed through untouched, ahead of every other check:
+the user agent allowlist ([blocked-bot-regex](#blocked-bot-regex)), the shape checks, the
+covers and even the KV lookup. A reader on a blocklisted hosting provider gets the real feed.
 
-The cost falls on real readers. A reader blocked by ASN or by a user agent detail not in
-[Feed readers](#feed-readers) gets a valid empty feed, so it reports an empty blog quietly and
-keeps polling instead of surfacing an error it could route around; the fix for an affected reader is
-a token in that list. `/rss.xml` is not covered: it keeps getting the plain `404`.
+A feed is how an honest reader sees this site at all. A reader that cannot fetch it reports an
+empty blog quietly and stops coming back, which is the opposite of what the blocklist is for. The
+feed is public by construction too: anything a scraper could learn from it it can read anyway.
+
+Exact match on the decoded, lowercased path, like `robots.txt`: `/some_other_path/feed.xml`,
+`/my-rss.xml`, `/feed.xml.php` and `/feed.xml/../.env` stay filtered. A prefix match would let a
+suffixed path skip the security scan.
+
+Limits: the two checks that run before this one still apply, so a client with no user agent at all
+gets the plain `404` described in [blocked-responses](#blocked-responses). `/feedpress.app/` is a
+user agent token in [allowed-hosted-software](#allowed-hosted-software), not a path.
 
 ### asn-kvs
 `kvsHandle.exists(asn)` answers "is this ASN an ISP or research network". The store is filled by
@@ -339,8 +342,8 @@ us-east-1 IPs (one IP per request), so blocking by IP is useless against it. Blo
 survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
 and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
-Blocked ASNs get the usual answer mapping ([blocked-responses](#blocked-responses)): a blocked feed
-reader or crawler from one of them sees the decoys on those two paths. The check runs after the
+Blocked ASNs get the usual answer mapping ([blocked-responses](#blocked-responses)): a request from one
+of them gets the plain `404`, except on `/robots.txt` and the feed paths. The check runs after the
 cheap URI/UA checks and the ASN whitelist, and before the KeyValueStore lookup
 ([filtering-sequence](#filtering-sequence)). If the header is absent (policy not attached) nothing
 matches: fails open.
@@ -352,7 +355,7 @@ Blocked ASNs (all at the user's request):
 | 15169 | Google LLC — Google's own network (Googlebot, FeedFetcher…); excluded on purpose, see "Google is excluded on purpose" above |
 | 16509, 14618 | AMAZON-02, AMAZON-AES |
 | 215125 | Church of Cyberology, NL scraper |
-| 29222 | Infomaniak, CH feed scraper |
+| 29222 | Infomaniak, CH feed scraper (still gets the feeds, blocked everywhere else) |
 | 396982 | Google Cloud, NL |
 | 1299 | Arelion Sweden AB |
 | 48090 | Techoff SRV Limited, Amsterdam NL |
@@ -429,7 +432,7 @@ the UA allowlist exists to accept.
 **Bravebot (`bravebot\/`, name token only, added Nov 19, 2026).** Brave Search crawls from
 Hetzner AS24940, which is blocklisted, so without this token every Bravebot page fetch would
 get `404` and Brave's own index could never crawl the blog (its robots.txt fetches still pass —
-robots.txt/feed.xml are served by the separate custom-response function). Goal: be indexed by
+robots.txt is served to everyone, see [robots-always-allowed](#robots-always-allowed)). Goal: be indexed by
 Brave on Brave's own index, not only through the Bing fallback. The genuine crawler UA is
 `Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Bravebot/1.0;
 https://search.brave.com/help/brave-search-crawler) Chrome/W.X.Y.Z Safari/537.36` — the

@@ -1,0 +1,1 @@
+sbx secret set github --command 'gh auth token'

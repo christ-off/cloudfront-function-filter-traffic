@@ -1,0 +1,1 @@
+sbx run --name blog-filtering -- "Hi !" --permission-mode auto
