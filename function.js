@@ -22,20 +22,20 @@ async function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // rationale: README.md#robots-always-allowed
-    if (uriLower === '/robots.txt') {
+    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
+    if (uriLower === '/robots.txt' || feedUriRegex.test(uriLower)) {
         return request;
     }
 
     if (isBadActor(uriLower, ua) || blockedBotRegex.test(ua) ||
         isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer, ua)) {
-        return createBlockedResponse(uriLower);
+        return createNotFoundResponse();
     }
 
     // The ASN decision comes last: it may cost a KeyValueStore read
     const asnHeader = request.headers['cloudfront-viewer-asn'];
     if (!await isAsnAllowed(asnHeader && asnHeader.value ? asnHeader.value : '', ua)) {
-        return createBlockedResponse(uriLower);
+        return createNotFoundResponse();
     }
 
     return request;
@@ -103,6 +103,12 @@ const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|pagefind\/page
 // rationale: README.md#js-allowlist
 const allowedJsRegex = /^\/(javascript\/(recommended-blogs|chart\.umd\.min|bootstrap\.bundle\.min)|pagefind\/pagefind(-worker|-ui)?)\.js$/;
 
+// Feeds are allowed verbatim, anchored at both ends: only the two feed files the
+// site actually publishes. Any other path (/some_other_path/feed.xml, /feed.xml.php,
+// /feed.xml/../.env) is not matched and stays filtered.
+// rationale: README.md#feed-always-served
+const feedUriRegex = /^\/(feed|rss)\.xml$/;
+
 // rationale: README.md#bad-actor-check-order
 function isBadActor(uri, ua) {
     return isPathTraversal(uri) ||
@@ -142,7 +148,7 @@ function isMalformedChromeClaim(ua) {
 }
 
 // rationale: README.md#blocked-bot-regex
-const blockedBotRegex = /linkupbot\/|sleepbot|got \(https:\/\/github\.com\/sindresorhus\/got|palo alto networks|trident|amzn-searchbot\/|ccbot\/|aiohttp\/|emacs\/|meta-webindexer\/|twitterbot\/1\.0|presto|analyseseonet\/|scrapy|headlesschrome|aranea web-crawled corpora project|pimeyes-downloader-api|bytespider|python-httpx\/|mach-o|intelx\.io_bot|welley\/|searchenginebot|python-requests\/|databankmetasearch|shapbot|cms-detector\/|navcrawl\/|wellknownbot|siteauditbot\/|ev-crawler|builtwith|timpibot|xai-searchbot\/|semrushbot|livelapbot\/|engagemiibot\/|sitescan\/|stackyenrich\/|testsearchspider|atlas-enrich\/|fyndbot|wpbot\/|googlebot|dataforseobot|imagebot\/|loadedbot\/|google-cloudvertexbot|googleother|koofie\.net\/|domain-intel\/|screaming frog seo spider|openclaw|discordbot\/|sharkey \(like|reflectionbot\/|lightpanda\/|forestengine\/|seojuice-searchbot\/|coccocbot|hubspot crawler|domain-harvester\/|mapthenetbot\/|expansel-monitor\/|fogbot\/|newsletterformresearchbot\/|srchs-research-bot\/|aionbot\/|tiktokspider|opentheboxbot\/|veryhip\/|cms-security-auditor\/|censysinspect\/|publicwwwbot\/|wp2shell|webatlabot|ssi-nutch\/|variableratio-publicassetresearch\/|halobot\/|flowb0t-contentengine\/|claritybot\/|undici|serpex-index\/|compatible; crawler\)|webapp-mapper\/|ironfountain-leads\/|what10bot\/|konqueror\/|brightbot|rust-scrape\/|crawl-engine\/|keenablebot\/|wordpress\/|curl\/|tphotobot\/|websiteresearch\/|surdotlybot\/|aonsightmetabot\/|giantcrawler\/|baiduspider|sqlspider\/|goscan-mini\/|storebot-google\/|feedfetcher-google|googleimageproxy|app::jupiter\/|httpx - open-source project/;
+const blockedBotRegex = /baiduspider|got \(https:\/\/github\.com\/sindresorhus\/got|twitterbot\/1\.0|python-requests\/|tphotobot\/|emacs\/|curl\/|coccocbot|seojuice-searchbot\/|konqueror\/|sharkey \(like/;
 
 // rationale: README.md#asn-blocking
 const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230|212238|20326|51167|53667|218785|213438|132203|201738|45102|9534|24940|197540|211619|56655|14593|18779|57043|60404|7979|62874|200651|213790|62044|136907|9009|213954|35830|43444|26548|210906|46475|12876|212286|216014|59651|19148|3257|64249|136258|30900|62387|138915|60729|201341|15169|4837|4766|199457)$/;
@@ -153,27 +159,6 @@ const asnWhitelistRegex = /^(60653|199064|714)$/;
 // rationale: README.md#asn-allowed-hosted-software
 const allowedHostedSoftwareRegex = /bingbot\/|bravebot\/|ibou-search\/|mastodon\/|friendica|iceshrimp|duckduckbot\/|summalybot\/|misskey\/|catodon|nextcloud social|feedbin|birchfeed|feeder\.co|newsblur|freshrss|flus\/|kriss feed agent|rss-parser|miniflux/;
 
-// One-shot response builder for the decoy bodies, which are static.
-// rationale: README.md#blocked-responses
-function createResponse(statusCode, statusDescription, contentType, body, cacheControl) {
-    return {
-        statusCode: statusCode,
-        statusDescription: statusDescription,
-        headers: {"content-type": {value: contentType}, "cache-control": {value: cacheControl}},
-        body: body
-    };
-}
-
-// Body served instead of a 404 on /feed.xml: valid Atom with no entries, so a
-// blocked feed reader reports an empty blog rather than an error.
-// rationale: README.md#fake-empty-feed
-const emptyAtomFeed = '<?xml version="1.0" encoding="utf-8"?>\n' +
-  '<feed xmlns="http://www.w3.org/2005/Atom">\n' +
-  '  <id>https://perdu.com/</id>\n' +
-  '  <title>Perdu sur l\'Internet ?</title>\n' +
-  '  <updated>2025-01-01T00:00:00Z</updated>\n' +
-  '</feed>\n';
-
 // rationale: README.md#blocked-responses
 function createNotFoundResponse() {
     return {
@@ -182,21 +167,6 @@ function createNotFoundResponse() {
         headers: {"content-type": {value: 'text/plain'}},
         body: 'Not Found'
     };
-}
-
-// Path-dependent answer for a request some check already rejected. The feed gets
-// a decoy instead of a 404; the no-UA and undecodable-URI exits answer 404
-// because they run before the URI can be trusted. The decoy is never cached: it
-// shares its URL with the real feed, the edge cache keeps one answer per URL, so
-// a stored decoy would reach legitimate clients as well, and answering it costs
-// no origin fetch that caching could save.
-// rationale: README.md#blocked-responses
-function createBlockedResponse(uriLower) {
-    if (uriLower === '/feed.xml') {
-        return createResponse(200, 'OK', 'application/atom+xml; charset=UTF-8',
-            emptyAtomFeed, 'private, no-store');
-    }
-    return createNotFoundResponse();
 }
 
 export {handler};

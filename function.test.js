@@ -22,17 +22,6 @@ async function expectPassed(event) {
   expect(await handler(event)).toBe(event.request);
 }
 
-// Decoy: what a blocked client sees on the one path we do not answer with a 404
-async function expectFakeFeed(event) {
-  const result = await handler(event);
-  expect(result.statusCode).toBe(200);
-  expect(result.headers["content-type"].value).toBe("application/atom+xml; charset=UTF-8");
-  expect(result.headers["cache-control"].value).toBe("private, no-store");
-  expect(result.body.startsWith("<?xml")).toBe(true);
-  expect(result.body).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-  expect(result.body).not.toContain("<entry");
-}
-
 let kvsLookups;
 beforeEach(() => {
   kvsLookups = [];
@@ -59,21 +48,36 @@ describe("cheap checks", () => {
   ])("blocks the fake Chrome UA %s", (userAgent) => expectBlocked(makeEvent({ userAgent })));
 
   it.each([
-    "Scrapy/2.16.0", "python-requests/2.31", "curl/8.0", "Baiduspider/2.0",
-    "Mozilla/5.0 (compatible; Googlebot/2.1)", "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)",
+    "python-requests/2.31", "curl/8.0", "Baiduspider/2.0", "Mozilla/5.0 (compatible; Konqueror/3; Linux)",
+    "Emacs/29.1", "CoccocBot-Web/1.0", "TPhotoBot/1.0", "Mozilla/5.0 (compatible; SEOJuice-SearchBot/1.0)",
   ])("blocks the bot UA %s", (userAgent) => expectBlocked(makeEvent({ userAgent })));
 
-  it("decoys the feed for a blocked bot and serves robots.txt to it", async () => {
-    await expectFakeFeed(makeEvent({ uri: "/feed.xml", userAgent: "Scrapy/2.16.0" }));
-    await expectPassed(makeEvent({ uri: "/robots.txt", userAgent: "Scrapy/2.16.0" }));
+  // rationale: README.md#blocked-bot-regex
+  it.each([
+    ["Scrapy/2.16.0", "16509"],
+    ["Mozilla/5.0 (compatible; Googlebot/2.1)", "15169"],
+    ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "15169"],
+    ["Mozilla/5.0 (compatible; SemrushBot/7~bm)", "24940"],
+  ])("blocks the hosted bot %s by its ASN, not by UA", async (userAgent, asn) => {
+    await expectBlocked(makeEvent({ userAgent, asn }));
+    expect(kvsLookups).toEqual([]);
+  });
+
+  it("serves the real feed and robots.txt to a blocked bot on a blocklisted ASN", async () => {
+    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
+    await expectPassed(makeEvent({ uri: "/feed.xml", asn: "16509", userAgent: "curl/8.5.0" }));
+    await expectPassed(makeEvent({ uri: "/rss.xml", asn: "16509", userAgent: "curl/8.5.0" }));
+    await expectPassed(makeEvent({ uri: "/robots.txt", asn: "16509", userAgent: "Scrapy/2.16.0" }));
   });
 
   it("keeps answering a blocked bot with a plain 404 on every other path", async () => {
-    await expectBlocked(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" }));
-    await expectBlocked(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
+    await expectBlocked(makeEvent({ uri: "/sitemap.xml", userAgent: "curl/8.0" }));
+    await expectBlocked(makeEvent({ uri: "/wp-login.php", userAgent: "curl/8.0" }));
   });
 
-  it("answers a request with no UA header with a plain 404 even on the decoy paths", async () => {
+  it("answers a request with no UA header with a plain 404, even on the always-served paths", async () => {
+    // A UA-less client is treated as a scraper, so this guard still runs first.
+    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
     await expectBlocked(makeEvent({ uri: "/feed.xml", userAgent: null }));
     await expectBlocked(makeEvent({ uri: "/robots.txt", userAgent: null }));
   });
@@ -158,8 +162,10 @@ describe("ASN rules", () => {
     expect(kvsLookups).toEqual([]);
   });
 
-  it("gives a blocklisted ASN the feed decoy and serves it robots.txt", async () => {
-    await expectFakeFeed(makeEvent({ uri: "/feed.xml", asn: "16509" }));
+  it("serves the feed and robots.txt to a blocklisted ASN", async () => {
+    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
+    await expectPassed(makeEvent({ uri: "/feed.xml", asn: "16509" }));
+    await expectPassed(makeEvent({ uri: "/rss.xml", asn: "16509" }));
     await expectPassed(makeEvent({ uri: "/robots.txt", asn: "16509" }));
   });
 
@@ -188,14 +194,24 @@ describe("KeyValueStore lookup", () => {
   it("passes feeds like any other request (reader on an ISP)", () =>
     expectPassed(makeEvent({ uri: "/feed.xml", asn: "3215", userAgent: "Reeder/5060003 CFNetwork/3896" })));
 
-  it("gives a feed reader on an unknown ASN the empty feed, never the real one", () =>
-    expectFakeFeed(makeEvent({ uri: "/feed.xml", asn: "99999", userAgent: "SomeReader/1.0" })));
+  it("serves the real feed to a reader on an unknown ASN", () =>
+    expectPassed(makeEvent({ uri: "/feed.xml", asn: "99999", userAgent: "SomeReader/1.0" })));
 
   it("serves robots.txt to a crawler blocked on its ASN", () =>
     expectPassed(makeEvent({ uri: "/robots.txt", asn: "99999" })));
 
   it("does not exempt a path that only ends with robots.txt", () =>
     expectBlocked(makeEvent({ uri: "/evil.com/robots.txt", asn: "99999" })));
+
+  it("does not exempt a path that only ends with feed.xml", () =>
+    expectBlocked(makeEvent({ uri: "/evil.com/feed.xml", asn: "99999" })));
+
+  it.each(["/feed.xml.php", "/feed.xml/../.env", "/rss.xml/wp-login.php", "/feed.xml/.git/config"])(
+    "does not exempt %s, which only starts with a feed path", (uri) =>
+      expectBlocked(makeEvent({ uri, asn: "16509", userAgent: "curl/8.5.0" })));
+
+  it("does not exempt a path that only ends with rss.xml", () =>
+    expectBlocked(makeEvent({ uri: "/evil.com/rss.xml", asn: "99999" })));
 
   it("fails open when the store read throws", async () => {
     kvs.exists = async () => { throw new Error("KVS unavailable"); };
@@ -204,6 +220,6 @@ describe("KeyValueStore lookup", () => {
 });
 
 describe("pass-through", () => {
-  it.each(["/", "/about/", "/about", "/backup.zip", "/robots.txt", "/feed.xml"])("returns the request for %s", (uri) =>
+  it.each(["/", "/about/", "/about", "/backup.zip", "/robots.txt", "/feed.xml", "/rss.xml"])("returns the request for %s", (uri) =>
     expectPassed(makeEvent({ uri })));
 });

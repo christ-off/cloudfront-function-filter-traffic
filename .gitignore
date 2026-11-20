@@ -6,3 +6,4 @@
 /coverage/
 /.vitest/
 .claude/settings.local.json
+/etc/sbx_*.sh
