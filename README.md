@@ -409,6 +409,7 @@ Blocked ASNs (all at the user's request):
 | 60729 | Stiftung Erneuerbare Freiheit (TORSERVERS-NET), Berlin DE — runs the torservers.net / artikel10.org Tor exit relays (e.g. `berlin01.tor-exit.artikel10.org`); anonymising-proxy infrastructure, not a consumer/business ISP; not verified against a registry in-session (`asn_info` has no category for it) |
 | 201341 | trafficforce, UAB (AS name Centurion-Internet-services), Lithuania, geolocated London GB — hosting network (RIPE, ASN type hosting; ~66k IPv4; peers with other hosting providers; not a consumer/business ISP; not verified against a registry in-session) |
 | 216014 | BestDC Limited, Amsterdam NL — hosting/datacenter/VPS provider; the "business" tag comes from the ASN classification, not an indication of a business ISP (not verified against a registry in-session) |
+| 135377 | UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED — hosting provider (cloud); added Nov 20, 2026 on request: only security scanners and scrapers seen |
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
