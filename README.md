@@ -116,7 +116,7 @@ what carries them past a blocklisted ASN. `allowedHostedSoftwareRegex` contains 
 no versions). `miniflux` passes through the KV from AS12322, but self-hosted instances on a VPS would
 not, so it is whitelisted anyway. `inoreader` passes through the KV and has no UA token. Not recoverable by a UA token: one Chrome-UA client polling from AS29222 (152
 hits, blocklisted, UA identical to a normal browser), Outlook behind Zscaler, and unnamed
-clients on hosting ASNs. `app::jupiter/` and `emacs/` are already in `blockedBotRegex`.
+clients on hosting ASNs. `emacs/` is already in `blockedBotRegex`.
 
 KV membership was checked on Nov 18 with `aws cloudfront-keyvaluestore get-key` against
 `asn-allowed-categories`: 3215, 5410, 8717, 12322 and 18403 are `isp`; 60653, 6939, 16509,
@@ -244,33 +244,30 @@ Match the bot's name token only and drop its version (`aionbot\/`, not
 `)` and `/` as `\.`, `\(`, `\)`, `\/`) and add a UA sample to the `blockedAgents`
 fixture in `function.test.js`.
 
-**Blocked at the user's request, no further reason:** `coccocbot` (Coc Coc),
-`hubspot crawler`, `domain-harvester/`, `mapthenetbot/`, `expansel-monitor/`, `fogbot/`,
-`newsletterformresearchbot/`, `srchs-research-bot/`, `aionbot/`, `sqlspider/`, `goscan-mini/`, `googlebot` (all Google search crawlers, incl. `Googlebot-Image`; the site must not be indexed by Google), `storebot-google/` (Google Merchant Center crawler), `feedfetcher-google` (Google RSS/Atom feed fetcher, UA `FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)`, no `/` version; blocking it stops Google fetching every path except the feeds, which are always served), `googleimageproxy` (Gmail/Google image proxy, UA `... (via ggpht.com GoogleImageProxy)`; also fetches images embedded in emails, so blocking it hides images in Gmail), `app::jupiter/` (Perl `App::` module UA), `tiktokspider` (no
-`/`-separated version in its UA), `opentheboxbot/`, `brightbot` (UA is `Brightbot 1.0`),
-`rust-scrape/`, `webapp-mapper/`, `ironfountain-leads/`, `veryhip/`, `censysinspect/`,
-`publicwwwbot/`, `wp2shell` (WordPress exploit tool), `webatlabot`, `ssi-nutch/`,
-`variableratio-publicassetresearch/`, `halobot/`, `flowb0t-contentengine/`, `tphotobot/`,
-`websiteresearch/`, `aonsightmetabot/`, `giantcrawler/`, `wordpress/` (pingback/XML-RPC UA), `curl/` (no
-legitimate need to curl the site), `httpx - open-source project` (ProjectDiscovery httpx;
-its UA has no `/`-separated version, so the name phrase is matched).
+**Only bots the ASN filter cannot catch are listed.** A bot running on a hosting provider is already
+answered `404` by the [ASN decision](#asn-blocking) (an ASN missing from the KeyValueStore is
+blocked), so a UA token for it adds a regex alternative and nothing else. Scrapy, SemrushBot,
+Googlebot, FeedFetcher-Google and the other hosted crawlers were dropped from the regex on Nov 20,
+2026 for that reason (Google's own networks, AS15169 and AS396982, are on the ASN blocklist). The
+trade-off: such a bot spoofing a UA from an ISP ASN, or from a hosting ASN present in the KV, is no
+longer caught by its UA. A bot goes back into the regex only if it is seen from an ASN the filter lets
+through.
 
-**With a reason:**
+Kept, still matched by UA (a reason is given only where one was recorded):
 
 | Token | Why |
 |---|---|
-| `cms-security-auditor/` | Claims to be an "authorized self-check", but the origin has no allowlist for it, so it is treated like any unsolicited scanner |
-| `seojuice-searchbot/` | Ignores `robots.txt` |
-| `what10bot/` | Ignores `robots.txt` |
-| `surdotlybot/` | Ignores `robots.txt` despite claiming to obey it |
-| `claritybot/` | AI crawler that ignores `robots.txt`; its bot info page is missing |
-| `keenablebot/` | Ignores `robots.txt` |
-| `crawl-engine/` | Ignores `robots.txt` |
-| `serpex-index/` | Documents no `robots.txt` policy |
-| `undici` | Node.js HTTP client; never fetches `robots.txt`, traffic comes from a hosting provider (DigitalOcean, Toronto) |
-| `konqueror/` | `Mozilla/5.0 (compatible; Konqueror/3; Linux)`: no real visitor sends this UA anymore; only scrapers spoof it |
-| `compatible; crawler)` | Full UA `Mozilla/5.0 (compatible; crawler)`. The bare word "crawler" is too generic (it appears in `https://crawler.exa.ai/`), so the whole substring is anchored |
 | `baiduspider` | Every variant (`-image`, `-render/2.0`, ...). The render variant downloads covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer); blocking only it is pointless |
+| `coccocbot` | Blocked at the user's request (Coc Coc) |
+| `tphotobot/` | Blocked at the user's request |
+| `curl/` | No legitimate need to curl the site |
+| `python-requests/` | Scripting library UA |
+| `got (https://github.com/sindresorhus/got` | Node HTTP client UA |
+| `twitterbot/1.0` | Version-pinned, unlike the other tokens |
+| `emacs/` | Emacs default UA |
+| `sharkey (like` | Sharkey fediverse server UA prefix |
+| `konqueror/` | `Mozilla/5.0 (compatible; Konqueror/3; Linux)`: no real visitor sends this UA anymore; only scrapers spoof it |
+| `seojuice-searchbot/` | Ignores `robots.txt` |
 
 **Deliberately not blocked** (absent from the regex; do not add):
 - `ExaSearchBot`: the user permits Exa to learn from the blog.

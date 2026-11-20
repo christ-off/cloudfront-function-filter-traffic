@@ -48,9 +48,20 @@ describe("cheap checks", () => {
   ])("blocks the fake Chrome UA %s", (userAgent) => expectBlocked(makeEvent({ userAgent })));
 
   it.each([
-    "Scrapy/2.16.0", "python-requests/2.31", "curl/8.0", "Baiduspider/2.0",
-    "Mozilla/5.0 (compatible; Googlebot/2.1)", "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)",
+    "python-requests/2.31", "curl/8.0", "Baiduspider/2.0", "Mozilla/5.0 (compatible; Konqueror/3; Linux)",
+    "Emacs/29.1", "CoccocBot-Web/1.0", "TPhotoBot/1.0", "Mozilla/5.0 (compatible; SEOJuice-SearchBot/1.0)",
   ])("blocks the bot UA %s", (userAgent) => expectBlocked(makeEvent({ userAgent })));
+
+  // rationale: README.md#blocked-bot-regex
+  it.each([
+    ["Scrapy/2.16.0", "16509"],
+    ["Mozilla/5.0 (compatible; Googlebot/2.1)", "15169"],
+    ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "15169"],
+    ["Mozilla/5.0 (compatible; SemrushBot/7~bm)", "24940"],
+  ])("blocks the hosted bot %s by its ASN, not by UA", async (userAgent, asn) => {
+    await expectBlocked(makeEvent({ userAgent, asn }));
+    expect(kvsLookups).toEqual([]);
+  });
 
   it("serves the real feed and robots.txt to a blocked bot on a blocklisted ASN", async () => {
     // rationale: README.md#robots-always-allowed, README.md#feed-always-served
@@ -60,8 +71,8 @@ describe("cheap checks", () => {
   });
 
   it("keeps answering a blocked bot with a plain 404 on every other path", async () => {
-    await expectBlocked(makeEvent({ uri: "/sitemap.xml", userAgent: "Scrapy/2.16.0" }));
-    await expectBlocked(makeEvent({ uri: "/wp-login.php", userAgent: "Scrapy/2.16.0" }));
+    await expectBlocked(makeEvent({ uri: "/sitemap.xml", userAgent: "curl/8.0" }));
+    await expectBlocked(makeEvent({ uri: "/wp-login.php", userAgent: "curl/8.0" }));
   });
 
   it("answers a request with no UA header with a plain 404, even on the always-served paths", async () => {
