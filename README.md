@@ -30,8 +30,8 @@ request
  │    (cover check exempts hosted-software UA)
  │
  ├─ ASN in function whitelist ─────────────────▶ pass
- ├─ hosted-software UA (mastodon, bingbot, ─────▶ pass
- │    bravebot, ibou, feed readers…)
+ ├─ hosted-software UA (googlebot, bingbot, ─────▶ pass
+ │    bravebot, mastodon, feed readers…)
  ├─ ASN in function blocklist ─────────────────▶ blocked
  ├─ no ASN header ─────────────────────────────▶ pass (fail open)
  │
@@ -51,13 +51,18 @@ survived every cheap check. The store is filled weekly by
 [`asn-kvs-sync`](../asn-kvs-sync/) with the `isp` and `education_research` ASNs (about 34.4k
 keys): **an ASN missing from the store is blocked**.
 
-**Google is excluded on purpose.** Blocking Google (indexing, FeedFetcher, image fetcher)
-is a voluntary decision to exclude Google tools from the blog: `googlebot`,
-`google-cloudvertexbot`, `googleother`, `storebot-google`, `feedfetcher-google` and
-`googleimageproxy` are in the bad-UA regex, and AS15169 is on the ASN blocklist. Do not
-add a Google exception (for search ranking or images) without revisiting this
-decision. The feed paths are the one exception: they are served to everyone, FeedFetcher included
-([feed-always-served](#feed-always-served)).
+**Google: indexing only.** The blanket Google exclusion was revisited on Nov 21, 2026: the blog
+wants to be indexed by Google search again, but not by Google's image, news, or AI crawlers.
+Only the web-indexing crawler is carved out — `googlebot/` (name token plus slash, no version)
+is in [asn-allowed-hosted-software](#asn-allowed-hosted-software), so a `Googlebot/…` UA passes
+the AS15169 blocklist the way Bingbot passes AS8075. Every other Google agent keeps the plain
+`404`: `Google-Images`, `Googlebot-News`, `Google-Extended` (Gemini training),
+`google-cloudvertexbot`, `googleother`, `storebot-google`, `googleimageproxy`, and
+`FeedFetcher-Google` on everything except the feed paths all come from AS15169 (or AS396982),
+which stays on the [ASN blocklist](#asn-blocking), and none of them matches the `googlebot/`
+token. Extending the exception beyond the web index (images, news, AI, …) needs the same
+revisit. The feed paths remain the one universal exception: served to everyone, FeedFetcher
+included ([feed-always-served](#feed-always-served)).
 
 Rules behind the order:
 
@@ -71,7 +76,8 @@ Rules behind the order:
 - **The hosted-software UA check sits before the ASN blocklist.** Bingbot comes from AS8075
   (Microsoft), which is blocklisted on purpose because the network hosts other tools we do not
   want; only the UA tokens (`bingbot/`, `ibou-search/`, Mastodon, feed readers…) get through it.
-  AS8075 is never whitelisted by ASN.
+  AS8075 is never whitelisted by ASN. Googlebot passes the blocklisted AS15169 the same way —
+  the rest of Google stays out ([asn-allowed-hosted-software](#asn-allowed-hosted-software)).
 - **The ASN blocklist stays** next to the KV. It stops the lookup for known bad ASNs and blocks
   ASNs the KV marks `isp` that we still refuse (e.g. Chinese ISPs 4134, 23724). Hosting-only
   verification still applies before adding an ASN.
@@ -331,7 +337,8 @@ than `get` because `get` throws on a missing key and the value is not needed. An
 ASNs that skip the blocklist and the KV: 60653 (Feedly: used only by Feedly, although the ipverse
 category is `business`), 199064 (Qwant), 714 (Apple).
 Not whitelisted on purpose: 8075 (Microsoft,
-Bingbot passes by UA) and 15169 (Google, blocklisted).
+Bingbot passes by UA) and 15169 (Google, blocklisted; only the web-indexing `Googlebot/`
+UA passes, by the UA token in [asn-allowed-hosted-software](#asn-allowed-hosted-software)).
 
 ### asn-blocking
 A scraper with a frozen Chrome 152 UA (`Chrome/152.0.0.0` on `X11; Linux x86_64`) crawls from a rotating pool of AWS
@@ -349,7 +356,7 @@ Blocked ASNs (all at the user's request):
 
 | ASN | Network |
 |---|---|
-| 15169 | Google LLC — Google's own network (Googlebot, FeedFetcher…); excluded on purpose, see "Google is excluded on purpose" above |
+| 15169 | Google LLC — Google's own network (Googlebot, FeedFetcher, Images, News, AI crawlers…); only the web-indexing Googlebot passes, by the `googlebot/` UA token ([asn-allowed-hosted-software](#asn-allowed-hosted-software)); everything else stays excluded — see "Google: indexing only" above |
 | 16509, 14618 | AMAZON-02, AMAZON-AES |
 | 215125 | Church of Cyberology, NL scraper |
 | 29222 | Infomaniak, CH feed scraper (still gets the feeds, blocked everywhere else) |
@@ -445,6 +452,21 @@ name (`Mozilla/5.0 (compatible; Bravebot/1.0; https://brave.com/search/)`, Googl
 same as Bingbot on AS8075: a scanner spoofing the token from a blocklisted ASN could reach a
 page.
 
+**Googlebot (`googlebot\/`, name token plus slash, added Nov 21, 2026).** The user asked to be
+indexed by Google search again, while Google's image, news, and AI crawlers stay out. Only the
+web-indexing crawler gets the token, and the slash keeps it precise: `Googlebot/2.1` matches,
+but `Googlebot-News` and `Googlebot-Image` carry a dash after the name, and `Google-Images` /
+`Google-Extended` (Gemini training) don't contain `googlebot` at all — so none of them passes
+and they fall through to the AS15169 block. AS15169 is deliberately *not* removed from
+[asn-blocking](#asn-blocking): that network carries every other Google agent and any unknown
+future ones, so the exclusion stays at the network level and only the index crawler is carved
+out — the same shape as Bingbot on AS8075. Accepted caveat, same as Bingbot and Bravebot: a
+scanner spoofing `Googlebot/` from a blocklisted ASN reaches normal page content; the path
+checks (traversal, dotfile, scan URIs) run before this one and still stop it. Side effect,
+wanted here: Googlebot fetches covers without a `Referer` while indexing a page, so it also
+gets the [cover-referer](#cover-referer) exemption this list carries — indexed posts keep
+their cover image.
+
 ### asn-header-setup
 **Setup — getting the ASN header in AWS.** The function only sees
 `CloudFront-Viewer-ASN` if the distribution requests it. This is done once per
@@ -517,7 +539,10 @@ site referer served before Nov 18 (1,546 Mastodon, 147 Misskey, 109 Friendica-fa
 browsers, 58 other) against 152 blocked after the Nov 18 deploy — without the exception, posts
 shared there lose their preview images. A *foreign* referer still gets `404` even with an
 allowlisted UA (fetchers send none, so a wrong one is suspicious), and browsers opening a cover
-directly stay blocked.
+directly stay blocked. Googlebot (web indexing, allowed Nov 21, 2026 —
+[asn-allowed-hosted-software](#asn-allowed-hosted-software)) is on the list too and fetches
+page covers without a `Referer`; the exemption is what lets indexed posts keep their cover
+image.
 
 ---
 

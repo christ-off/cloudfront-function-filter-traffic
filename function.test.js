@@ -55,7 +55,6 @@ describe("cheap checks", () => {
   // rationale: README.md#blocked-bot-regex
   it.each([
     ["Scrapy/2.16.0", "16509"],
-    ["Mozilla/5.0 (compatible; Googlebot/2.1)", "15169"],
     ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "15169"],
     ["Mozilla/5.0 (compatible; SemrushBot/7~bm)", "24940"],
   ])("blocks the hosted bot %s by its ASN, not by UA", async (userAgent, asn) => {
@@ -110,6 +109,7 @@ describe("asset rules", () => {
     await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Misskey/2026.6.0 (https://fuzzle.me.uk/)" }));
     await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "SummalyBot/5.2.0" }));
     await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Catodon (like Discordbot)" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }));
   });
 
   it("still blocks covers when hosted software sends a foreign referer", async () =>
@@ -157,6 +157,31 @@ describe("ASN rules", () => {
     await expectBlocked(makeEvent({ uri: "/.env", asn: "396982", userAgent: spoof }));
     await expectBlocked(makeEvent({ uri: "/@fs/app/.env", asn: "396982", userAgent: spoof }));
     await expectBlocked(makeEvent({ uri: "/proc/self/environ", asn: "396982", userAgent: spoof }));
+  });
+
+  it("passes Googlebot from blocklisted AS15169 by UA token, without a KeyValueStore read", async () => {
+    // rationale: README.md#asn-allowed-hosted-software
+    await expectPassed(makeEvent({
+      asn: "15169",
+      userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    }));
+    expect(kvsLookups).toEqual([]);
+  });
+
+  it.each([
+    "Mozilla/5.0 (compatible; Google-Images/1.0)",
+    "Mozilla/5.0 (compatible; Googlebot-News/2.1; +http://news.google.com/)",
+    "Mozilla/5.0 (compatible; Google-Extended/1.0; +http://www.google.com/)",
+  ])("keeps blocking Google's non-indexing agent %s from AS15169 by ASN", async (userAgent) => {
+    await expectBlocked(makeEvent({ asn: "15169", userAgent }));
+    expect(kvsLookups).toEqual([]);
+  });
+
+  it("keeps blocking a Googlebot UA spoof on scanner paths", async () => {
+    const spoof = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+    await expectBlocked(makeEvent({ uri: "/.env", asn: "15169", userAgent: spoof }));
+    await expectBlocked(makeEvent({ uri: "/@fs/app/.env", asn: "15169", userAgent: spoof }));
+    await expectBlocked(makeEvent({ uri: "/proc/self/environ", asn: "15169", userAgent: spoof }));
   });
 
   it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169", "135377", "37963", "24429", "51396"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
