@@ -410,6 +410,8 @@ Blocked ASNs (all at the user's request):
 | 201341 | trafficforce, UAB (AS name Centurion-Internet-services), Lithuania, geolocated London GB — hosting network (RIPE, ASN type hosting; ~66k IPv4; peers with other hosting providers; not a consumer/business ISP; not verified against a registry in-session) |
 | 216014 | BestDC Limited, Amsterdam NL — hosting/datacenter/VPS provider; the "business" tag comes from the ASN classification, not an indication of a business ISP (not verified against a registry in-session) |
 | 135377 | UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED — hosting provider (cloud); added Nov 20, 2026 on request: only security scanners and scrapers seen |
+| 37963 | Hangzhou Alibaba Advertising Co., Ltd. (Alibaba Cloud, China) — hosting/cloud network; added Nov 21, 2026 on request: Alibaba hosting platform, home of many scrapers; not verified against a registry in-session |
+| 24429 | Alibaba (China) Technology Co., Ltd. (Zhejiang Taobao Network, Alibaba Cloud) — hosting/cloud network; added Nov 21, 2026 on request: Alibaba hosting platform, home of many scrapers; not verified against a registry in-session |
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software

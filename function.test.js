@@ -159,7 +159,7 @@ describe("ASN rules", () => {
     await expectBlocked(makeEvent({ uri: "/proc/self/environ", asn: "396982", userAgent: spoof }));
   });
 
-  it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169", "135377"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
+  it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169", "135377", "37963", "24429"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
     await expectBlocked(makeEvent({ asn }));
     expect(kvsLookups).toEqual([]);
   });
