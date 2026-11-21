@@ -499,8 +499,12 @@ unaffected). To check it works, temporarily log it from the function with
 is not attached.
 
 **Trade-off:** this blocks everything hosted on AWS, including Amazonbot and
-any AWS-hosted Linkwarden / Synapse instance (SummalyBot is already allowed by UA). If such traffic
-shows up, add those UA tokens to `allowedHostedSoftwareRegex`. Some Amazon ranges are
+any AWS-hosted Linkwarden / Synapse instance (SummalyBot is already allowed by UA).
+ClaudeBot (Anthropic's crawler) also runs from these networks and is deliberately left blocked:
+it fetches `/robots.txt` first — always served, before the ASN check
+([robots-always-allowed](#robots-always-allowed)) — and obeys the disallow in it, so it backs off
+on its own and needs no UA token. If other such traffic shows up, add those UA tokens to
+`allowedHostedSoftwareRegex`. Some Amazon ranges are
 announced from other ASNs (e.g. AS8987 EU): check bgp.he.net before extending.
 
 ### json-allowlist
