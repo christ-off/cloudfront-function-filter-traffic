@@ -412,6 +412,7 @@ Blocked ASNs (all at the user's request):
 | 135377 | UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED — hosting provider (cloud); added Nov 20, 2026 on request: only security scanners and scrapers seen |
 | 37963 | Hangzhou Alibaba Advertising Co., Ltd. (Alibaba Cloud, China) — hosting/cloud network; added Nov 21, 2026 on request: Alibaba hosting platform, home of many scrapers; not verified against a registry in-session |
 | 24429 | Alibaba (China) Technology Co., Ltd. (Zhejiang Taobao Network, Alibaba Cloud) — hosting/cloud network; added Nov 21, 2026 on request: Alibaba hosting platform, home of many scrapers; not verified against a registry in-session |
+| 51396 | PFCLOUD Pfcloud UG (haftungsbeschränkt), Germany — hosting/VPS provider (holder per RIPEstat, confirmed by hackertarget aslookup; not a consumer/business ISP); added Nov 21, 2026 on request: home of many security bots |
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
