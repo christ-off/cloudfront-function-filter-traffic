@@ -62,11 +62,12 @@ describe("cheap checks", () => {
     expect(kvsLookups).toEqual([]);
   });
 
-  it("serves the real feed and robots.txt to a blocked bot on a blocklisted ASN", async () => {
-    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
+  it("serves the real feed, robots.txt and favicon.ico to a blocked bot on a blocklisted ASN", async () => {
+    // rationale: README.md#robots-always-allowed, README.md#favicon-always-served, README.md#feed-always-served
     await expectPassed(makeEvent({ uri: "/feed.xml", asn: "16509", userAgent: "curl/8.5.0" }));
     await expectPassed(makeEvent({ uri: "/rss.xml", asn: "16509", userAgent: "curl/8.5.0" }));
     await expectPassed(makeEvent({ uri: "/robots.txt", asn: "16509", userAgent: "Scrapy/2.16.0" }));
+    await expectPassed(makeEvent({ uri: "/favicon.ico", asn: "16509", userAgent: "Scrapy/2.16.0" }));
   });
 
   it("keeps answering a blocked bot with a plain 404 on every other path", async () => {
@@ -76,9 +77,10 @@ describe("cheap checks", () => {
 
   it("answers a request with no UA header with a plain 404, even on the always-served paths", async () => {
     // A UA-less client is treated as a scraper, so this guard still runs first.
-    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
+    // rationale: README.md#robots-always-allowed, README.md#favicon-always-served, README.md#feed-always-served
     await expectBlocked(makeEvent({ uri: "/feed.xml", userAgent: null }));
     await expectBlocked(makeEvent({ uri: "/robots.txt", userAgent: null }));
+    await expectBlocked(makeEvent({ uri: "/favicon.ico", userAgent: null }));
   });
 
   it("blocks cheap-check failures without reading the KeyValueStore", async () => {
@@ -189,11 +191,12 @@ describe("ASN rules", () => {
     expect(kvsLookups).toEqual([]);
   });
 
-  it("serves the feed and robots.txt to a blocklisted ASN", async () => {
-    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
+  it("serves the feed, robots.txt and favicon.ico to a blocklisted ASN", async () => {
+    // rationale: README.md#robots-always-allowed, README.md#favicon-always-served, README.md#feed-always-served
     await expectPassed(makeEvent({ uri: "/feed.xml", asn: "16509" }));
     await expectPassed(makeEvent({ uri: "/rss.xml", asn: "16509" }));
     await expectPassed(makeEvent({ uri: "/robots.txt", asn: "16509" }));
+    await expectPassed(makeEvent({ uri: "/favicon.ico", asn: "16509" }));
   });
 
   it("keeps giving a blocklisted ASN a plain 404 on the pages themselves", async () => {
@@ -230,6 +233,12 @@ describe("KeyValueStore lookup", () => {
   it("does not exempt a path that only ends with robots.txt", () =>
     expectBlocked(makeEvent({ uri: "/evil.com/robots.txt", asn: "99999" })));
 
+  it("serves favicon.ico to a crawler blocked on its ASN", () =>
+    expectPassed(makeEvent({ uri: "/favicon.ico", asn: "99999" })));
+
+  it("does not exempt a path that only ends with favicon.ico", () =>
+    expectBlocked(makeEvent({ uri: "/evil.com/favicon.ico", asn: "99999" })));
+
   it("does not exempt a path that only ends with feed.xml", () =>
     expectBlocked(makeEvent({ uri: "/evil.com/feed.xml", asn: "99999" })));
 
@@ -247,6 +256,6 @@ describe("KeyValueStore lookup", () => {
 });
 
 describe("pass-through", () => {
-  it.each(["/", "/about/", "/about", "/backup.zip", "/robots.txt", "/feed.xml", "/rss.xml"])("returns the request for %s", (uri) =>
+  it.each(["/", "/about/", "/about", "/backup.zip", "/robots.txt", "/favicon.ico", "/feed.xml", "/rss.xml"])("returns the request for %s", (uri) =>
     expectPassed(makeEvent({ uri })));
 });

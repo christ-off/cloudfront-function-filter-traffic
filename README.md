@@ -8,8 +8,9 @@ A [CloudFront Function](https://docs.aws.amazon.com/AmazonCloudFront/latest/Deve
 
 ## What the function does
 
-Checks run in this order; the first match wins. `/robots.txt` and the feed paths are always served
-as-is ([robots-always-allowed](#robots-always-allowed),
+Checks run in this order; the first match wins. `/robots.txt`, `/favicon.ico` and the feed paths are
+always served as-is ([robots-always-allowed](#robots-always-allowed),
+[favicon-always-served](#favicon-always-served),
 [feed-always-served](#feed-always-served)); a blocked request gets a plain `404`. Reasoning is under
 [Blocking rules — rationale](#blocking-rules--rationale).
 
@@ -20,6 +21,7 @@ request
  ├─ URI undecodable ───────────────────────────▶ 404  (no usable URI)
  │
  ├─ uriLower === '/robots.txt' ────────────────▶ pass (always served)
+ ├─ uriLower === '/favicon.ico' ───────────────▶ pass (always served)
  │
  ├─ uriLower is '/feed.xml' or '/rss.xml' ─────▶ pass (always served)
  │
@@ -43,8 +45,8 @@ request
 
 `blocked` is the answer mapping in [blocked-responses](#blocked-responses): a plain `404`. The two
 checks above it answer a plain `404` because they run before the URI is decoded, so there is no
-reliable URI to route. The missing user agent exit also precedes the `robots.txt` and feed passes on
-purpose: a client that sends no user agent was not going to read either one.
+reliable URI to route. The missing user agent exit also precedes the `robots.txt`, `favicon.ico` and
+feed passes on purpose: a client that sends no user agent was not going to read or display any of them.
 
 The ASN decision comes last so that the KeyValueStore is read only for requests that
 survived every cheap check. The store is filled weekly by
@@ -284,7 +286,8 @@ Kept, still matched by UA (a reason is given only where one was recorded):
 The order is in [What the function does](#what-the-function-does). Principle: cheapest checks first, the
 ASN decision last because it can cost a KeyValueStore read (2M reads/month free, then $0.03 per million).
 The URI is decoded once, lowercased, for the [robots pass](#robots-always-allowed), the
-[feed pass](#feed-always-served) and every other rule. There is no `/backup.zip` allowlist.
+[favicon pass](#favicon-always-served), the [feed pass](#feed-always-served) and every other rule.
+There is no `/backup.zip` allowlist.
 
 ### blocked-responses
 A rejected request is answered here and never reaches the origin. Nothing in the answer says which
@@ -296,8 +299,8 @@ origin has already cached reaches the client untouched. The filter only sees req
 function, which is also where scraping of paths like `.env` and `backup.zip` lands.
 
 The two checks that run before URI decoding (no user agent, undecodable URI) answer a plain `404`
-even on the feed paths and on `robots.txt`: an undecodable URI is not a path worth trusting, and a
-client that sends no user agent is not going to read either file.
+even on the feed paths, on `robots.txt` and on `favicon.ico`: an undecodable URI is not a path worth
+trusting, and a client that sends no user agent is not going to read or display any of them.
 
 ### robots-always-allowed
 Exact match on `/robots.txt`, after decoding and lowercasing, ahead of every filter except the two
@@ -310,6 +313,20 @@ anyone who reads a dead end as permission. Harvesters listed in
 Matched exactly, not as a suffix: `/evil.com/robots.txt` stays blocked, the same shape the
 redirect-prefix rule rejects. `ads.txt` and `llms.txt` are deliberately not in here: they attract
 the same scanner traffic as every other path, and no honest client is harmed by a `404` on them.
+
+### favicon-always-served
+Exact match on `/favicon.ico`, after decoding and lowercasing, right after the
+[robots pass](#robots-always-allowed) and ahead of every filter.
+
+The favicon is the site's visual signature rather than content: a few hundred bytes of fully public
+data, fetched by every browser that renders the site and by the feed readers and preview fetchers
+this filter deliberately serves — they list the site with the icon beside the entry, so a reader on
+a blocklisted hosting network would otherwise see a broken icon next to a feed it can read in full
+([feed-always-served](#feed-always-served)). Refusing it stops nobody: the traffic the blocklist is
+for does not fetch favicons, and a missing icon gives a scraper nothing to work with.
+
+Matched exactly, not as a suffix: `/evil.com/favicon.ico` stays blocked, the same shape the
+[robots rule](#robots-always-allowed) rejects.
 
 ### feed-always-served
 `/feed.xml` and `/rss.xml` are passed through untouched, ahead of every other check:
@@ -347,7 +364,8 @@ survives a UA change. CloudFront adds `CloudFront-Viewer-ASN` only when an
 origin request policy asks for it (`Viewer-ASN`, attached to the distribution),
 and `blockedAsnRegex` matches the header value exactly (anchored `^(...)$`).
 Blocked ASNs get the usual answer mapping ([blocked-responses](#blocked-responses)): a request from one
-of them gets the plain `404`, except on `/robots.txt` and the feed paths. The check runs after the
+of them gets the plain `404`, except on `/robots.txt`, `/favicon.ico` and the feed paths. The check
+runs after the
 cheap URI/UA checks and the ASN whitelist, and before the KeyValueStore lookup
 ([filtering-sequence](#filtering-sequence)). If the header is absent (policy not attached) nothing
 matches: fails open.

@@ -22,8 +22,8 @@ async function handler(event) {
     const uriLower = uri.trim().toLowerCase();
     const ua = userAgentHeader.value.toLowerCase();
 
-    // rationale: README.md#robots-always-allowed, README.md#feed-always-served
-    if (uriLower === '/robots.txt' || feedUriRegex.test(uriLower)) {
+    // rationale: README.md#robots-always-allowed, README.md#favicon-always-served, README.md#feed-always-served
+    if (uriLower === '/robots.txt' || uriLower === '/favicon.ico' || feedUriRegex.test(uriLower)) {
         return request;
     }
 
