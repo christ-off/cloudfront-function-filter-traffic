@@ -28,7 +28,7 @@ async function handler(event) {
     }
 
     if (isBadActor(uriLower, ua) || blockedBotRegex.test(ua) ||
-        isDisallowedAsset(uriLower) || isCoverDenied(uriLower, request.headers.referer, ua)) {
+        isDisallowedAsset(uriLower)) {
         return createNotFoundResponse();
     }
 
@@ -80,22 +80,6 @@ function isDisallowedAsset(uri) {
     return (uri.slice(-5) === '.json' && !allowedJsonRegex.test(uri)) ||
         (uri.slice(-3) === '.js' && !allowedJsRegex.test(uri));
 }
-
-// rationale: README.md#cover-referer
-function isCoverDenied(uri, referer, ua) {
-    if (!coverUriRegex.test(uri)) {
-        return false;
-    }
-    if (referer && referer.value) {
-        return referer.value.toLowerCase().indexOf(COVER_REFERER_PREFIX) !== 0;
-    }
-    // Refererless fetchers on the hosted-software allowlist are previews, not hotlinks
-    return !allowedHostedSoftwareRegex.test(ua);
-}
-
-// rationale: README.md#cover-referer
-const coverUriRegex = /^\/assets\/posts(_640)?\/.+\.webp$/;
-const COVER_REFERER_PREFIX = 'https://post-tenebras-lire.net/';
 
 // rationale: README.md#json-allowlist
 const allowedJsonRegex = /^\/(about\/data\/(blogs|pages|visitors)|pagefind\/pagefind-entry)\.json$/;
@@ -151,7 +135,7 @@ function isMalformedChromeClaim(ua) {
 const blockedBotRegex = /baiduspider|got \(https:\/\/github\.com\/sindresorhus\/got|twitterbot\/1\.0|python-requests\/|tphotobot\/|emacs\/|curl\/|coccocbot|seojuice-searchbot\/|konqueror\/|sharkey \(like/;
 
 // rationale: README.md#asn-blocking
-const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230|212238|20326|51167|53667|218785|213438|132203|201738|45102|9534|24940|197540|211619|56655|14593|18779|57043|60404|7979|62874|200651|213790|62044|136907|9009|213954|35830|43444|26548|210906|46475|12876|212286|216014|59651|19148|3257|64249|136258|30900|62387|138915|60729|201341|15169|4837|4766|199457|135377|37963|24429|51396)$/;
+const blockedAsnRegex = /^(16509|14618|215125|29222|396982|1299|48090|8075|4134|23724|271315|209334|41608|213230|212238|20326|51167|53667|218785|213438|132203|201738|45102|9534|24940|197540|211619|56655|14593|18779|57043|60404|7979|62874|200651|213790|62044|136907|9009|213954|35830|43444|26548|210906|46475|12876|212286|216014|59651|19148|3257|64249|136258|30900|62387|138915|60729|201341|15169|4837|4766|199457|135377|37963|24429|51396|56044|132525)$/;
 
 // rationale: README.md#asn-whitelist
 const asnWhitelistRegex = /^(60653|199064|714)$/;

@@ -89,7 +89,7 @@ describe("cheap checks", () => {
   });
 });
 
-// Step 5: .json / .js allowlists and cover referer apply to everyone, whitelisted ASN included
+// Step 5: .json / .js allowlists apply to everyone, whitelisted ASN included
 describe("asset rules", () => {
   it("allows the listed json and js files, blocks the others", async () => {
     await expectPassed(makeEvent({ uri: "/about/data/visitors.json" }));
@@ -99,24 +99,10 @@ describe("asset rules", () => {
     await expectBlocked(makeEvent({ uri: "/other.js" }));
   });
 
-  it("only serves covers with the site referer", async () => {
-    await expectBlocked(makeEvent({ uri: "/assets/posts/a.webp" }));
-    await expectBlocked(makeEvent({ uri: "/assets/posts/a.webp", referer: "https://evil.example/" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", referer: "https://post-tenebras-lire.net/x/" }));
+  it("serves covers regardless of referer", async () => {
+    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp" }));
+    await expectPassed(makeEvent({ uri: "/assets/posts_640/a.webp", referer: "https://evil.example/" }));
   });
-
-  it("serves covers refererless to hosted software (preview fetchers)", async () => {
-    await expectPassed(makeEvent({ uri: "/assets/posts_640/a.webp", userAgent: "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Mastodon/4.7.3 (http.rb/5.3.1;  https://tuebingen.network/)" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Misskey/2026.6.0 (https://fuzzle.me.uk/)" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "SummalyBot/5.2.0" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Catodon (like Discordbot)" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }));
-    await expectPassed(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "Mozilla/5.0 (compatible; Google-InspectionTool/1.0)" }));
-  });
-
-  it("still blocks covers when hosted software sends a foreign referer", async () =>
-    expectBlocked(makeEvent({ uri: "/assets/posts/a.webp", userAgent: "http.rb/5.1.1 (Mastodon/4.2.0; +https://mastodon.example/)", referer: "https://evil.example/" })));
 
   it("applies to a whitelisted ASN as well", () =>
     expectBlocked(makeEvent({ uri: "/other.json", asn: "714" })));
@@ -203,7 +189,7 @@ describe("ASN rules", () => {
     await expectBlocked(makeEvent({ uri: "/proc/self/environ", asn: "15169", userAgent: spoof }));
   });
 
-  it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169", "135377", "37963", "24429", "51396"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
+  it.each(["16509", "8075", "4134", "4837", "4766", "199457", "15169", "135377", "37963", "24429", "51396", "56044", "132525"])("blocks blocklisted AS%s without a KeyValueStore read", async (asn) => {
     await expectBlocked(makeEvent({ asn }));
     expect(kvsLookups).toEqual([]);
   });

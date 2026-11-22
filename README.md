@@ -28,8 +28,7 @@ request
  ├─ security scan: traversal, dotfile, ────────▶ blocked
  │    php/wp/env/… URI, bad Chrome UA
  ├─ bad-UA regex ──────────────────────────────▶ blocked
- ├─ .json/.js not allowlisted, cover referer ──▶ blocked
- │    (cover check exempts hosted-software UA)
+ ├─ .json/.js not allowlisted ─────────────────▶ blocked
  │
  ├─ ASN in function whitelist ─────────────────▶ pass
  ├─ hosted-software UA (googlebot, bingbot, ─────▶ pass
@@ -71,10 +70,8 @@ exception: served to everyone, FeedFetcher included ([feed-always-served](#feed-
 
 Rules behind the order:
 
-- **"pass" before the KV only skips the lookup.** The `.json`/`.js` allowlist and the
-  cover-referer check run earlier and apply to every request, whitelisted ASN or not — the
-  cover check excepted for hosted-software UA ([asn-allowed-hosted-software](#asn-allowed-hosted-software)),
-  which fetches without a referer.
+- **"pass" before the KV only skips the lookup.** The `.json`/`.js` allowlist
+  runs earlier and applies to every request, whitelisted ASN or not.
 - **The ASN whitelist** holds three ASNs: AS60653 (Feedly, used only by Feedly although
   the KV category is `business`), AS199064 (Qwant) and AS714 (Apple, Applebot). It runs after
   the bad-UA regex, so a blocked bot UA from a whitelisted ASN is still blocked.
@@ -268,7 +265,7 @@ Kept, still matched by UA (a reason is given only where one was recorded):
 
 | Token | Why |
 |---|---|
-| `baiduspider` | Every variant (`-image`, `-render/2.0`, ...). The render variant downloads covers with the post URL as `Referer`, so it passes [cover-referer](#cover-referer); blocking only it is pointless |
+| `baiduspider` | Every variant (`-image`, `-render/2.0`, ...). |
 | `coccocbot` | Blocked at the user's request (Coc Coc) |
 | `tphotobot/` | Blocked at the user's request |
 | `curl/` | No legitimate need to curl the site |
@@ -441,6 +438,8 @@ Blocked ASNs (all at the user's request):
 | 37963 | Hangzhou Alibaba Advertising Co., Ltd. (Alibaba Cloud, China) — hosting/cloud network; added Nov 21, 2026 on request: Alibaba hosting platform, home of many scrapers; not verified against a registry in-session |
 | 24429 | Alibaba (China) Technology Co., Ltd. (Zhejiang Taobao Network, Alibaba Cloud) — hosting/cloud network; added Nov 21, 2026 on request: Alibaba hosting platform, home of many scrapers; not verified against a registry in-session |
 | 51396 | PFCLOUD Pfcloud UG (haftungsbeschränkt), Germany — hosting/VPS provider (holder per RIPEstat, confirmed by hackertarget aslookup; not a consumer/business ISP); added Nov 21, 2026 on request: home of many security bots |
+| 56044 | China Mobile Communications Corporation (CMNET), China — consumer/mobile ISP, NOT hosting; added Nov 22, 2026 on request: traffic only fetches the page, never its assets; not verified against a registry in-session |
+| 132525 | China Mobile Communications Corporation (CMNET), China — consumer/mobile ISP, NOT hosting; added Nov 22, 2026 on request: traffic only fetches the page, never its assets; not verified against a registry in-session |
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
@@ -455,10 +454,6 @@ the ASN blocklist and the KV lookup, all other rules still apply. Matched on the
 without version, like the bot blocklist.
 
 **Pleroma (`pleroma`, bare name token).** Fediverse server software like Mastodon. It sends `Pleroma <version>; <instance-url>` with a space, not a slash, after the name, so the token has no trailing `\/`, like `friendica`. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
-
-Since Nov 19, 2026 the same tokens also skip the [cover-referer](#cover-referer) check: these
-fetchers are server-side and send no `Referer`, so the cover rule blocked exactly the traffic
-the UA allowlist exists to accept.
 
 **Bravebot (`bravebot\/`, name token only, added Nov 19, 2026).** Brave Search crawls from
 Hetzner AS24940, which is blocklisted, so without this token every Bravebot page fetch would
@@ -483,10 +478,7 @@ and they fall through to the AS15169 block. AS15169 is deliberately *not* remove
 future ones, so the exclusion stays at the network level and only the index crawler is carved
 out — the same shape as Bingbot on AS8075. Accepted caveat, same as Bingbot and Bravebot: a
 scanner spoofing `Googlebot/` from a blocklisted ASN reaches normal page content; the path
-checks (traversal, dotfile, scan URIs) run before this one and still stop it. Side effect,
-wanted here: Googlebot fetches covers without a `Referer` while indexing a page, so it also
-gets the [cover-referer](#cover-referer) exemption this list carries — indexed posts keep
-their cover image.
+checks (traversal, dotfile, scan URIs) run before this one and still stop it.
 
 **Google-InspectionTool (`google-inspectiontool\/`, name token plus slash, added Nov 22, 2026).**
 Google's site-inspection tooling (the family behind Search Console's crawl and structure checks)
@@ -497,8 +489,7 @@ is name plus slash, no version, like the bot blocklist: `Google-InspectionTool/1
 no other agent seen in the logs carries the name. AS15169 stays on the
 [ASN blocklist](#asn-blocking) — the carve-out is at the UA level, same shape as Googlebot — and
 the path checks run before it, so a scanner spoofing the token is still stopped on
-`.env`/`@fs`-style URIs. Like Googlebot it fetches without a `Referer`, so it also gets the
-[cover-referer](#cover-referer) exemption this list carries.
+`.env`/`@fs`-style URIs.
 
 ### asn-header-setup
 **Setup — getting the ASN header in AWS.** The function only sees
@@ -559,28 +550,6 @@ Runs last, after the bad-actor/bot checks. Matches the decoded, lowercased
 `uriLower` exactly; `.json` paths are handled by the JSON rule, not this one.
 
 To allow another file, add it to `allowedJsRegex` and the test fixture.
-
-### cover-referer
-Post covers (`.webp` in `/assets/posts/` and `/assets/posts_640/`) are only
-meant to be embedded by the site itself, so hotlinked or direct requests
-(missing or foreign `Referer`) get `404`. `coverUriRegex` matches the decoded,
-lowercased `uriLower`; the referer is compared case-insensitively against
-`COVER_REFERER_PREFIX`. The `Referer` is client-supplied, so this only stops
-casual hotlinking. Other `/assets/*` paths are intentionally unfiltered for now.
-
-Exception since Nov 19, 2026: a UA matching `allowedHostedSoftwareRegex` skips this check
-([asn-allowed-hosted-software](#asn-allowed-hosted-software)). Fediverse and link-preview
-fetchers (Mastodon, Misskey, Friendica/Iceshrimp/Catodon, SummalyBot) fetch covers server-side
-and never send a `Referer`: `logs.db` (Aug 19 – Nov 19) counted 2,214 cover fetches without a
-site referer served before Nov 18 (1,546 Mastodon, 147 Misskey, 109 Friendica-family, 354
-browsers, 58 other) against 152 blocked after the Nov 18 deploy — without the exception, posts
-shared there lose their preview images. A *foreign* referer still gets `404` even with an
-allowlisted UA (fetchers send none, so a wrong one is suspicious), and browsers opening a cover
-directly stay blocked. Googlebot (web indexing, allowed Nov 21, 2026 —
-[asn-allowed-hosted-software](#asn-allowed-hosted-software)) is on the list too and fetches
-page covers without a `Referer`; the exemption is what lets indexed posts keep their cover
-image. Google-InspectionTool (allowed Nov 22, 2026) is on the list too and likewise fetches
-without a `Referer`.
 
 ---
 
