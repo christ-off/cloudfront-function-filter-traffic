@@ -53,18 +53,21 @@ survived every cheap check. The store is filled weekly by
 [`asn-kvs-sync`](../asn-kvs-sync/) with the `isp` and `education_research` ASNs (about 34.4k
 keys): **an ASN missing from the store is blocked**.
 
-**Google: indexing only.** The blanket Google exclusion was revisited on Nov 21, 2026: the blog
-wants to be indexed by Google search again, but not by Google's image, news, or AI crawlers.
-Only the web-indexing crawler is carved out — `googlebot/` (name token plus slash, no version)
-is in [asn-allowed-hosted-software](#asn-allowed-hosted-software), so a `Googlebot/…` UA passes
-the AS15169 blocklist the way Bingbot passes AS8075. Every other Google agent keeps the plain
-`404`: `Google-Images`, `Googlebot-News`, `Google-Extended` (Gemini training),
+**Google: indexing and inspection only.** The blanket Google exclusion was revisited on Nov 21,
+2026: the blog wants to be indexed by Google search again, but not by Google's image, news, or AI
+crawlers. Only the web-indexing crawler is carved out — `googlebot/` (name token plus slash, no
+version) is in [asn-allowed-hosted-software](#asn-allowed-hosted-software), so a `Googlebot/…` UA
+passes the AS15169 blocklist the way Bingbot passes AS8075. On Nov 22, 2026 the site-inspection
+tool joined the carve-out: `google-inspectiontool/` matches its
+`(compatible; Google-InspectionTool/1.0)` UA
+([asn-allowed-hosted-software](#asn-allowed-hosted-software)). Every other Google agent keeps the
+plain `404`: `Google-Images`, `Googlebot-News`, `Google-Extended` (Gemini training),
 `google-cloudvertexbot`, `googleother`, `storebot-google`, `googleimageproxy`, and
 `FeedFetcher-Google` on everything except the feed paths all come from AS15169 (or AS396982),
-which stays on the [ASN blocklist](#asn-blocking), and none of them matches the `googlebot/`
-token. Extending the exception beyond the web index (images, news, AI, …) needs the same
-revisit. The feed paths remain the one universal exception: served to everyone, FeedFetcher
-included ([feed-always-served](#feed-always-served)).
+which stays on the [ASN blocklist](#asn-blocking), and none of them matches the `googlebot/` or
+`google-inspectiontool/` token. Extending the exception beyond the web index and the inspection
+tool (images, news, AI, …) needs the same revisit. The feed paths remain the one universal
+exception: served to everyone, FeedFetcher included ([feed-always-served](#feed-always-served)).
 
 Rules behind the order:
 
@@ -374,7 +377,7 @@ Blocked ASNs (all at the user's request):
 
 | ASN | Network |
 |---|---|
-| 15169 | Google LLC — Google's own network (Googlebot, FeedFetcher, Images, News, AI crawlers…); only the web-indexing Googlebot passes, by the `googlebot/` UA token ([asn-allowed-hosted-software](#asn-allowed-hosted-software)); everything else stays excluded — see "Google: indexing only" above |
+| 15169 | Google LLC — Google's own network (Googlebot, FeedFetcher, Images, News, AI crawlers…); only the web-indexing Googlebot and the site-inspection tool pass, by the `googlebot/` and `google-inspectiontool/` UA tokens ([asn-allowed-hosted-software](#asn-allowed-hosted-software)); everything else stays excluded — see "Google: indexing and inspection only" above |
 | 16509, 14618 | AMAZON-02, AMAZON-AES |
 | 215125 | Church of Cyberology, NL scraper |
 | 29222 | Infomaniak, CH feed scraper (still gets the feeds, blocked everywhere else) |
@@ -485,6 +488,18 @@ wanted here: Googlebot fetches covers without a `Referer` while indexing a page,
 gets the [cover-referer](#cover-referer) exemption this list carries — indexed posts keep
 their cover image.
 
+**Google-InspectionTool (`google-inspectiontool\/`, name token plus slash, added Nov 22, 2026).**
+Google's site-inspection tooling (the family behind Search Console's crawl and structure checks)
+verifies the site is reachable and well-formed. It sends a Chrome-impersonating mobile UA ending
+in `(compatible; Google-InspectionTool/1.0)` from AS15169, and its checks were getting the plain
+`404` — the name does not contain `googlebot`, so the index-crawler token didn't match. The token
+is name plus slash, no version, like the bot blocklist: `Google-InspectionTool/1.0` matches, and
+no other agent seen in the logs carries the name. AS15169 stays on the
+[ASN blocklist](#asn-blocking) — the carve-out is at the UA level, same shape as Googlebot — and
+the path checks run before it, so a scanner spoofing the token is still stopped on
+`.env`/`@fs`-style URIs. Like Googlebot it fetches without a `Referer`, so it also gets the
+[cover-referer](#cover-referer) exemption this list carries.
+
 ### asn-header-setup
 **Setup — getting the ASN header in AWS.** The function only sees
 `CloudFront-Viewer-ASN` if the distribution requests it. This is done once per
@@ -564,7 +579,8 @@ allowlisted UA (fetchers send none, so a wrong one is suspicious), and browsers 
 directly stay blocked. Googlebot (web indexing, allowed Nov 21, 2026 —
 [asn-allowed-hosted-software](#asn-allowed-hosted-software)) is on the list too and fetches
 page covers without a `Referer`; the exemption is what lets indexed posts keep their cover
-image.
+image. Google-InspectionTool (allowed Nov 22, 2026) is on the list too and likewise fetches
+without a `Referer`.
 
 ---
 
