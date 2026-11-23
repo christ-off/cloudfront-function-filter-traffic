@@ -125,6 +125,7 @@ describe("ASN rules", () => {
     // Catodon ships two UA forms: "<name>/<version> ( <instance-url>)" and "<name> (like Discordbot)"
     "Catodon/26.10.0 ( https://catodon.rocks)",
     "Catodon (like Discordbot)",
+    "Haathi/0.17.0 ( https://haathi.mxhdr.net/)",
     "Nextcloud Social 0.24.1",
     // Pleroma sends "Pleroma <version>; <instance-url> <admin-email>[; Bot]", with no slash after the name
     "Pleroma 2.6.3-0-gee6ba27ed-develop; https://social.metadata.moe <pleroma@metadata.moe>; Bot",
