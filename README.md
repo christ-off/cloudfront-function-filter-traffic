@@ -270,7 +270,6 @@ Kept, still matched by UA (a reason is given only where one was recorded):
 | `tphotobot/` | Blocked at the user's request |
 | `curl/` | No legitimate need to curl the site |
 | `python-requests/` | Scripting library UA |
-| `got (https://github.com/sindresorhus/got` | Node HTTP client UA |
 | `twitterbot/1.0` | Version-pinned, unlike the other tokens |
 | `emacs/` | Emacs default UA |
 | `sharkey (like` | Sharkey fediverse server UA prefix |
