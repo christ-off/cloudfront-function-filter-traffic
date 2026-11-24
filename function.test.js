@@ -127,6 +127,7 @@ describe("ASN rules", () => {
     "Catodon (like Discordbot)",
     "Akkoma 3.20.1; https://soc.punktrash.club <ary@punktrash.club>",
     "Haathi/0.17.0 ( https://haathi.mxhdr.net/)",
+    "LivelapBot/0.2 (http://site.livelap.com/crawler)",
     "Nextcloud Social 0.24.1",
     // Pleroma sends "Pleroma <version>; <instance-url> <admin-email>[; Bot]", with no slash after the name
     "Pleroma 2.6.3-0-gee6ba27ed-develop; https://social.metadata.moe <pleroma@metadata.moe>; Bot",
