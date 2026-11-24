@@ -442,7 +442,7 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Akkoma, Iceshrimp, Misskey, Haathi, LivelapBot, LiberaiteBot, Catodon, Nextcloud Social, DuckDuckBot,
+run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Akkoma, Iceshrimp, Misskey, Haathi, LivelapBot, Catodon, Nextcloud Social, DuckDuckBot,
 SummalyBot link previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN; Catodon
 ships two UA forms (`Catodon/<version> ( <instance-url>)` and `Catodon (like Discordbot)`), so it is matched on the bare name token; Nextcloud
 Social is matched on the full name phrase — the bare `nextcloud` would also match the distinct `Nextcloud-Server-Crawler` UA, which is
@@ -459,8 +459,6 @@ without version, like the bot blocklist.
 **Haathi (`haathi\/`, name token only).** Fediverse client application (`Haathi/<version> ( https://haathi.mxhdr.net/)`) whose requests come from hosted servers in blocklisted ASNs. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 
 **LivelapBot (`livelapbot\/`, name token only, added Nov 24, 2026).** Crawler of livelap.com (`LivelapBot/<version> (http://site.livelap.com/crawler)`) whose requests come from hosted servers in blocklisted ASNs. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
-
-**LiberaiteBot (`liberaitebot\/`, name token only, added Nov 24, 2026).** Indexer crawler of liberaite.com (`LiberaiteBot/<version> ( https://liberaite.com/bot.html)`), accepted as an allowed indexer, whose requests come from hosted servers in blocklisted ASNs. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 
 **Bravebot (`bravebot\/`, name token only, added Nov 19, 2026).** Brave Search crawls from
 Hetzner AS24940, which is blocklisted, so without this token every Bravebot page fetch would
