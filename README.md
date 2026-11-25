@@ -442,7 +442,7 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Akkoma, Iceshrimp, Misskey, Haathi, LivelapBot, Claude-User, Claude-SearchBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User, Catodon, Nextcloud Social, DuckDuckBot,
+run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Akkoma, Iceshrimp, Misskey, Haathi, LivelapBot, Claude-User, Claude-SearchBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User, Catodon, Catstodon, Nextcloud Social, DuckDuckBot,
 SummalyBot link previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN; Catodon
 ships two UA forms (`Catodon/<version> ( <instance-url>)` and `Catodon (like Discordbot)`), so it is matched on the bare name token; Nextcloud
 Social is matched on the full name phrase — the bare `nextcloud` would also match the distinct `Nextcloud-Server-Crawler` UA, which is
@@ -455,6 +455,8 @@ without version, like the bot blocklist.
 **Pleroma (`pleroma`, bare name token).** Fediverse server software like Mastodon. It sends `Pleroma <version>; <instance-url>` with a space, not a slash, after the name, so the token has no trailing `\/`, like `friendica`. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 
 **Akkoma (`akkoma`, bare name token, added Nov 24, 2026).** Pleroma fork, same UA shape: `Akkoma <version>; <instance-url> <admin-email>`, with a space, not a slash, after the name, so the token has no trailing `\/`. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
+
+**Catstodon (`catstodon\/`, name token only, added Nov 25, 2026).** Mastodon fork whose UA (`Catstodon/<version> <fork-version> (http.rb/<version>; <instance-url>)`) does not contain the `mastodon\/` token, so it needs its own entry. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 
 **Haathi (`haathi\/`, name token only).** Fediverse client application (`Haathi/<version> ( https://haathi.mxhdr.net/)`) whose requests come from hosted servers in blocklisted ASNs. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 

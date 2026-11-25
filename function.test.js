@@ -125,6 +125,7 @@ describe("ASN rules", () => {
     // Catodon ships two UA forms: "<name>/<version> ( <instance-url>)" and "<name> (like Discordbot)"
     "Catodon/26.10.0 ( https://catodon.rocks)",
     "Catodon (like Discordbot)",
+    "Catstodon/4.6.12 cat.1.0.0 (http.rb/5.3.1; https://catcatnya.com/)",
     "Akkoma 3.20.1; https://soc.punktrash.club <ary@punktrash.club>",
     "Haathi/0.17.0 ( https://haathi.mxhdr.net/)",
     "LivelapBot/0.2 (http://site.livelap.com/crawler)",
