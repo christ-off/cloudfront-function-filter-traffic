@@ -128,6 +128,12 @@ describe("ASN rules", () => {
     "Akkoma 3.20.1; https://soc.punktrash.club <ary@punktrash.club>",
     "Haathi/0.17.0 ( https://haathi.mxhdr.net/)",
     "LivelapBot/0.2 (http://site.livelap.com/crawler)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +Claude-SearchBot@anthropic.com)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.3; +https://openai.com/searchbot",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)",
     "Nextcloud Social 0.24.1",
     // Pleroma sends "Pleroma <version>; <instance-url> <admin-email>[; Bot]", with no slash after the name
     "Pleroma 2.6.3-0-gee6ba27ed-develop; https://social.metadata.moe <pleroma@metadata.moe>; Bot",
