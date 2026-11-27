@@ -443,7 +443,7 @@ Blocked ASNs (all at the user's request):
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
-run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Akkoma, Iceshrimp, Misskey, Haathi, LivelapBot, Claude-User, Claude-SearchBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User, ExaSearchBot, Catodon, Catstodon, Nextcloud Social, DuckDuckBot,
+run by third parties (Bingbot, Bravebot, ibou-search, Mastodon, Friendica, Pleroma, Akkoma, Iceshrimp, Misskey, Haathi, LivelapBot, Claude-User, Claude-SearchBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User, ExaSearchBot, kChatBot, Catodon, Catstodon, Nextcloud Social, DuckDuckBot,
 SummalyBot link previews; ibou-search is the crawler of ibou.com, whose servers are rented and may move, so it is matched by UA, not by ASN; Catodon
 ships two UA forms (`Catodon/<version> ( <instance-url>)` and `Catodon (like Discordbot)`), so it is matched on the bare name token; Nextcloud
 Social is matched on the full name phrase — the bare `nextcloud` would also match the distinct `Nextcloud-Server-Crawler` UA, which is
@@ -466,6 +466,8 @@ without version, like the bot blocklist.
 **AI search and user-fetch agents (`claude-user`, `claude-searchbot\/`, `oai-searchbot\/`, `chatgpt-user\/`, `perplexitybot\/`, `perplexity-user\/`, name tokens only, added Nov 25, 2026).** The site owner allows these six agents in robots.txt (Anthropic's Claude-User and Claude-SearchBot, OpenAI's OAI-SearchBot and ChatGPT-User, Perplexity's PerplexityBot and Perplexity-User): they fetch pages for search results or on a user's request, and run from cloud hosting (AWS, Azure…) in blocklisted ASNs, so without the UA tokens the robots.txt permission would be moot. Matched on the name without the version; `claude-user` has no trailing `\/` because the claude-code form of its UA is `Claude-User (claude-code/<version>; https://support.anthropic.com/)`, with a space after the name. Training crawlers stay blocked (ClaudeBot, GPTBot, …). Accepted caveat: a scanner spoofing a token from a blocklisted ASN could reach a page.
 
 **ExaSearchBot (`exasearchbot\/`, name token only, added Nov 27, 2026).** Crawler of Exa's AI search index (`Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)`), run from cloud hosting in blocklisted ASNs, so without the UA token its page fetches would get `404`. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
+
+**kChatBot (`kchatbot\/`, name token only, added Nov 27, 2026).** Link-preview fetcher of kChat, Infomaniak's hosted team-chat app (`Mozilla/5.0 (compatible; kChatBot/1.0; https://www.infomaniak.com/kchat)`): when someone posts a link to a page in a chat, the server fetches it to build the preview card. It runs from hosting in blocklisted ASNs, so without the UA token the preview would get `404`. Matched on the name without the version. Accepted caveat: a scanner spoofing the token from a blocklisted ASN could reach a page.
 
 **Bravebot (`bravebot\/`, name token only, added Nov 19, 2026).** Brave Search crawls from
 Hetzner AS24940, which is blocklisted, so without this token every Bravebot page fetch would
