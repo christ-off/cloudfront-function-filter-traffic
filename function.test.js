@@ -136,6 +136,7 @@ describe("ASN rules", () => {
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot",
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)",
     "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)",
+    "Mozilla/5.0 (compatible; ExaSearchBot/1.0; https://crawler.exa.ai/)",
     "Nextcloud Social 0.24.1",
     // Pleroma sends "Pleroma <version>; <instance-url> <admin-email>[; Bot]", with no slash after the name
     "Pleroma 2.6.3-0-gee6ba27ed-develop; https://social.metadata.moe <pleroma@metadata.moe>; Bot",
