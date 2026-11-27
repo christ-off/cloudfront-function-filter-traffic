@@ -440,6 +440,7 @@ Blocked ASNs (all at the user's request):
 | 56044 | China Mobile Communications Corporation (CMNET), China — consumer/mobile ISP, NOT hosting; added Nov 22, 2026 on request: traffic only fetches the page, never its assets; not verified against a registry in-session |
 | 132525 | China Mobile Communications Corporation (CMNET), China — consumer/mobile ISP, NOT hosting; added Nov 22, 2026 on request: traffic only fetches the page, never its assets; not verified against a registry in-session |
 | 208348 | DomyNet Sp. z o.o., Poland — ISP, NOT hosting (in the KV as `isp`); added Nov 27, 2026 on request: all traffic seen is scraping through a residential proxy; not verified against a registry in-session |
+| 211590 | Bucklog SARL, France — business network, NOT confirmed hosting (labelled `business`); added Nov 27, 2026 on request; not verified against a registry in-session |
 
 ### asn-allowed-hosted-software
 `allowedHostedSoftwareRegex` is an allowlist of legitimate *hosted software*: server-side software
